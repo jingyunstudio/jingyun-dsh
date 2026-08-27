@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "esModuleInterop": true,
+    "strict": true,
+    "skipLibCheck": true
+  },
+  "files": [],
+  "references": [
+    { "path": "./packages/config-loader" },
+    { "path": "./packages/packager" },
+    { "path": "./packages/jingyun-dsh" }
+  ]
+}

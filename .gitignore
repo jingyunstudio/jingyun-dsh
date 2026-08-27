@@ -1,0 +1,44 @@
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Dependency directories
+node_modules/
+
+# Compilation outputs
+lib/
+dist/
+
+# Local temporary workspaces
+scratch/
+.tempmediaStorage/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Custom configs
+**/jingyun-config.json
+
+# Tauri Sandboxes & Installers
+src-tauri/target/
+src-tauri/gen/
+src-tauri/resources/vendor/*.zip
+src-tauri/resources/vendor/workspace/
+dist_tauri_temp/
+dist_installer_output/
+
+# Temporary build & pristine npm directories
+temp/
+temp_*
+*.zip
+*.tar
+
+# Python bytecode caches
+__pycache__/
+*.pyc
+
+

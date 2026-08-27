@@ -1,0 +1,22 @@
+[package]
+name = "jingyun-dsh-client"
+version = "0.1.0"
+description = "Jingyun DSH Desktop Client"
+authors = ["Jingyun Team"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.0.0-rc", features = [] }
+
+[dependencies]
+tauri = { version = "2.0.0-rc", features = ["tray-icon", "unstable"] }
+tauri-plugin-opener = "2.0.0-rc"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+zip = "2.2.0"
+
+[profile.release]
+panic = "abort"
+codegen-units = 16
+lto = false
+opt-level = 2

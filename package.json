@@ -1,0 +1,26 @@
+{
+  "name": "jingyun-dsh",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "pnpm -r build",
+    "build:deps": "node scripts/build_deps.js",
+    "start": "node scripts/prepare_dev.js && node node_modules/@deepseek-ai/dsh/lib/bin.js --profile web",
+    "tauri:dev": "npx --package @tauri-apps/cli tauri dev",
+    "tauri:build": "pnpm build && node scripts/prepare_vendor.js && npx --package @tauri-apps/cli tauri build"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh": "0.1.0-rc.8",
+    "cordis": "^3.0.0",
+    "ws": "^8.18.0",
+    "yaml": "^2.5.0",
+    "@jingyun-ai/jingyun-dsh": "workspace:^"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0",
+    "@types/node": "^20.0.0",
+    "tsdown": "^0.22.2",
+    "typescript": "^5.5.0"
+  }
+}

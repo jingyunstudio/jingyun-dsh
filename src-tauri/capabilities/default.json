@@ -1,0 +1,36 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/schema/capability.json",
+  "identifier": "default",
+  "description": "Default permissions for DSH shell client",
+  "windows": [
+    "*"
+  ],
+  "permissions": [
+    "core:default",
+    "opener:default",
+    "core:webview:default",
+    "core:window:default",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-toggle-maximize",
+    "core:window:allow-close",
+    "core:window:allow-start-dragging",
+    "core:window:allow-is-maximized",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-set-webview-size",
+    "core:webview:allow-set-webview-position",
+    "core:webview:allow-webview-hide",
+    "core:webview:allow-webview-show"
+  ],
+  "remote": {
+    "urls": [
+      "http://localhost:3003/*",
+      "http://localhost/*",
+      "http://localhost:3080/*",
+      "http://61978ad0.localhost/*"
+    ]
+  }
+}

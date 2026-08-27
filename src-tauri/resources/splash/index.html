@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>正在初始化...</title>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --text-primary: #111827;
+      --text-secondary: #64748b;
+      --track-bg: #f1f5f9;
+      --bar-color: #2563eb;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #09090b;
+        --text-primary: #f9fafb;
+        --text-secondary: #94a3b8;
+        --track-bg: #1f293d;
+        --bar-color: #3b82f6;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.3s ease;
+    }
+
+    /* 顶部透明窗口拖拽区 */
+    .drag-region {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 40px;
+      z-index: 9999;
+      -webkit-app-region: drag;
+      app-region: drag;
+    }
+
+    /* 主容器 */
+    .splash-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      padding: 20px;
+      width: 100%;
+    }
+
+    /* 居中主标题 */
+    .splash-title {
+      font-size: 26px;
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: -0.03em;
+      margin-bottom: 38px;
+      line-height: 1.35;
+    }
+
+    /* 极简加长进度条轨道 */
+    .progress-track {
+      width: 480px;
+      max-width: 84vw;
+      height: 6px;
+      background-color: var(--track-bg);
+      border-radius: 9999px;
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 18px;
+    }
+
+    /* 进度条填充条 */
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background-color: var(--bar-color);
+      border-radius: 9999px;
+      transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+
+    /* 极简纯净流光动效 */
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.55) 50%, transparent 100%);
+      animation: shimmer 1.6s infinite;
+    }
+
+    /* 状态副文本 */
+    .status-text {
+      font-size: 13.5px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      min-height: 20px;
+      letter-spacing: 0.01em;
+      transition: opacity 0.2s ease;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部无边框拖拽区域 -->
+  <div class="drag-region" data-tauri-drag-region></div>
+
+  <div class="splash-container">
+    <!-- 居中标题：统一纯净颜色，去除杂乱色调 -->
+    <h1 class="splash-title">
+      正在初始化 <span id="app-name">Jingyun.Studio</span>，请稍候
+    </h1>
+
+    <!-- 加长加粗的极简进度条 -->
+    <div class="progress-track">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <!-- 动态状态提示 -->
+    <div class="status-text" id="status-text">正在启动核心引擎...</div>
+  </div>
+
+  <script>
+    (function () {
+      const progressBar = document.getElementById('progress-bar');
+      const statusText = document.getElementById('status-text');
+
+      let currentProgress = 5;
+      let isReady = false;
+
+      // 状态提示文案轮换
+      const steps = [
+        { threshold: 15, text: '正在检测环境依赖...' },
+        { threshold: 40, text: '正在启动智能核心引擎...' },
+        { threshold: 65, text: '正在同步功能模块与插件...' },
+        { threshold: 85, text: '正在加载工作空间与智能体库...' }
+      ];
+
+      function updateStatus(val) {
+        for (let i = steps.length - 1; i >= 0; i--) {
+          if (val >= steps[i].threshold) {
+            statusText.textContent = steps[i].text;
+            break;
+          }
+        }
+      }
+
+      // 模拟平滑进度推进（就绪前停在 88%）
+      const progressTimer = setInterval(() => {
+        if (isReady) return;
+        if (currentProgress < 88) {
+          currentProgress += Math.random() * 8 + 3;
+          if (currentProgress > 88) currentProgress = 88;
+          progressBar.style.width = currentProgress + '%';
+          updateStatus(currentProgress);
+        }
+      }, 200);
+
+      // 后台毫秒级探测后端 3080 端口是否就绪
+      let checkCount = 0;
+      async function checkBackend() {
+        if (isReady) return;
+        checkCount++;
+        try {
+          const endpoints = [
+            'http://127.0.0.1:3080/api/jingyun/branding',
+            'http://localhost:3080/api/jingyun/branding',
+            'http://127.0.0.1:3080/',
+            'http://localhost:3080/'
+          ];
+          
+          const ep = endpoints[checkCount % endpoints.length];
+          await fetch(ep, { cache: 'no-store', mode: 'no-cors' });
+          
+          onBackendReady();
+        } catch (err) {
+          setTimeout(checkBackend, 250);
+        }
+      }
+
+      function onBackendReady() {
+        if (isReady) return;
+        isReady = true;
+        clearInterval(progressTimer);
+
+        progressBar.style.width = '100%';
+        statusText.textContent = '初始化完成，正在进入工作台...';
+
+        setTimeout(() => {
+          window.location.replace('http://localhost:3080');
+        }, 300);
+      }
+
+      // 立即启动探测
+      setTimeout(checkBackend, 100);
+    })();
+  </script>
+</body>
+</html>

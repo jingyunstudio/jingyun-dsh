@@ -1,0 +1,57 @@
+{
+  "productName": "Jingyun.Studio",
+  "version": "0.1.0",
+  "identifier": "com.jingyun.dstudio",
+  "bundle": {
+    "active": true,
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "resources/vendor/*.zip",
+      "resources/vendor/workspace"
+    ],
+    "windows": {
+      "nsis": {
+        "languages": [
+          "SimpChinese"
+        ],
+        "installerHooks": "hooks.nsh",
+        "installerIcon": "icons/icon.ico",
+        "template": "installer.nsi"
+      }
+    }
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Jingyun.Studio",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false,
+        "maximized": true,
+        "decorations": false,
+        "url": "index.html"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "build": {
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "",
+    "devUrl": "http://localhost:3080",
+    "frontendDist": "../dist_tauri_temp"
+  }
+}

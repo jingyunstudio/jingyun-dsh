@@ -1,0 +1,63 @@
+{
+  "name": "@jingyun-ai/jingyun-dsh",
+  "version": "0.1.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Branding customization plugin for DSH client",
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "jingyun",
+    "ai-agent",
+    "jingyun.studio",
+    "tauri"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jingyunstudio/jingyun-dsh.git",
+    "directory": "packages/jingyun-dsh"
+  },
+  "homepage": "https://github.com/jingyunstudio/jingyun-dsh#readme",
+  "bugs": {
+    "url": "https://github.com/jingyunstudio/jingyun-dsh/issues"
+  },
+  "type": "module",
+  "main": "lib/index.mjs",
+  "exports": {
+    ".": {
+      "default": "./lib/index.mjs"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-slots",
+        "@deepseek-ai/dsh-client-ui-primitives",
+        "@deepseek-ai/dsh-client-ui-commands"
+      ],
+      "platform": "web"
+    }
+  },
+  "scripts": {
+    "build": "tsdown"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-commands": "0.1.0-rc.8",
+    "@deepseek-ai/cordis": "^4.0.1"
+  }
+}
