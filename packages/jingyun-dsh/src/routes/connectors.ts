@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 
-import { Context } from '@deepseek-ai/cordis';
+import type { Context } from '@deepseek-ai/cordis';
 
 import { sendJson, sendError } from '../common/http';
 import { wecomConnector, type WecomConfig } from './wecom-service';
@@ -49,7 +49,7 @@ const runConfigInitAndGetUrl = (): Promise<{ url: string; mode: string }> => {
         if (fs.existsSync(tempLogPath)) {
           const content = fs.readFileSync(tempLogPath, 'utf8');
           const match = content.match(
-            /https:\/\/open\.feishu\.cn\/page\/cli\?user_code=[A-Za-z0-9\-_&=%\.]+/i
+            /https:\/\/open\.feishu\.cn\/page\/cli\?user_code=[A-Za-z0-9\-_&=%.]+/i
           );
           if (match && !urlFound) {
             urlFound = true;

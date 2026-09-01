@@ -11,7 +11,7 @@
     "start": "node scripts/prepare_dev.js && node node_modules/@deepseek-ai/dsh/lib/bin.js --profile web",
     "tauri:dev": "npx --package @tauri-apps/cli tauri dev",
     "tauri:build": "pnpm build && node scripts/prepare_vendor.js && npx --package @tauri-apps/cli tauri build",
-    "lint": "oxlint",
+    "lint": "oxlint --fix",
     "fmt": "oxfmt --write"
   },
   "dependencies": {

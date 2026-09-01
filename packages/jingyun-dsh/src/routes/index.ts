@@ -1,6 +1,6 @@
-import { Context } from '@deepseek-ai/cordis';
+import type { Context } from '@deepseek-ai/cordis';
 
-import { Config } from '../config/schema';
+import type { Config } from '../config/schema';
 import { registerAgentRoutes } from './agent';
 import { registerArtifactRoutes } from './artifact';
 import { registerAssetsRoutes } from './assets';

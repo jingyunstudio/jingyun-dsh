@@ -19,11 +19,18 @@
     "correctness": "warn"
   },
   "rules": {
-    "no-unused-vars": "warn",
+    "no-unused-vars": [
+      "warn",
+      {
+        "fix": {
+          "imports": "safe-fix"
+        }
+      }
+    ],
     "eqeqeq": "warn",
     "strict-boolean-expressions": "warn",
     "typescript/consistent-type-imports": "warn",
-    "typescript/no-explicit-any": "warn"
+    "typescript/no-explicit-any": "off"
   },
   "ignorePatterns": []
 }

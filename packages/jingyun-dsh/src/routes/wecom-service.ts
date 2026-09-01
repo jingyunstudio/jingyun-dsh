@@ -1,6 +1,5 @@
 import crypto from 'crypto';
 import { promises as fs } from 'fs';
-import os from 'os';
 import path from 'path';
 
 import { WebSocket, type RawData } from 'ws';

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
-import { AUTOMATION_TEMPLATES, TemplateItem } from './constants';
+import type { TemplateItem } from './constants';
+import { AUTOMATION_TEMPLATES } from './constants';
 
 // 自动化配置项定义
 interface AutoTask {

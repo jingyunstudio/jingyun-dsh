@@ -1,6 +1,6 @@
 import { spawn } from 'child_process';
 
-import { Context } from '@deepseek-ai/cordis';
+import type { Context } from '@deepseek-ai/cordis';
 
 import { sendJson, sendError } from '../common/http';
 

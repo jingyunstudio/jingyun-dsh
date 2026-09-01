@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { Context } from '@deepseek-ai/cordis';
+import type { Context } from '@deepseek-ai/cordis';
 
 import { baseHome, getSessionAgentsConfig } from './manager';
 

@@ -5,7 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { promisify } from 'util';
 
-import { Context } from '@deepseek-ai/cordis';
+import type { Context } from '@deepseek-ai/cordis';
 
 import { sendJson, sendError } from '../common/http';
 import { getDshHome } from '../common/paths';
@@ -329,7 +329,7 @@ export function registerPluginsRoutes(ctx: Context) {
               fs.readFileSync(profilePkgFile, 'utf8')
             );
             const deps: Record<string, any> = {
-              ...(profilePkg.dependencies || {}),
+              ...profilePkg.dependencies,
             };
             const bundles: string[] = profilePkg.dsh?.profile?.bundles || [];
             for (const b of bundles) {

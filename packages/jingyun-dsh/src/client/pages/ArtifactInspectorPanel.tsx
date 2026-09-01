@@ -486,7 +486,7 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
         '';
       const rawText = title || text;
       const match = rawText.match(
-        /[a-zA-Z0-9_\u4e00-\u9fa5\-]+\.(html|md|png|jpg|jpeg|json|js|ts|css|py|vue|tsx|jsx)/i
+        /[a-zA-Z0-9_\u4e00-\u9fa5-]+\.(html|md|png|jpg|jpeg|json|js|ts|css|py|vue|tsx|jsx)/i
       );
       const isProducedContext =
         Boolean(

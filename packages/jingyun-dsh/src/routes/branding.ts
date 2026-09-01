@@ -2,14 +2,14 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { Context } from '@deepseek-ai/cordis';
+import type { Context } from '@deepseek-ai/cordis';
 
 import { sendJson, sendError } from '../common/http';
 import {
   getJingyunConfigPath,
   getJingyunConfigWritePath,
 } from '../common/paths';
-import { Config } from '../config/schema';
+import type { Config } from '../config/schema';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

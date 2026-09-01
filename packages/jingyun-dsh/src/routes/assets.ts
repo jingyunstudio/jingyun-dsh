@@ -4,7 +4,7 @@ import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 
-import { Context } from '@deepseek-ai/cordis';
+import type { Context } from '@deepseek-ai/cordis';
 
 import { getSessionAgentsConfig, baseHome } from '../agent/manager';
 import { moveToRecycleBin, extractZipSafe } from '../common/fs';
@@ -503,7 +503,7 @@ export function registerAssetsRoutes(ctx: Context) {
 
           const cleanSlug = slug.trim();
           if (
-            !/^[a-zA-Z0-9_\-\.]+$/.test(cleanSlug) ||
+            !/^[a-zA-Z0-9_\-.]+$/.test(cleanSlug) ||
             cleanSlug === '.' ||
             cleanSlug === '..' ||
             cleanSlug.includes('..')
@@ -691,7 +691,7 @@ export function registerAssetsRoutes(ctx: Context) {
 
           const cleanSlug = slug.trim();
           if (
-            !/^[a-zA-Z0-9_\-\.]+$/.test(cleanSlug) ||
+            !/^[a-zA-Z0-9_\-.]+$/.test(cleanSlug) ||
             cleanSlug === '.' ||
             cleanSlug === '..' ||
             cleanSlug.includes('..')

@@ -1,9 +1,8 @@
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { Context } from '@deepseek-ai/cordis';
+import type { Context } from '@deepseek-ai/cordis';
 
 import { initSystemPromptHook } from './agent/agent-loader';
 import { getDshHome, getJingyunConfigPath } from './common/paths';
