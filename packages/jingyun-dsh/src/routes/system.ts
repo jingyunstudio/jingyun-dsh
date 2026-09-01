@@ -1,12 +1,14 @@
-import { Context } from '@deepseek-ai/cordis'
-import { spawn } from 'child_process'
-import { sendJson, sendError } from '../common/http'
+import { spawn } from 'child_process';
+
+import { Context } from '@deepseek-ai/cordis';
+
+import { sendJson, sendError } from '../common/http';
 
 function scheduleRestartDsh(port = 3080) {
   try {
-    const nodeExec = process.execPath || 'node'
-    const args = process.argv.slice(1)
-    const cwd = process.cwd()
+    const nodeExec = process.execPath || 'node';
+    const args = process.argv.slice(1);
+    const cwd = process.cwd();
 
     const helperCode = `
       const { spawn } = require('node:child_process');
@@ -35,20 +37,20 @@ function scheduleRestartDsh(port = 3080) {
         });
         child.unref();
       })();
-    `
+    `;
 
     const helper = spawn(nodeExec, ['-e', helperCode], {
       detached: true,
       stdio: 'ignore',
-      env: process.env
-    })
-    helper.unref()
+      env: process.env,
+    });
+    helper.unref();
 
     setTimeout(() => {
-      process.exit(0)
-    }, 400)
+      process.exit(0);
+    }, 400);
   } catch (e: any) {
-    console.error('[UIBranding] Failed to schedule restart:', e.message)
+    console.error('[UIBranding] Failed to schedule restart:', e.message);
   }
 }
 
@@ -59,17 +61,22 @@ export function registerSystemRoutes(ctx: Context) {
     path: '/api/jingyun/restart',
     handler: async (req, res) => {
       try {
-        const hostHeader = req.headers.host || '127.0.0.1:3080'
-        const portMatch = /:(\d+)$/.exec(hostHeader)
-        const port = portMatch ? parseInt(portMatch[1], 10) : 3080
+        const hostHeader = req.headers.host || '127.0.0.1:3080';
+        const portMatch = /:(\d+)$/.exec(hostHeader);
+        const port = portMatch ? parseInt(portMatch[1], 10) : 3080;
 
-        sendJson(res, { success: true, message: 'DSH host service restarting smoothly...' })
+        sendJson(res, {
+          success: true,
+          message: 'DSH host service restarting smoothly...',
+        });
 
-        console.log(`[UIBranding] Received restart request on port ${port}, scheduling smooth restart...`)
-        scheduleRestartDsh(port)
+        console.log(
+          `[UIBranding] Received restart request on port ${port}, scheduling smooth restart...`
+        );
+        scheduleRestartDsh(port);
       } catch (err: any) {
-        sendError(res, err.message)
+        sendError(res, err.message);
       }
-    }
-  })
+    },
+  });
 }

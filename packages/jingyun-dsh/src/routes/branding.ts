@@ -1,12 +1,17 @@
-import { Context } from '@deepseek-ai/cordis'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import { Config } from '../config/schema'
-import { sendJson, sendError } from '../common/http'
-import { getJingyunConfigPath, getJingyunConfigWritePath } from '../common/paths'
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+import { Context } from '@deepseek-ai/cordis';
+
+import { sendJson, sendError } from '../common/http';
+import {
+  getJingyunConfigPath,
+  getJingyunConfigWritePath,
+} from '../common/paths';
+import { Config } from '../config/schema';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function registerBrandingRoutes(ctx: Context, config: Config) {
   // 1. 获取 descriptors
@@ -16,8 +21,8 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
     handler: async (req, res) => {
       try {
         ctx.inject(['settings'], (sctx: any) => {
-          const descriptors = sctx.settings.describe() || []
-          
+          const descriptors = sctx.settings.describe() || [];
+
           // 对 descriptors 进行内存同步强矫正，解决底座写 YAML 延迟导致的同步抖动
           const mapped = descriptors.map((desc: any) => {
             if (desc.ns === 'jingyun-dsh') {
@@ -29,38 +34,42 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
                   tenantHost: config.tenantHost || '',
                   appHost: config.appHost || '',
                   customName: config.customName || '',
-                  customLogo: config.customLogo || ''
-                }
-              }
+                  customLogo: config.customLogo || '',
+                },
+              };
             }
-            return desc
-          })
+            return desc;
+          });
 
-          sendJson(res, { success: true, data: mapped })
-        })
+          sendJson(res, { success: true, data: mapped });
+        });
       } catch (err: any) {
-        sendError(res, err.message)
+        sendError(res, err.message);
       }
-    }
-  })
+    },
+  });
 
   // 2. 更新 descriptors
   ctx.webServer.register({
     kind: 'exact',
     path: '/api/jingyun/branding/descriptors/update',
     handler: async (req, res) => {
-      let body = ''
-      req.on('data', chunk => { body += chunk })
+      let body = '';
+      req.on('data', (chunk) => {
+        body += chunk;
+      });
       req.on('end', async () => {
         try {
-          const payload = JSON.parse(body)
-          const { ns, patch } = payload
+          const payload = JSON.parse(body);
+          const { ns, patch } = payload;
 
           if (!ns || !patch) {
-            throw new Error('Missing parameter: ns or patch')
+            throw new Error('Missing parameter: ns or patch');
           }
 
-          console.log(`[UIBranding] Generic settings update. NS=${ns}, Patch keys=${Object.keys(patch)}`)
+          console.log(
+            `[UIBranding] Generic settings update. NS=${ns}, Patch keys=${Object.keys(patch)}`
+          );
 
           if (ns === 'jingyun-dsh') {
             let jsonContent = {
@@ -68,43 +77,61 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
               tenant_host: '',
               domain: '',
               custom_name: '',
-              custom_logo: ''
-            }
+              custom_logo: '',
+            };
 
-            const currentReadPath = getJingyunConfigPath(__dirname)
+            const currentReadPath = getJingyunConfigPath(__dirname);
             if (fs.existsSync(currentReadPath)) {
               try {
-                jsonContent = JSON.parse(fs.readFileSync(currentReadPath, 'utf8'))
+                jsonContent = JSON.parse(
+                  fs.readFileSync(currentReadPath, 'utf8')
+                );
               } catch (e) {}
             }
 
-            if (patch.apiUrl) jsonContent.api_url = patch.apiUrl
-            if (patch.tenantHost) jsonContent.tenant_host = patch.tenantHost
-            if (patch.domain) jsonContent.domain = patch.domain
-            if (patch.customName !== undefined) jsonContent.custom_name = patch.customName
-            if (patch.customLogo !== undefined) jsonContent.custom_logo = patch.customLogo
+            if (patch.apiUrl) jsonContent.api_url = patch.apiUrl;
+            if (patch.tenantHost) jsonContent.tenant_host = patch.tenantHost;
+            if (patch.domain) jsonContent.domain = patch.domain;
+            if (patch.customName !== undefined)
+              jsonContent.custom_name = patch.customName;
+            if (patch.customLogo !== undefined)
+              jsonContent.custom_logo = patch.customLogo;
 
-            const targetWritePath = getJingyunConfigWritePath(__dirname)
-            fs.writeFileSync(targetWritePath, JSON.stringify(jsonContent, null, 2), 'utf8')
-            console.log(`[UIBranding] Local JSON file synchronized: ${targetWritePath}`)
+            const targetWritePath = getJingyunConfigWritePath(__dirname);
+            fs.writeFileSync(
+              targetWritePath,
+              JSON.stringify(jsonContent, null, 2),
+              'utf8'
+            );
+            console.log(
+              `[UIBranding] Local JSON file synchronized: ${targetWritePath}`
+            );
 
             // 同步回内存 config 引用
-            if (patch.mode) config.mode = patch.mode
-            if (patch.apiUrl) config.apiUrl = patch.apiUrl
-            if (patch.tenantHost) config.tenantHost = patch.tenantHost
-            if (patch.domain) config.appHost = patch.domain
-            if (patch.customName !== undefined) config.customName = patch.customName
-            if (patch.customLogo !== undefined) config.customLogo = patch.customLogo
+            if (patch.mode) config.mode = patch.mode;
+            if (patch.apiUrl) config.apiUrl = patch.apiUrl;
+            if (patch.tenantHost) config.tenantHost = patch.tenantHost;
+            if (patch.domain) config.appHost = patch.domain;
+            if (patch.customName !== undefined)
+              config.customName = patch.customName;
+            if (patch.customLogo !== undefined)
+              config.customLogo = patch.customLogo;
           }
 
-          sendJson(res, { success: true, message: `Namespace ${ns} updated successfully.` })
+          sendJson(res, {
+            success: true,
+            message: `Namespace ${ns} updated successfully.`,
+          });
         } catch (err: any) {
-          console.error('[UIBranding] Failed to save descriptor patch:', err.message)
-          sendError(res, err.message)
+          console.error(
+            '[UIBranding] Failed to save descriptor patch:',
+            err.message
+          );
+          sendError(res, err.message);
         }
-      })
-    }
-  })
+      });
+    },
+  });
 
   // 3. Direct Disk JSON Settings API
   ctx.webServer.register({
@@ -116,13 +143,13 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
         tenant_host: '',
         domain: '',
         custom_name: '',
-        custom_logo: ''
-      }
+        custom_logo: '',
+      };
 
-      const currentReadPath = getJingyunConfigPath(__dirname)
+      const currentReadPath = getJingyunConfigPath(__dirname);
       if (fs.existsSync(currentReadPath)) {
         try {
-          jsonContent = JSON.parse(fs.readFileSync(currentReadPath, 'utf8'))
+          jsonContent = JSON.parse(fs.readFileSync(currentReadPath, 'utf8'));
         } catch (e) {}
       }
 
@@ -133,37 +160,37 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
         domain: jsonContent.domain,
         appHost: jsonContent.domain,
         customName: jsonContent.custom_name,
-        customLogo: jsonContent.custom_logo
-      })
-    }
-  })
+        customLogo: jsonContent.custom_logo,
+      });
+    },
+  });
 
   // 4. Branding Config API (100% Direct Disk JSON Single Source of Truth)
   ctx.webServer.register({
     kind: 'exact',
     path: '/api/jingyun/branding',
     handler: async (req, res) => {
-      let apiUrl = ''
-      let tenantHost = ''
-      let domain = ''
-      let siteName = ''
-      let siteLogo = ''
-      const customLogoFile = path.resolve(__dirname, '..', '..', 'logo.png')
+      let apiUrl = '';
+      let tenantHost = '';
+      let domain = '';
+      let siteName = '';
+      let siteLogo = '';
+      const customLogoFile = path.resolve(__dirname, '..', '..', 'logo.png');
       if (fs.existsSync(customLogoFile)) {
-        siteLogo = '/api/jingyun/branding/logo.png'
+        siteLogo = '/api/jingyun/branding/logo.png';
       }
 
-      const currentReadPath = getJingyunConfigPath(__dirname)
+      const currentReadPath = getJingyunConfigPath(__dirname);
       if (fs.existsSync(currentReadPath)) {
         try {
-          const raw = fs.readFileSync(currentReadPath, 'utf8')
-          const localData = JSON.parse(raw)
-          if (localData.api_url) apiUrl = localData.api_url
-          if (localData.tenant_host) tenantHost = localData.tenant_host
-          if (localData.domain) domain = localData.domain
-          else if (localData.app_host) domain = localData.app_host
-          if (localData.custom_name) siteName = localData.custom_name
-          if (localData.custom_logo) siteLogo = localData.custom_logo
+          const raw = fs.readFileSync(currentReadPath, 'utf8');
+          const localData = JSON.parse(raw);
+          if (localData.api_url) apiUrl = localData.api_url;
+          if (localData.tenant_host) tenantHost = localData.tenant_host;
+          if (localData.domain) domain = localData.domain;
+          else if (localData.app_host) domain = localData.app_host;
+          if (localData.custom_name) siteName = localData.custom_name;
+          if (localData.custom_logo) siteLogo = localData.custom_logo;
         } catch (e) {}
       }
 
@@ -174,35 +201,43 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
         domain: domain,
         appHost: domain,
         site_logo: siteLogo,
-        site_name: siteName
-      })
-    }
-  })
+        site_name: siteName,
+      });
+    },
+  });
 
   // 5. Static Local Logo Resource Stream Router
   ctx.webServer.register({
     kind: 'exact',
     path: '/api/jingyun/branding/logo.png',
     handler: async (req, res) => {
-      let iconPath = path.resolve(__dirname, '..', '..', '..', 'src-tauri', 'icons', '128x128.png')
-      const customLogoFile = path.resolve(__dirname, '..', '..', 'logo.png')
+      let iconPath = path.resolve(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        'src-tauri',
+        'icons',
+        '128x128.png'
+      );
+      const customLogoFile = path.resolve(__dirname, '..', '..', 'logo.png');
       if (fs.existsSync(customLogoFile)) {
-        iconPath = customLogoFile
+        iconPath = customLogoFile;
       }
 
       if (fs.existsSync(iconPath)) {
         try {
-          const imgBuf = fs.readFileSync(iconPath)
+          const imgBuf = fs.readFileSync(iconPath);
           res.writeHead(200, {
             'Content-Type': 'image/png',
-            'Cache-Control': 'no-cache'
-          })
-          res.end(imgBuf)
-          return
+            'Cache-Control': 'no-cache',
+          });
+          res.end(imgBuf);
+          return;
         } catch (e) {}
       }
-      res.writeHead(404)
-      res.end()
-    }
-  })
+      res.writeHead(404);
+      res.end();
+    },
+  });
 }

@@ -1,46 +1,49 @@
-import React, { useState } from 'react'
-import { AUTOMATION_TEMPLATES, TemplateItem } from './constants'
+import React, { useState } from 'react';
+
+import { AUTOMATION_TEMPLATES, TemplateItem } from './constants';
 
 // 自动化配置项定义
 interface AutoTask {
-  id: string
-  name: string
-  workspace: string
-  prompt: string
-  connectors: string[]
-  frequencyType: 'cycle' | 'interval' | 'once'
-  frequencyDetail: string // 例如 "每天 07:45"
-  cronExpression?: string
-  startDate?: string
-  endDate?: string
-  pushToWechatApp: boolean
-  pushToWechatBot: boolean
-  enabled: boolean
+  id: string;
+  name: string;
+  workspace: string;
+  prompt: string;
+  connectors: string[];
+  frequencyType: 'cycle' | 'interval' | 'once';
+  frequencyDetail: string; // 例如 "每天 07:45"
+  cronExpression?: string;
+  startDate?: string;
+  endDate?: string;
+  pushToWechatApp: boolean;
+  pushToWechatBot: boolean;
+  enabled: boolean;
 }
 
 // 模拟历史记录定义
 interface HistoryRecord {
-  id: string
-  taskName: string
-  time: string
-  status: 'success' | 'failed'
-  duration: string
-  message: string
+  id: string;
+  taskName: string;
+  time: string;
+  status: 'success' | 'failed';
+  duration: string;
+  message: string;
 }
 
 export function AutomationPanel() {
-  const [activeTab, setActiveTab] = useState<'configured' | 'history' | 'templates'>('configured')
-  const [keepAwake, setKeepAwake] = useState(false)
-  const [showModal, setShowModal] = useState(false)
-  const [editingTask, setEditingTask] = useState<AutoTask | null>(null)
-  const [activeMenuTaskId, setActiveMenuTaskId] = useState<string | null>(null)
-  
+  const [activeTab, setActiveTab] = useState<
+    'configured' | 'history' | 'templates'
+  >('configured');
+  const [keepAwake, setKeepAwake] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editingTask, setEditingTask] = useState<AutoTask | null>(null);
+  const [activeMenuTaskId, setActiveMenuTaskId] = useState<string | null>(null);
+
   // 提示气泡
-  const [toastMsg, setToastMsg] = useState('')
+  const [toastMsg, setToastMsg] = useState('');
   const showToast = (msg: string) => {
-    setToastMsg(msg)
-    setTimeout(() => setToastMsg(''), 3000)
-  }
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(''), 3000);
+  };
 
   // 初始 Mock 数据 (配置了一个“每日 AI 新闻简报”，高度还原图 2)
   const [tasks, setTasks] = useState<AutoTask[]>([
@@ -54,9 +57,9 @@ export function AutomationPanel() {
       frequencyDetail: '每月 1 日 00:00',
       pushToWechatApp: true,
       pushToWechatBot: false,
-      enabled: true
-    }
-  ])
+      enabled: true,
+    },
+  ]);
 
   // Mock 历史记录数据
   const [historyList] = useState<HistoryRecord[]>([
@@ -66,7 +69,7 @@ export function AutomationPanel() {
       time: '2026-08-26 00:00:12',
       status: 'success',
       duration: '4.2s',
-      message: '已成功向飞书渠道推送消息'
+      message: '已成功向飞书渠道推送消息',
     },
     {
       id: 'h_2',
@@ -74,7 +77,7 @@ export function AutomationPanel() {
       time: '2026-08-26 16:00:01',
       status: 'success',
       duration: '1.8s',
-      message: '面试模拟题已生成并推送到微信小程序'
+      message: '面试模拟题已生成并推送到微信小程序',
     },
     {
       id: 'h_3',
@@ -82,101 +85,116 @@ export function AutomationPanel() {
       time: '2026-08-24 10:00:03',
       status: 'success',
       duration: '0.9s',
-      message: '提醒消息已触发'
-    }
-  ])
+      message: '提醒消息已触发',
+    },
+  ]);
 
   // 表单状态定义
-  const [formName, setFormName] = useState('')
-  const [formWorkspace, setFormWorkspace] = useState('Work')
-  const [formPrompt, setFormPrompt] = useState('')
-  const [formConnectors, setFormConnectors] = useState<string[]>(['lark'])
-  const [formFreqType, setFormFreqType] = useState<'cycle' | 'interval' | 'once'>('cycle')
-  const [formFreqCycle, setFormFreqCycle] = useState('everyday') // everyday, everyweek, everymonth
-  const [formFreqTime, setFormFreqTime] = useState('07:45')
-  const [formPushApp, setFormPushApp] = useState(false)
-  const [formPushBot, setFormPushBot] = useState(false)
+  const [formName, setFormName] = useState('');
+  const [formWorkspace, setFormWorkspace] = useState('Work');
+  const [formPrompt, setFormPrompt] = useState('');
+  const [formConnectors, setFormConnectors] = useState<string[]>(['lark']);
+  const [formFreqType, setFormFreqType] = useState<
+    'cycle' | 'interval' | 'once'
+  >('cycle');
+  const [formFreqCycle, setFormFreqCycle] = useState('everyday'); // everyday, everyweek, everymonth
+  const [formFreqTime, setFormFreqTime] = useState('07:45');
+  const [formPushApp, setFormPushApp] = useState(false);
+  const [formPushBot, setFormPushBot] = useState(false);
 
   // 处理拉起新建弹窗
   const handleOpenCreate = () => {
-    setEditingTask(null)
-    setFormName('')
-    setFormWorkspace('Work')
-    setFormPrompt('')
-    setFormConnectors(['lark'])
-    setFormFreqType('cycle')
-    setFormFreqCycle('everyday')
-    setFormFreqTime('07:45')
-    setFormPushApp(false)
-    setFormPushBot(false)
-    setShowModal(true)
-  }
+    setEditingTask(null);
+    setFormName('');
+    setFormWorkspace('Work');
+    setFormPrompt('');
+    setFormConnectors(['lark']);
+    setFormFreqType('cycle');
+    setFormFreqCycle('everyday');
+    setFormFreqTime('07:45');
+    setFormPushApp(false);
+    setFormPushBot(false);
+    setShowModal(true);
+  };
 
   // 处理拉起编辑弹窗
   const handleOpenEdit = (task: AutoTask) => {
-    setEditingTask(task)
-    setFormName(task.name)
-    setFormWorkspace(task.workspace)
-    setFormPrompt(task.prompt)
-    setFormConnectors(task.connectors)
-    setFormFreqType(task.frequencyType)
-    setFormFreqCycle(task.frequencyDetail.includes('月') ? 'everymonth' : task.frequencyDetail.includes('周') ? 'everyweek' : 'everyday')
-    
+    setEditingTask(task);
+    setFormName(task.name);
+    setFormWorkspace(task.workspace);
+    setFormPrompt(task.prompt);
+    setFormConnectors(task.connectors);
+    setFormFreqType(task.frequencyType);
+    setFormFreqCycle(
+      task.frequencyDetail.includes('月')
+        ? 'everymonth'
+        : task.frequencyDetail.includes('周')
+          ? 'everyweek'
+          : 'everyday'
+    );
+
     // 时间解析
-    const timeMatch = task.frequencyDetail.match(/\d{2}:\d{2}/)
-    setFormFreqTime(timeMatch ? timeMatch[0] : '07:45')
-    
-    setFormPushApp(task.pushToWechatApp)
-    setFormPushBot(task.pushToWechatBot)
-    setShowModal(true)
-  }
+    const timeMatch = task.frequencyDetail.match(/\d{2}:\d{2}/);
+    setFormFreqTime(timeMatch ? timeMatch[0] : '07:45');
+
+    setFormPushApp(task.pushToWechatApp);
+    setFormPushBot(task.pushToWechatBot);
+    setShowModal(true);
+  };
 
   // 处理点击模板一键预填新建
   const handleSelectTemplate = (tpl: TemplateItem) => {
-    setEditingTask(null)
-    setFormName(tpl.title)
-    setFormWorkspace('Work')
-    setFormPrompt(tpl.prompt)
-    setFormConnectors(['lark'])
-    setFormFreqType('cycle')
-    setFormFreqCycle('everyday')
-    setFormFreqTime('07:45')
-    setFormPushApp(tpl.prompt.includes('小程序') || tpl.title.includes('提醒'))
-    setFormPushBot(false)
-    setShowModal(true)
-    showToast(`💡 已自动为您载入“${tpl.title}”模板！`)
-  }
+    setEditingTask(null);
+    setFormName(tpl.title);
+    setFormWorkspace('Work');
+    setFormPrompt(tpl.prompt);
+    setFormConnectors(['lark']);
+    setFormFreqType('cycle');
+    setFormFreqCycle('everyday');
+    setFormFreqTime('07:45');
+    setFormPushApp(tpl.prompt.includes('小程序') || tpl.title.includes('提醒'));
+    setFormPushBot(false);
+    setShowModal(true);
+    showToast(`💡 已自动为您载入“${tpl.title}”模板！`);
+  };
 
   // 保存任务
   const handleSaveTask = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formName.trim()) return alert('请输入任务名称')
-    
-    let freqDetail = ''
+    e.preventDefault();
+    if (!formName.trim()) return alert('请输入任务名称');
+
+    let freqDetail = '';
     if (formFreqType === 'cycle') {
-      if (formFreqCycle === 'everyday') freqDetail = `每天 ${formFreqTime}`
-      else if (formFreqCycle === 'everyweek') freqDetail = `每周日 ${formFreqTime}`
-      else freqDetail = `每月 1 日 ${formFreqTime}`
+      if (formFreqCycle === 'everyday') freqDetail = `每天 ${formFreqTime}`;
+      else if (formFreqCycle === 'everyweek')
+        freqDetail = `每周日 ${formFreqTime}`;
+      else freqDetail = `每月 1 日 ${formFreqTime}`;
     } else if (formFreqType === 'interval') {
-      freqDetail = '每隔 2 小时'
+      freqDetail = '每隔 2 小时';
     } else {
-      freqDetail = '单次运行'
+      freqDetail = '单次运行';
     }
 
     if (editingTask) {
       // 更新
-      setTasks(tasks.map(t => t.id === editingTask.id ? {
-        ...t,
-        name: formName,
-        workspace: formWorkspace,
-        prompt: formPrompt,
-        connectors: formConnectors,
-        frequencyType: formFreqType,
-        frequencyDetail: freqDetail,
-        pushToWechatApp: formPushApp,
-        pushToWechatBot: formPushBot
-      } : t))
-      showToast('✅ 任务修改保存成功！')
+      setTasks(
+        tasks.map((t) =>
+          t.id === editingTask.id
+            ? {
+                ...t,
+                name: formName,
+                workspace: formWorkspace,
+                prompt: formPrompt,
+                connectors: formConnectors,
+                frequencyType: formFreqType,
+                frequencyDetail: freqDetail,
+                pushToWechatApp: formPushApp,
+                pushToWechatBot: formPushBot,
+              }
+            : t
+        )
+      );
+      showToast('✅ 任务修改保存成功！');
     } else {
       // 新建
       const newTask: AutoTask = {
@@ -189,86 +207,100 @@ export function AutomationPanel() {
         frequencyDetail: freqDetail,
         pushToWechatApp: formPushApp,
         pushToWechatBot: formPushBot,
-        enabled: true
-      }
-      setTasks([...tasks, newTask])
-      showToast('🎉 新建自动化任务成功！')
+        enabled: true,
+      };
+      setTasks([...tasks, newTask]);
+      showToast('🎉 新建自动化任务成功！');
     }
-    setShowModal(false)
+    setShowModal(false);
     // 强制切回已配置页
-    setActiveTab('configured')
-  }
+    setActiveTab('configured');
+  };
 
   // 删除任务
   const handleDeleteTask = (id: string) => {
-    if (!confirm('确定要删除这个自动化任务吗？')) return
-    setTasks(tasks.filter(t => t.id !== id))
-    showToast('🗑️ 任务已被移除')
-  }
+    if (!confirm('确定要删除这个自动化任务吗？')) return;
+    setTasks(tasks.filter((t) => t.id !== id));
+    showToast('🗑️ 任务已被移除');
+  };
 
   // 切换任务状态
   const toggleTaskEnabled = (id: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, enabled: !t.enabled } : t))
-  }
+    setTasks(
+      tasks.map((t) => (t.id === id ? { ...t, enabled: !t.enabled } : t))
+    );
+  };
 
   return (
-    <div style={{
-      width: '100%',
-      height: '100%',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '24px 32px',
-      boxSizing: 'border-box',
-      background: 'var(--dsw-alias-bg-main, #ffffff)',
-      overflowY: 'auto'
-    }}>
-      {/* 顶部标题栏 */}
-      <div style={{
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        gap: '4px',
-        marginBottom: '16px',
-        width: '100%'
-      }}>
-        <h2 style={{
-          margin: 0,
-          fontSize: '20px',
-          fontWeight: 700,
-          color: 'var(--dsw-alias-label-primary, #0f172a)',
+        padding: '24px 32px',
+        boxSizing: 'border-box',
+        background: 'var(--dsw-alias-bg-main, #ffffff)',
+        overflowY: 'auto',
+      }}
+    >
+      {/* 顶部标题栏 */}
+      <div
+        style={{
           display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
-        }}>
+          flexDirection: 'column',
+          gap: '4px',
+          marginBottom: '16px',
+          width: '100%',
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: '20px',
+            fontWeight: 700,
+            color: 'var(--dsw-alias-label-primary, #0f172a)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
           自动化
         </h2>
-        <p style={{
-          margin: 0,
-          fontSize: '12.5px',
-          color: 'var(--dsw-alias-label-secondary, #64748b)'
-        }}>
+        <p
+          style={{
+            margin: 0,
+            fontSize: '12.5px',
+            color: 'var(--dsw-alias-label-secondary, #64748b)',
+          }}
+        >
           配置和管理自动化任务，按计划自动执行工作流。
         </p>
       </div>
 
       {/* Tabs 页签选择 与 按钮控制组 在同一行 (对齐应用市场) */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-end',
-        marginBottom: '20px',
-        width: '100%',
-        boxSizing: 'border-box'
-      }}>
-        {/* 左侧页签 */}
-        <div style={{
+      <div
+        style={{
           display: 'flex',
-          gap: '24px'
-        }}>
+          justifyContent: 'space-between',
+          alignItems: 'flex-end',
+          marginBottom: '20px',
+          width: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
+        {/* 左侧页签 */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '24px',
+          }}
+        >
           {[
             { id: 'configured', label: '已配置' },
             { id: 'history', label: '执行历史' },
-            { id: 'templates', label: '任务模板' }
-          ].map(tab => (
+            { id: 'templates', label: '任务模板' },
+          ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
@@ -276,12 +308,18 @@ export function AutomationPanel() {
                 padding: '8px 4px 12px 4px',
                 background: 'transparent',
                 border: 'none',
-                borderBottom: activeTab === tab.id ? '2px solid var(--dsw-alias-label-primary, #0f172a)' : '2px solid transparent',
-                color: activeTab === tab.id ? 'var(--dsw-alias-label-primary, #0f172a)' : 'var(--dsw-alias-label-tertiary, #64748b)',
+                borderBottom:
+                  activeTab === tab.id
+                    ? '2px solid var(--dsw-alias-label-primary, #0f172a)'
+                    : '2px solid transparent',
+                color:
+                  activeTab === tab.id
+                    ? 'var(--dsw-alias-label-primary, #0f172a)'
+                    : 'var(--dsw-alias-label-tertiary, #64748b)',
                 fontSize: '14px',
                 fontWeight: activeTab === tab.id ? 600 : 500,
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
               }}
             >
               {tab.label}
@@ -291,7 +329,7 @@ export function AutomationPanel() {
 
         {/* 右侧动作按钮组 (向上浮动以与页签视觉对齐，且不贴死底线) */}
         <div style={{ display: 'flex', gap: '10px', paddingBottom: '8px' }}>
-          <button 
+          <button
             onClick={handleOpenCreate}
             style={{
               height: '32px',
@@ -307,26 +345,33 @@ export function AutomationPanel() {
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              transition: 'background 0.15s ease'
+              transition: 'background 0.15s ease',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc' }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#ffffff' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f8fafc';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ffffff';
+            }}
           >
             手动新建
           </button>
-          
-          <button 
+
+          <button
             onClick={() => {
-              window.location.hash = '#/'
+              window.location.hash = '#/';
               setTimeout(() => {
-                const textarea: any = document.querySelector('textarea')
+                const textarea: any = document.querySelector('textarea');
                 if (textarea) {
-                  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
-                  setter?.call(textarea, '帮我创建一个自动化任务：')
-                  textarea.dispatchEvent(new Event('input', { bubbles: true }))
-                  textarea.focus()
+                  const setter = Object.getOwnPropertyDescriptor(
+                    HTMLTextAreaElement.prototype,
+                    'value'
+                  )?.set;
+                  setter?.call(textarea, '帮我创建一个自动化任务：');
+                  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                  textarea.focus();
                 }
-              }, 250)
+              }, 250);
             }}
             style={{
               height: '32px',
@@ -343,12 +388,25 @@ export function AutomationPanel() {
               justifyContent: 'center',
               gap: '6px',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              transition: 'opacity 0.15s ease'
+              transition: 'opacity 0.15s ease',
             }}
-            onMouseEnter={e => { e.currentTarget.style.opacity = '0.9' }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.opacity = '0.9';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.opacity = '1';
+            }}
           >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
             </svg>
             在对话中创建
@@ -360,49 +418,88 @@ export function AutomationPanel() {
       <div style={{ flex: 1, width: '100%', boxSizing: 'border-box' }}>
         {/* Tab 1: 已配置 */}
         {activeTab === 'configured' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%' }}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              width: '100%',
+            }}
+          >
             {tasks.length > 0 ? (
               <>
                 {/* 电脑保持唤醒通知条 */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '10px 16px',
-                  borderRadius: '10px',
-                  background: 'rgba(59, 130, 246, 0.06)',
-                  border: '1px solid rgba(59, 130, 246, 0.12)',
-                  fontSize: '12px',
-                  color: '#1e40af'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    background: 'rgba(59, 130, 246, 0.06)',
+                    border: '1px solid rgba(59, 130, 246, 0.12)',
+                    fontSize: '12px',
+                    color: '#1e40af',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      style={{ flexShrink: 0 }}
+                    >
                       <circle cx="12" cy="12" r="10"></circle>
                       <line x1="12" y1="16" x2="12" y2="12"></line>
                       <line x1="12" y1="8" x2="12.01" y2="8"></line>
                     </svg>
                     <span>本地任务仅在「电脑保持唤醒」时运行</span>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '11px', color: '#475569' }}>保持电脑唤醒</span>
-                    <input 
-                      type="checkbox" 
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}
+                  >
+                    <span style={{ fontSize: '11px', color: '#475569' }}>
+                      保持电脑唤醒
+                    </span>
+                    <input
+                      type="checkbox"
                       checked={keepAwake}
                       onChange={() => setKeepAwake(!keepAwake)}
                       style={{
                         width: '28px',
                         height: '16px',
                         cursor: 'pointer',
-                        accentColor: '#1e40af'
+                        accentColor: '#1e40af',
                       }}
                     />
                   </div>
                 </div>
 
                 {/* 任务列表容器 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {tasks.map(task => (
-                    <div 
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  {tasks.map((task) => (
+                    <div
                       key={task.id}
                       style={{
                         display: 'flex',
@@ -414,67 +511,120 @@ export function AutomationPanel() {
                         background: 'var(--dsw-alias-bg-card, #ffffff)',
                         boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
                         transition: 'border-color 0.15s ease',
-                        position: 'relative'
+                        position: 'relative',
                       }}
                     >
                       {/* 左侧信息 */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-                        <div style={{
-                          width: '36px',
-                          height: '36px',
-                          borderRadius: '8px',
-                          background: '#f8fafc',
+                      <div
+                        style={{
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          border: '1px solid var(--dsw-alias-border, #e2e8f0)'
-                        }}>
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                          gap: '12px',
+                          minWidth: 0,
+                          flex: 1,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '8px',
+                            background: '#f8fafc',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border:
+                              '1px solid var(--dsw-alias-border, #e2e8f0)',
+                          }}
+                        >
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#64748b"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
                           </svg>
                         </div>
-                        
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span 
+
+                        <div
+                          style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '2px',
+                            minWidth: 0,
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                            }}
+                          >
+                            <span
                               onClick={() => handleOpenEdit(task)}
                               style={{
                                 fontSize: '13.5px',
                                 fontWeight: 600,
-                                color: 'var(--dsw-alias-label-primary, #0f172a)',
-                                cursor: 'pointer'
+                                color:
+                                  'var(--dsw-alias-label-primary, #0f172a)',
+                                cursor: 'pointer',
                               }}
                             >
                               {task.name}
                             </span>
                             {task.workspace && (
-                              <span style={{
-                                fontSize: '10px',
-                                color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                                background: '#f1f5f9',
-                                padding: '1px 6px',
-                                borderRadius: '4px',
-                                fontWeight: 500
-                              }}>{task.workspace}</span>
+                              <span
+                                style={{
+                                  fontSize: '10px',
+                                  color:
+                                    'var(--dsw-alias-label-tertiary, #64748b)',
+                                  background: '#f1f5f9',
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  fontWeight: 500,
+                                }}
+                              >
+                                {task.workspace}
+                              </span>
                             )}
                           </div>
-                          
-                          <span style={{
-                            fontSize: '11.5px',
-                            color: 'var(--dsw-alias-label-tertiary, #64748b)'
-                          }}>{task.frequencyDetail}</span>
+
+                          <span
+                            style={{
+                              fontSize: '11.5px',
+                              color: 'var(--dsw-alias-label-tertiary, #64748b)',
+                            }}
+                          >
+                            {task.frequencyDetail}
+                          </span>
                         </div>
                       </div>
 
                       {/* 右侧动作按钮 */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexShrink: 0, position: 'relative' }}>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '16px',
+                          flexShrink: 0,
+                          position: 'relative',
+                        }}
+                      >
                         {/* 更多操作 三点按钮 ... */}
                         <div style={{ position: 'relative' }}>
                           <button
                             title="更多操作"
                             onClick={(e) => {
-                              e.stopPropagation()
-                              setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id)
+                              e.stopPropagation();
+                              setActiveMenuTaskId(
+                                activeMenuTaskId === task.id ? null : task.id
+                              );
                             }}
                             style={{
                               border: 'none',
@@ -486,12 +636,25 @@ export function AutomationPanel() {
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              transition: 'background 0.15s ease'
+                              transition: 'background 0.15s ease',
                             }}
-                            onMouseEnter={e => { e.currentTarget.style.background = '#f1f5f9' }}
-                            onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#f1f5f9';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
                           >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
                               <circle cx="12" cy="12" r="1.5"></circle>
                               <circle cx="19" cy="12" r="1.5"></circle>
                               <circle cx="5" cy="12" r="1.5"></circle>
@@ -502,10 +665,10 @@ export function AutomationPanel() {
                           {activeMenuTaskId === task.id && (
                             <>
                               {/* 遮罩背景，用于点击空白处自动关闭 */}
-                              <div 
+                              <div
                                 onClick={(e) => {
-                                  e.stopPropagation()
-                                  setActiveMenuTaskId(null)
+                                  e.stopPropagation();
+                                  setActiveMenuTaskId(null);
                                 }}
                                 style={{
                                   position: 'fixed',
@@ -514,61 +677,102 @@ export function AutomationPanel() {
                                   right: 0,
                                   bottom: 0,
                                   zIndex: 998,
-                                  background: 'transparent'
+                                  background: 'transparent',
                                 }}
                               />
-                              <div 
+                              <div
                                 onClick={(e) => e.stopPropagation()}
                                 style={{
                                   position: 'absolute',
                                   right: '0px',
                                   top: '32px',
-                                  background: 'var(--dsw-alias-bg-card, #ffffff)',
+                                  background:
+                                    'var(--dsw-alias-bg-card, #ffffff)',
                                   borderRadius: '12px',
-                                  border: '1px solid var(--dsw-alias-border, rgba(0,0,0,0.06))',
-                                  boxShadow: '0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02)',
+                                  border:
+                                    '1px solid var(--dsw-alias-border, rgba(0,0,0,0.06))',
+                                  boxShadow:
+                                    '0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02)',
                                   padding: '6px',
                                   zIndex: 999,
                                   minWidth: '120px',
                                   boxSizing: 'border-box',
                                   display: 'flex',
                                   flexDirection: 'column',
-                                  gap: '2px'
+                                  gap: '2px',
                                 }}
                               >
                                 {/* 暂停 / 启用选项 (对齐截图 1) */}
-                                <div 
+                                <div
                                   onClick={() => {
-                                    toggleTaskEnabled(task.id)
-                                    setActiveMenuTaskId(null)
+                                    toggleTaskEnabled(task.id);
+                                    setActiveMenuTaskId(null);
                                   }}
                                   style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
-                                    color: 'var(--dsw-alias-label-primary, #334155)',
+                                    color:
+                                      'var(--dsw-alias-label-primary, #334155)',
                                     padding: '8px 12px',
                                     fontSize: '13px',
                                     cursor: 'pointer',
                                     borderRadius: '8px',
                                     transition: 'background 0.15s ease',
-                                    fontWeight: 500
+                                    fontWeight: 500,
                                   }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0, 0, 0, 0.04)' }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background =
+                                      'rgba(0, 0, 0, 0.04)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background =
+                                      'transparent';
+                                  }}
                                 >
                                   {task.enabled ? (
                                     <>
-                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="6" y="4" width="4" height="16"></rect>
-                                        <rect x="14" y="4" width="4" height="16"></rect>
+                                      <svg
+                                        width="13"
+                                        height="13"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <rect
+                                          x="6"
+                                          y="4"
+                                          width="4"
+                                          height="16"
+                                        ></rect>
+                                        <rect
+                                          x="14"
+                                          y="4"
+                                          width="4"
+                                          height="16"
+                                        ></rect>
                                       </svg>
                                       暂停
                                     </>
                                   ) : (
                                     <>
-                                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"></polygon>
+                                      <svg
+                                        width="13"
+                                        height="13"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                      >
+                                        <polygon
+                                          points="5 3 19 12 5 21 5 3"
+                                          fill="currentColor"
+                                        ></polygon>
                                       </svg>
                                       启用
                                     </>
@@ -576,27 +780,43 @@ export function AutomationPanel() {
                                 </div>
 
                                 {/* 删除选项 (对齐截图 1 极简灰度色，不花哨) */}
-                                <div 
+                                <div
                                   onClick={() => {
-                                    handleDeleteTask(task.id)
-                                    setActiveMenuTaskId(null)
+                                    handleDeleteTask(task.id);
+                                    setActiveMenuTaskId(null);
                                   }}
                                   style={{
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '8px',
-                                    color: 'var(--dsw-alias-label-primary, #334155)',
+                                    color:
+                                      'var(--dsw-alias-label-primary, #334155)',
                                     padding: '8px 12px',
                                     fontSize: '13px',
                                     cursor: 'pointer',
                                     borderRadius: '8px',
                                     transition: 'background 0.15s ease',
-                                    fontWeight: 500
+                                    fontWeight: 500,
                                   }}
-                                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(0, 0, 0, 0.04)' }}
-                                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background =
+                                      'rgba(0, 0, 0, 0.04)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background =
+                                      'transparent';
+                                  }}
                                 >
-                                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                  <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
                                     <polyline points="3 6 5 6 21 6"></polyline>
                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                   </svg>
@@ -623,19 +843,35 @@ export function AutomationPanel() {
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            transition: 'color 0.15s ease'
+                            transition: 'color 0.15s ease',
                           }}
-                          onMouseEnter={e => { e.currentTarget.style.color = '#000000' }}
-                          onMouseLeave={e => { e.currentTarget.style.color = '#334155' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.color = '#000000';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.color = '#334155';
+                          }}
                         >
-                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <svg
+                            width="18"
+                            height="18"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
                             <circle cx="12" cy="12" r="10"></circle>
-                            <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"></polygon>
+                            <polygon
+                              points="10 8 16 12 10 16 10 8"
+                              fill="currentColor"
+                            ></polygon>
                           </svg>
                         </button>
 
                         {/* 启用 Toggle 滑动 Switch 开关 (100% 对齐截图 2 绿色 iOS滑块) */}
-                        <div 
+                        <div
                           onClick={() => toggleTaskEnabled(task.id)}
                           style={{
                             width: '34px',
@@ -646,20 +882,23 @@ export function AutomationPanel() {
                             cursor: 'pointer',
                             transition: 'background-color 0.2s ease',
                             boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.05)',
-                            flexShrink: 0
+                            flexShrink: 0,
                           }}
                         >
-                          <span style={{
-                            width: '14px',
-                            height: '14px',
-                            borderRadius: '50%',
-                            background: '#ffffff',
-                            position: 'absolute',
-                            top: '3px',
-                            left: task.enabled ? '17px' : '3px',
-                            transition: 'left 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                          }} />
+                          <span
+                            style={{
+                              width: '14px',
+                              height: '14px',
+                              borderRadius: '50%',
+                              background: '#ffffff',
+                              position: 'absolute',
+                              top: '3px',
+                              left: task.enabled ? '17px' : '3px',
+                              transition:
+                                'left 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                              boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                            }}
+                          />
                         </div>
                       </div>
                     </div>
@@ -668,37 +907,54 @@ export function AutomationPanel() {
               </>
             ) : (
               /* 空状态，100% 对齐截图 1 */
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                padding: '60px 0 40px 0',
-                width: '100%',
-                boxSizing: 'border-box'
-              }}>
-                <div style={{
-                  width: '64px',
-                  height: '64px',
-                  borderRadius: '50%',
-                  background: '#f8fafc',
+              <div
+                style={{
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginBottom: '16px',
-                  border: '1px dashed var(--dsw-alias-border, #cbd5e1)'
-                }}>
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--dsw-alias-label-tertiary, #94a3b8)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  padding: '60px 0 40px 0',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                }}
+              >
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    background: '#f8fafc',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: '16px',
+                    border: '1px dashed var(--dsw-alias-border, #cbd5e1)',
+                  }}
+                >
+                  <svg
+                    width="28"
+                    height="28"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="var(--dsw-alias-label-tertiary, #94a3b8)"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
                     <circle cx="12" cy="12" r="10"></circle>
                     <polyline points="12 6 12 12 16 14"></polyline>
                   </svg>
                 </div>
-                <p style={{
-                  margin: '0 0 20px 0',
-                  fontSize: '13px',
-                  color: 'var(--dsw-alias-label-tertiary, #94a3b8)'
-                }}>开启你的第一个自动化任务吧</p>
-                
+                <p
+                  style={{
+                    margin: '0 0 20px 0',
+                    fontSize: '13px',
+                    color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
+                  }}
+                >
+                  开启你的第一个自动化任务吧
+                </p>
+
                 <button
                   onClick={handleOpenCreate}
                   style={{
@@ -714,7 +970,7 @@ export function AutomationPanel() {
                     boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px'
+                    gap: '4px',
                   }}
                 >
                   ＋ 添加自动化
@@ -722,21 +978,31 @@ export function AutomationPanel() {
 
                 {/* 任务模板区 */}
                 <div style={{ width: '100%', marginTop: '60px' }}>
-                  <h3 style={{
-                    fontSize: '14px',
-                    fontWeight: 700,
-                    color: 'var(--dsw-alias-label-primary, #0f172a)',
-                    marginBottom: '16px',
-                    textAlign: 'left'
-                  }}>自动化任务模版</h3>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                    gap: '12px',
-                    width: '100%'
-                  }}>
-                    {AUTOMATION_TEMPLATES.map(tpl => (
-                      <TemplateCard key={tpl.id} tpl={tpl} onClick={() => handleSelectTemplate(tpl)} />
+                  <h3
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 700,
+                      color: 'var(--dsw-alias-label-primary, #0f172a)',
+                      marginBottom: '16px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    自动化任务模版
+                  </h3>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      gap: '12px',
+                      width: '100%',
+                    }}
+                  >
+                    {AUTOMATION_TEMPLATES.map((tpl) => (
+                      <TemplateCard
+                        key={tpl.id}
+                        tpl={tpl}
+                        onClick={() => handleSelectTemplate(tpl)}
+                      />
                     ))}
                   </div>
                 </div>
@@ -747,42 +1013,139 @@ export function AutomationPanel() {
 
         {/* Tab 2: 执行历史 */}
         {activeTab === 'history' && (
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-            overflow: 'hidden',
-            width: '100%'
-          }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+              overflow: 'hidden',
+              width: '100%',
+            }}
+          >
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                fontSize: '13px',
+                textAlign: 'left',
+              }}
+            >
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid var(--dsw-alias-border, #e2e8f0)' }}>
-                  <th style={{ padding: '12px 16px', color: 'var(--dsw-alias-label-secondary, #64748b)', fontWeight: 600 }}>运行时间</th>
-                  <th style={{ padding: '12px 16px', color: 'var(--dsw-alias-label-secondary, #64748b)', fontWeight: 600 }}>自动化任务</th>
-                  <th style={{ padding: '12px 16px', color: 'var(--dsw-alias-label-secondary, #64748b)', fontWeight: 600 }}>耗时</th>
-                  <th style={{ padding: '12px 16px', color: 'var(--dsw-alias-label-secondary, #64748b)', fontWeight: 600 }}>执行状态</th>
-                  <th style={{ padding: '12px 16px', color: 'var(--dsw-alias-label-secondary, #64748b)', fontWeight: 600 }}>日志详情</th>
+                <tr
+                  style={{
+                    background: '#f8fafc',
+                    borderBottom: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                  }}
+                >
+                  <th
+                    style={{
+                      padding: '12px 16px',
+                      color: 'var(--dsw-alias-label-secondary, #64748b)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    运行时间
+                  </th>
+                  <th
+                    style={{
+                      padding: '12px 16px',
+                      color: 'var(--dsw-alias-label-secondary, #64748b)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    自动化任务
+                  </th>
+                  <th
+                    style={{
+                      padding: '12px 16px',
+                      color: 'var(--dsw-alias-label-secondary, #64748b)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    耗时
+                  </th>
+                  <th
+                    style={{
+                      padding: '12px 16px',
+                      color: 'var(--dsw-alias-label-secondary, #64748b)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    执行状态
+                  </th>
+                  <th
+                    style={{
+                      padding: '12px 16px',
+                      color: 'var(--dsw-alias-label-secondary, #64748b)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    日志详情
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {historyList.map((item, idx) => (
-                  <tr key={item.id} style={{ borderBottom: idx < historyList.length - 1 ? '1px solid var(--dsw-alias-border, #f1f5f9)' : 'none' }}>
-                    <td style={{ padding: '14px 16px', color: 'var(--dsw-alias-label-tertiary, #64748b)' }}>{item.time}</td>
-                    <td style={{ padding: '14px 16px', color: 'var(--dsw-alias-label-primary, #0f172a)', fontWeight: 500 }}>{item.taskName}</td>
-                    <td style={{ padding: '14px 16px', color: 'var(--dsw-alias-label-tertiary, #64748b)' }}>{item.duration}</td>
+                  <tr
+                    key={item.id}
+                    style={{
+                      borderBottom:
+                        idx < historyList.length - 1
+                          ? '1px solid var(--dsw-alias-border, #f1f5f9)'
+                          : 'none',
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: '14px 16px',
+                        color: 'var(--dsw-alias-label-tertiary, #64748b)',
+                      }}
+                    >
+                      {item.time}
+                    </td>
+                    <td
+                      style={{
+                        padding: '14px 16px',
+                        color: 'var(--dsw-alias-label-primary, #0f172a)',
+                        fontWeight: 500,
+                      }}
+                    >
+                      {item.taskName}
+                    </td>
+                    <td
+                      style={{
+                        padding: '14px 16px',
+                        color: 'var(--dsw-alias-label-tertiary, #64748b)',
+                      }}
+                    >
+                      {item.duration}
+                    </td>
                     <td style={{ padding: '14px 16px' }}>
-                      <span style={{
-                        fontSize: '11px',
-                        color: item.status === 'success' ? '#16a34a' : '#dc2626',
-                        background: item.status === 'success' ? 'rgba(34, 197, 94, 0.08)' : 'rgba(239, 68, 68, 0.08)',
-                        padding: '2px 6px',
-                        borderRadius: '4px',
-                        fontWeight: 500
-                      }}>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          color:
+                            item.status === 'success' ? '#16a34a' : '#dc2626',
+                          background:
+                            item.status === 'success'
+                              ? 'rgba(34, 197, 94, 0.08)'
+                              : 'rgba(239, 68, 68, 0.08)',
+                          padding: '2px 6px',
+                          borderRadius: '4px',
+                          fontWeight: 500,
+                        }}
+                      >
                         {item.status === 'success' ? '成功' : '失败'}
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px', color: 'var(--dsw-alias-label-tertiary, #64748b)' }}>{item.message}</td>
+                    <td
+                      style={{
+                        padding: '14px 16px',
+                        color: 'var(--dsw-alias-label-tertiary, #64748b)',
+                      }}
+                    >
+                      {item.message}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -792,14 +1155,20 @@ export function AutomationPanel() {
 
         {/* Tab 3: 任务模板 */}
         {activeTab === 'templates' && (
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: '12px',
-            width: '100%'
-          }}>
-            {AUTOMATION_TEMPLATES.map(tpl => (
-              <TemplateCard key={tpl.id} tpl={tpl} onClick={() => handleSelectTemplate(tpl)} />
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+              gap: '12px',
+              width: '100%',
+            }}
+          >
+            {AUTOMATION_TEMPLATES.map((tpl) => (
+              <TemplateCard
+                key={tpl.id}
+                tpl={tpl}
+                onClick={() => handleSelectTemplate(tpl)}
+              />
             ))}
           </div>
         )}
@@ -807,53 +1176,77 @@ export function AutomationPanel() {
 
       {/* 新建/编辑自动化大抽屉弹窗 (完全还原图 3) */}
       {showModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.4)',
-          display: 'flex',
-          justifyContent: 'flex-end',
-          zIndex: 999,
-          backdropFilter: 'blur(3px)',
-          animation: 'fade-in 0.15s ease'
-        }} onClick={() => setShowModal(false)}>
-          <div style={{
-            width: '560px',
-            height: '100%',
-            background: 'var(--dsw-alias-bg-card, #ffffff)',
-            borderLeft: '1px solid var(--dsw-alias-border, #e2e8f0)',
-            boxShadow: '-4px 0 25px rgba(0,0,0,0.08)',
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
             display: 'flex',
-            flexDirection: 'column',
-            animation: 'slide-left 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-            boxSizing: 'border-box'
-          }} onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div style={{
-              padding: '18px 24px',
-              borderBottom: '1px solid #f1f5f9',
+            justifyContent: 'flex-end',
+            zIndex: 999,
+            backdropFilter: 'blur(3px)',
+            animation: 'fade-in 0.15s ease',
+          }}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            style={{
+              width: '560px',
+              height: '100%',
+              background: 'var(--dsw-alias-bg-card, #ffffff)',
+              borderLeft: '1px solid var(--dsw-alias-border, #e2e8f0)',
+              boxShadow: '-4px 0 25px rgba(0,0,0,0.08)',
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              boxSizing: 'border-box'
-            }}>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#0f172a' }}>
+              flexDirection: 'column',
+              animation: 'slide-left 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+              boxSizing: 'border-box',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div
+              style={{
+                padding: '18px 24px',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                boxSizing: 'border-box',
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  color: '#0f172a',
+                }}
+              >
                 {editingTask ? '编辑自动化' : '新建自动化'}
               </h3>
-              <button 
+              <button
                 onClick={() => setShowModal(false)}
                 style={{
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
                   color: '#94a3b8',
-                  padding: '4px'
+                  padding: '4px',
                 }}
               >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
@@ -861,22 +1254,35 @@ export function AutomationPanel() {
             </div>
 
             {/* Scroll Form Body */}
-            <form onSubmit={handleSaveTask} style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '18px',
-              boxSizing: 'border-box'
-            }}>
+            <form
+              onSubmit={handleSaveTask}
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '18px',
+                boxSizing: 'border-box',
+              }}
+            >
               {/*名称 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>名称</label>
-                <input 
-                  type="text" 
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                  }}
+                >
+                  名称
+                </label>
+                <input
+                  type="text"
                   value={formName}
-                  onChange={e => setFormName(e.target.value)}
+                  onChange={(e) => setFormName(e.target.value)}
                   placeholder="请输入自动化任务名称"
                   style={{
                     height: '34px',
@@ -885,20 +1291,31 @@ export function AutomationPanel() {
                     border: '1px solid #cbd5e1',
                     fontSize: '13px',
                     outline: 'none',
-                    background: '#ffffff'
+                    background: '#ffffff',
                   }}
                 />
               </div>
 
               {/*工作空间 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                  工作空间 <span style={{ fontWeight: 400, color: '#94a3b8' }}>(可选)</span>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                  }}
+                >
+                  工作空间{' '}
+                  <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                    (可选)
+                  </span>
                 </label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={formWorkspace}
-                  onChange={e => setFormWorkspace(e.target.value)}
+                  onChange={(e) => setFormWorkspace(e.target.value)}
                   placeholder="选择工作空间"
                   style={{
                     height: '34px',
@@ -907,25 +1324,37 @@ export function AutomationPanel() {
                     border: '1px solid #cbd5e1',
                     fontSize: '13px',
                     outline: 'none',
-                    background: '#ffffff'
+                    background: '#ffffff',
                   }}
                 />
               </div>
 
               {/*提示词 (带四个底部小微标标签，完全还原图 3) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>提示词</label>
-                <div style={{
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '10px',
-                  overflow: 'hidden',
-                  background: '#ffffff',
-                  display: 'flex',
-                  flexDirection: 'column'
-                }}>
-                  <textarea 
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                  }}
+                >
+                  提示词
+                </label>
+                <div
+                  style={{
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    background: '#ffffff',
+                    display: 'flex',
+                    flexDirection: 'column',
+                  }}
+                >
+                  <textarea
                     value={formPrompt}
-                    onChange={e => setFormPrompt(e.target.value)}
+                    onChange={(e) => setFormPrompt(e.target.value)}
                     placeholder="请输入当自动化运行时，希望智能体执行的具体工作内容或流程..."
                     style={{
                       height: '110px',
@@ -935,34 +1364,73 @@ export function AutomationPanel() {
                       fontSize: '13px',
                       lineHeight: '1.5',
                       resize: 'none',
-                      fontFamily: 'inherit'
+                      fontFamily: 'inherit',
                     }}
                   />
                   {/* 输入框底部小辅助条 */}
-                  <div style={{
-                    padding: '6px 12px',
-                    background: '#f8fafc',
-                    borderTop: '1px solid #f1f5f9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    fontSize: '11.5px',
-                    color: '#64748b'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <div
+                    style={{
+                      padding: '6px 12px',
+                      background: '#f8fafc',
+                      borderTop: '1px solid #f1f5f9',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      fontSize: '11.5px',
+                      color: '#64748b',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                      >
                         <circle cx="12" cy="12" r="10"></circle>
                         <polygon points="10 8 16 12 10 16 10 8"></polygon>
                       </svg>
                       Auto ▾
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        cursor: 'pointer',
+                      }}
+                    >
                       ⚙ 技能 ▾
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        cursor: 'pointer',
+                      }}
+                    >
                       🤖 召唤智能体 ▾
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px', cursor: 'pointer', color: '#ea580c', fontWeight: 500 }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        cursor: 'pointer',
+                        color: '#ea580c',
+                        fontWeight: 500,
+                      }}
+                    >
                       ⚠ 完全访问权限 ▾
                     </div>
                   </div>
@@ -970,27 +1438,40 @@ export function AutomationPanel() {
               </div>
 
               {/*连接器 (选择已授权) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                  连接器 <span style={{ fontWeight: 400, color: '#94a3b8' }}>(勾选即授权该连接器在任务中免确认使用)</span>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                  }}
+                >
+                  连接器{' '}
+                  <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                    (勾选即授权该连接器在任务中免确认使用)
+                  </span>
                 </label>
-                <div style={{
-                  padding: '8px 12px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#f8fafc',
-                  fontSize: '13px',
-                  color: '#334155',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
-                  <input 
-                    type="checkbox" 
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '8px',
+                    border: '1px solid #cbd5e1',
+                    background: '#f8fafc',
+                    fontSize: '13px',
+                    color: '#334155',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <input
+                    type="checkbox"
                     checked={formConnectors.includes('lark')}
                     onChange={(e) => {
-                      if (e.target.checked) setFormConnectors(['lark'])
-                      else setFormConnectors([])
+                      if (e.target.checked) setFormConnectors(['lark']);
+                      else setFormConnectors([]);
                     }}
                     style={{ cursor: 'pointer' }}
                   />
@@ -999,25 +1480,38 @@ export function AutomationPanel() {
               </div>
 
               {/*执行频率 (Tab + 下拉) */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                  执行频率 <span style={{ fontWeight: 400, color: '#94a3b8' }}>(建议避开上午高峰时段，选择非高峰期执行更稳定)</span>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                  }}
+                >
+                  执行频率{' '}
+                  <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                    (建议避开上午高峰时段，选择非高峰期执行更稳定)
+                  </span>
                 </label>
-                
+
                 {/* 频率 Tab 切换 */}
-                <div style={{
-                  display: 'flex',
-                  gap: '6px',
-                  background: '#f1f5f9',
-                  padding: '3px',
-                  borderRadius: '8px',
-                  width: 'fit-content'
-                }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '6px',
+                    background: '#f1f5f9',
+                    padding: '3px',
+                    borderRadius: '8px',
+                    width: 'fit-content',
+                  }}
+                >
                   {[
                     { id: 'cycle', label: '周期' },
                     { id: 'interval', label: '按间隔' },
-                    { id: 'once', label: '单次' }
-                  ].map(f => (
+                    { id: 'once', label: '单次' },
+                  ].map((f) => (
                     <button
                       key={f.id}
                       type="button"
@@ -1026,12 +1520,16 @@ export function AutomationPanel() {
                         padding: '4px 16px',
                         border: 'none',
                         borderRadius: '6px',
-                        background: formFreqType === f.id ? '#ffffff' : 'transparent',
+                        background:
+                          formFreqType === f.id ? '#ffffff' : 'transparent',
                         color: formFreqType === f.id ? '#0f172a' : '#64748b',
                         fontSize: '12px',
                         fontWeight: formFreqType === f.id ? 600 : 500,
                         cursor: 'pointer',
-                        boxShadow: formFreqType === f.id ? '0 1px 2px rgba(0,0,0,0.05)' : 'none'
+                        boxShadow:
+                          formFreqType === f.id
+                            ? '0 1px 2px rgba(0,0,0,0.05)'
+                            : 'none',
                       }}
                     >
                       {f.label}
@@ -1041,10 +1539,17 @@ export function AutomationPanel() {
 
                 {/* 周期表单展开细节 (高还原图 3) */}
                 {formFreqType === 'cycle' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginTop: '4px',
+                    }}
+                  >
                     <select
                       value={formFreqCycle}
-                      onChange={e => setFormFreqCycle(e.target.value)}
+                      onChange={(e) => setFormFreqCycle(e.target.value)}
                       style={{
                         height: '34px',
                         padding: '0 8px',
@@ -1052,7 +1557,7 @@ export function AutomationPanel() {
                         border: '1px solid #cbd5e1',
                         background: '#ffffff',
                         fontSize: '12.5px',
-                        width: '100px'
+                        width: '100px',
                       }}
                     >
                       <option value="everyday">每天</option>
@@ -1060,10 +1565,10 @@ export function AutomationPanel() {
                       <option value="everymonth">每月 1 日</option>
                     </select>
 
-                    <input 
-                      type="time" 
+                    <input
+                      type="time"
                       value={formFreqTime}
-                      onChange={e => setFormFreqTime(e.target.value)}
+                      onChange={(e) => setFormFreqTime(e.target.value)}
                       style={{
                         height: '34px',
                         padding: '0 8px',
@@ -1071,7 +1576,7 @@ export function AutomationPanel() {
                         border: '1px solid #cbd5e1',
                         background: '#ffffff',
                         fontSize: '12.5px',
-                        width: '110px'
+                        width: '110px',
                       }}
                     />
                   </div>
@@ -1079,10 +1584,19 @@ export function AutomationPanel() {
 
                 {/* 按间隔表单展开 */}
                 {formFreqType === 'interval' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px', fontSize: '13px', color: '#475569' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginTop: '4px',
+                      fontSize: '13px',
+                      color: '#475569',
+                    }}
+                  >
                     <span>每隔</span>
-                    <input 
-                      type="number" 
+                    <input
+                      type="number"
                       defaultValue={2}
                       style={{
                         height: '34px',
@@ -1090,16 +1604,18 @@ export function AutomationPanel() {
                         padding: '0 8px',
                         borderRadius: '6px',
                         border: '1px solid #cbd5e1',
-                        fontSize: '12.5px'
+                        fontSize: '12.5px',
                       }}
                     />
-                    <select style={{
-                      height: '34px',
-                      padding: '0 8px',
-                      borderRadius: '6px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '12.5px'
-                    }}>
+                    <select
+                      style={{
+                        height: '34px',
+                        padding: '0 8px',
+                        borderRadius: '6px',
+                        border: '1px solid #cbd5e1',
+                        fontSize: '12.5px',
+                      }}
+                    >
                       <option>小时</option>
                       <option>分钟</option>
                     </select>
@@ -1108,19 +1624,37 @@ export function AutomationPanel() {
 
                 {/* 单次表单展开 */}
                 {formFreqType === 'once' && (
-                  <div style={{ marginTop: '4px', fontSize: '12px', color: '#64748b' }}>
-                    任务将仅被单次触发（您也可以随时在面板中点击“▶ 运行”立即执行）。
+                  <div
+                    style={{
+                      marginTop: '4px',
+                      fontSize: '12px',
+                      color: '#64748b',
+                    }}
+                  >
+                    任务将仅被单次触发（您也可以随时在面板中点击“▶
+                    运行”立即执行）。
                   </div>
                 )}
               </div>
 
               {/* 生效日期区间 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-                  生效日期区间 <span style={{ fontWeight: 400, color: '#94a3b8' }}>(可选，留空表示始终生效)</span>
+              <div
+                style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
+              >
+                <label
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                  }}
+                >
+                  生效日期区间{' '}
+                  <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                    (可选，留空表示始终生效)
+                  </span>
                 </label>
-                <input 
-                  type="date" 
+                <input
+                  type="date"
                   placeholder="选择生效日期"
                   style={{
                     height: '34px',
@@ -1129,35 +1663,81 @@ export function AutomationPanel() {
                     border: '1px solid #cbd5e1',
                     fontSize: '13px',
                     outline: 'none',
-                    background: '#ffffff'
+                    background: '#ffffff',
                   }}
                 />
               </div>
 
               {/* 推送通道 */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px', color: '#334155' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  marginTop: '10px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    fontSize: '12.5px',
+                    color: '#334155',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
                     <span>推送到微信小程序</span>
-                    <span title="推送并接收微信推送卡片服务" style={{ cursor: 'help', color: '#94a3b8' }}>ⓘ</span>
+                    <span
+                      title="推送并接收微信推送卡片服务"
+                      style={{ cursor: 'help', color: '#94a3b8' }}
+                    >
+                      ⓘ
+                    </span>
                   </div>
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={formPushApp}
-                    onChange={e => setFormPushApp(e.target.checked)}
+                    onChange={(e) => setFormPushApp(e.target.checked)}
                     style={{ cursor: 'pointer' }}
                   />
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', justifycontent: 'space-between', justifyContent: 'space-between', fontSize: '12.5px', color: '#334155' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifycontent: 'space-between',
+                    justifyContent: 'space-between',
+                    fontSize: '12.5px',
+                    color: '#334155',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
                     <span>推送到企业微信 bot</span>
-                    <span title="向绑定的企业微信机器人推送消息" style={{ cursor: 'help', color: '#94a3b8' }}>ⓘ</span>
+                    <span
+                      title="向绑定的企业微信机器人推送消息"
+                      style={{ cursor: 'help', color: '#94a3b8' }}
+                    >
+                      ⓘ
+                    </span>
                   </div>
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={formPushBot}
-                    onChange={e => setFormPushBot(e.target.checked)}
+                    onChange={(e) => setFormPushBot(e.target.checked)}
                     style={{ cursor: 'pointer' }}
                   />
                 </div>
@@ -1165,14 +1745,16 @@ export function AutomationPanel() {
             </form>
 
             {/* Footer */}
-            <div style={{
-              padding: '18px 24px',
-              borderTop: '1px solid #f1f5f9',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '10px',
-              boxSizing: 'border-box'
-            }}>
+            <div
+              style={{
+                padding: '18px 24px',
+                borderTop: '1px solid #f1f5f9',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '10px',
+                boxSizing: 'border-box',
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
@@ -1184,7 +1766,7 @@ export function AutomationPanel() {
                   background: '#ffffff',
                   color: '#334155',
                   fontSize: '13px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
                 }}
               >
                 取消
@@ -1200,7 +1782,7 @@ export function AutomationPanel() {
                   color: '#ffffff',
                   fontSize: '13px',
                   fontWeight: 500,
-                  cursor: 'pointer'
+                  cursor: 'pointer',
                 }}
               >
                 保存
@@ -1212,40 +1794,43 @@ export function AutomationPanel() {
 
       {/* 全局自定义 Toast 弹窗气泡 */}
       {toastMsg && (
-        <div style={{
-          position: 'fixed',
-          bottom: '24px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-          color: '#ffffff',
-          padding: '10px 20px',
-          borderRadius: '9999px',
-          fontSize: '13px',
-          fontWeight: 500,
-          boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
-          zIndex: 9999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          animation: 'fade-in 0.15s ease'
-        }}>
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
+            color: '#ffffff',
+            padding: '10px 20px',
+            borderRadius: '9999px',
+            fontSize: '13px',
+            fontWeight: 500,
+            boxShadow:
+              '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'fade-in 0.15s ease',
+          }}
+        >
           {toastMsg}
         </div>
       )}
     </div>
-  )
+  );
 }
 
 // 模板卡片排版组件 (100% 对齐截图 1 底部)
 interface TplCardProps {
-  tpl: TemplateItem
-  onClick: () => void
+  tpl: TemplateItem;
+  onClick: () => void;
 }
 
 const TemplateCard = ({ tpl, onClick }: TplCardProps) => {
   return (
-    <div 
+    <div
       onClick={onClick}
       style={{
         display: 'flex',
@@ -1258,94 +1843,156 @@ const TemplateCard = ({ tpl, onClick }: TplCardProps) => {
         boxSizing: 'border-box',
         height: '88px',
         cursor: 'pointer',
-        transition: 'all 0.2s ease-out'
+        transition: 'all 0.2s ease-out',
       }}
-      onMouseEnter={e => {
-        e.currentTarget.style.borderColor = 'var(--dsw-alias-border-hover, rgba(0,0,0,0.15))'
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)'
-        e.currentTarget.style.transform = 'translateY(-1px)'
+      onMouseEnter={(e) => {
+        e.currentTarget.style.borderColor =
+          'var(--dsw-alias-border-hover, rgba(0,0,0,0.15))';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+        e.currentTarget.style.transform = 'translateY(-1px)';
       }}
-      onMouseLeave={e => {
-        e.currentTarget.style.borderColor = 'var(--dsw-alias-border, #e2e8f0)'
-        e.currentTarget.style.boxShadow = 'none'
-        e.currentTarget.style.transform = 'none'
+      onMouseLeave={(e) => {
+        e.currentTarget.style.borderColor = 'var(--dsw-alias-border, #e2e8f0)';
+        e.currentTarget.style.boxShadow = 'none';
+        e.currentTarget.style.transform = 'none';
       }}
     >
       {/* Icon 容器 */}
-      <div style={{
-        width: '40px',
-        height: '40px',
-        borderRadius: '8px',
-        background: '#f8fafc',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-        flexShrink: 0
-      }}>
+      <div
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '8px',
+          background: '#f8fafc',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+          flexShrink: 0,
+        }}
+      >
         <TemplateIcon type={tpl.iconType} />
       </div>
 
       {/* Content */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <h3 style={{
-          margin: 0,
-          fontSize: '13px',
-          fontWeight: 600,
-          color: 'var(--dsw-alias-label-primary, #0f172a)'
-        }}>{tpl.title}</h3>
-        <p style={{
-          margin: 0,
-          fontSize: '11.5px',
-          color: 'var(--dsw-alias-label-secondary, #64748b)',
-          textOverflow: 'ellipsis',
-          overflow: 'hidden',
-          whiteSpace: 'nowrap'
-        }}>
+      <div
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '2px',
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: '13px',
+            fontWeight: 600,
+            color: 'var(--dsw-alias-label-primary, #0f172a)',
+          }}
+        >
+          {tpl.title}
+        </h3>
+        <p
+          style={{
+            margin: 0,
+            fontSize: '11.5px',
+            color: 'var(--dsw-alias-label-secondary, #64748b)',
+            textOverflow: 'ellipsis',
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+          }}
+        >
           {tpl.desc}
         </p>
       </div>
     </div>
-  )
-}
+  );
+};
 
 // 模板各类 SVG Icon
 const TemplateIcon = ({ type }: { type: string }) => {
-  const strokeColor = '#475569'
+  const strokeColor = '#475569';
   switch (type) {
     case 'news':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
           <path d="M16 8h2M16 12h2M16 16h2M6 8h6v8H6z"></path>
         </svg>
-      )
+      );
     case 'english':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
           <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
           <path d="M9 8h6M12 6v6"></path>
         </svg>
-      )
+      );
     case 'story':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
         </svg>
-      )
+      );
     case 'report':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
           <line x1="16" y1="2" x2="16" y2="6"></line>
           <line x1="8" y1="2" x2="8" y2="6"></line>
           <line x1="3" y1="10" x2="21" y2="10"></line>
         </svg>
-      )
+      );
     case 'movie':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
           <line x1="7" y1="2" x2="7" y2="22"></line>
           <line x1="17" y1="2" x2="17" y2="22"></line>
@@ -1355,64 +2002,134 @@ const TemplateIcon = ({ type }: { type: string }) => {
           <line x1="17" y1="17" x2="22" y2="17"></line>
           <line x1="17" y1="7" x2="22" y2="7"></line>
         </svg>
-      )
+      );
     case 'history':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
-      )
+      );
     case 'qa':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
           <circle cx="12" cy="12" r="10"></circle>
         </svg>
-      )
+      );
     case 'family':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
           <circle cx="9" cy="7" r="4"></circle>
           <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
           <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
         </svg>
-      )
+      );
     case 'health':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
         </svg>
-      )
+      );
     case 'interview':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path>
         </svg>
-      )
+      );
     case 'meeting':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
           <circle cx="9" cy="7" r="4"></circle>
           <polyline points="16 11 18 13 22 9"></polyline>
         </svg>
-      )
+      );
     case 'wallpaper':
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
           <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
           <circle cx="8.5" cy="8.5" r="1.5"></circle>
           <polyline points="21 15 16 10 5 21"></polyline>
         </svg>
-      )
+      );
     default:
       return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={strokeColor} strokeWidth="2.2">
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={strokeColor}
+          strokeWidth="2.2"
+        >
           <circle cx="12" cy="12" r="10"></circle>
         </svg>
-      )
+      );
   }
-}
+};

@@ -22,8 +22,5 @@
     ],
     "customGroups": []
   },
-  "ignorePatterns": [
-    "*.md",
-    "*.toml"
-  ]
+  "ignorePatterns": ["*.md", "*.toml"]
 }

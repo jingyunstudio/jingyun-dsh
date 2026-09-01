@@ -4,7 +4,9 @@ import { styleSheetContent } from './styles';
 export function initClientBrandingDOM() {
   if (typeof document !== 'undefined') {
     // 1. 无论是否定制品牌，首先注入我们自定义按钮与面板的基础样式，防止排版错乱
-    let styleEl = document.getElementById('jy-custom-branding-style') as HTMLStyleElement | null;
+    let styleEl = document.getElementById(
+      'jy-custom-branding-style'
+    ) as HTMLStyleElement | null;
     if (!styleEl) {
       styleEl = document.createElement('style');
       styleEl.id = 'jy-custom-branding-style';
@@ -23,7 +25,9 @@ export function initClientBrandingDOM() {
         document.title = data.site_name;
       }
       if (data?.site_logo) {
-        let link = document.querySelector('link[rel*="icon"]') as HTMLLinkElement | null;
+        let link = document.querySelector(
+          'link[rel*="icon"]'
+        ) as HTMLLinkElement | null;
         if (!link) {
           link = document.createElement('link');
           link.rel = 'icon';
@@ -36,25 +40,38 @@ export function initClientBrandingDOM() {
 
       // 【三保险机制之二：MutationObserver 动态响应式捕获隐藏】
       const hideUnwantedElements = () => {
-        document.querySelectorAll('button, a, div[role="button"]').forEach((el) => {
-          if (el.textContent && el.textContent.includes('Session log')) {
-            ;(el as HTMLElement).style.display = 'none';
-          }
-        });
+        document
+          .querySelectorAll('button, a, div[role="button"]')
+          .forEach((el) => {
+            if (el.textContent && el.textContent.includes('Session log')) {
+              (el as HTMLElement).style.display = 'none';
+            }
+          });
 
-        document.querySelectorAll('h1, h2, h3, [class*="leadTitle"], [class*="LeadTitle"], [class*="HeroTitle"], [class*="previewBadge"]').forEach((el) => {
-          if (el.textContent && (el.textContent.includes('探索未至之境') || el.textContent.includes('预览版') || el.textContent.includes('Explore the uncharted'))) {
-            ;(el as HTMLElement).style.display = 'none';
-          }
-        });
+        document
+          .querySelectorAll(
+            'h1, h2, h3, [class*="leadTitle"], [class*="LeadTitle"], [class*="HeroTitle"], [class*="previewBadge"]'
+          )
+          .forEach((el) => {
+            if (
+              el.textContent &&
+              (el.textContent.includes('探索未至之境') ||
+                el.textContent.includes('预览版') ||
+                el.textContent.includes('Explore the uncharted'))
+            ) {
+              (el as HTMLElement).style.display = 'none';
+            }
+          });
       };
-      
+
       hideUnwantedElements();
       const observer = new MutationObserver(hideUnwantedElements);
       observer.observe(document.body, { childList: true, subtree: true });
 
       // 追加注入隐藏官方原生标语与按钮的覆盖样式
-      styleEl.textContent = styleSheetContent + `
+      styleEl.textContent =
+        styleSheetContent +
+        `
         /* 隐藏 Session log 按钮 */
         button[title*="Session log"],
         button[aria-label*="Session log"],

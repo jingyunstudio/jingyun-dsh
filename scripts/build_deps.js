@@ -1,7 +1,7 @@
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const baseDir = path.join(__dirname, '..');
@@ -13,7 +13,7 @@ console.log('[BuildDeps] 🚀 Starting standalone static dependency builder...')
 
 // Read official DSH version automatically from root package.json
 const rootPkgPath = path.join(baseDir, 'package.json');
-let dshVersion = "0.1.0-rc.8";
+let dshVersion = '0.1.0-rc.8';
 if (fs.existsSync(rootPkgPath)) {
   try {
     const rootPkg = JSON.parse(fs.readFileSync(rootPkgPath, 'utf-8'));
@@ -29,7 +29,11 @@ console.log(`[BuildDeps] Target @deepseek-ai/dsh version: ${dshVersion}`);
 function copyRealDir(src, dst) {
   if (!fs.existsSync(src)) return;
   let realSrc = src;
-  try { realSrc = fs.realpathSync(src); } catch (e) { return; }
+  try {
+    realSrc = fs.realpathSync(src);
+  } catch (e) {
+    return;
+  }
   fs.mkdirSync(dst, { recursive: true });
   const entries = fs.readdirSync(realSrc, { withFileTypes: true });
   for (const entry of entries) {
@@ -39,7 +43,9 @@ function copyRealDir(src, dst) {
     if (entry.isDirectory()) {
       copyRealDir(srcPath, dstPath);
     } else if (entry.isFile()) {
-      try { fs.copyFileSync(srcPath, dstPath); } catch (e) {}
+      try {
+        fs.copyFileSync(srcPath, dstPath);
+      } catch (e) {}
     } else if (entry.isSymbolicLink()) {
       try {
         const target = fs.realpathSync(srcPath);
@@ -56,14 +62,23 @@ function copyRealDir(src, dst) {
 // 1. Prepare staging node_modules folder
 const stagingFolder = path.join(baseDir, 'temp_staging_node_modules');
 if (fs.existsSync(stagingFolder)) {
-  try { fs.rmSync(stagingFolder, { recursive: true, force: true }); } catch (e) {}
+  try {
+    fs.rmSync(stagingFolder, { recursive: true, force: true });
+  } catch (e) {}
 }
 fs.mkdirSync(stagingFolder, { recursive: true });
 
-const appDataVendor = path.join(process.env.LOCALAPPDATA || '', 'com.jingyun.dstudio', 'vendor', 'jingyun');
-const srcVendor = (fs.existsSync(path.join(appDataVendor, 'node_modules')) && fs.readdirSync(path.join(appDataVendor, 'node_modules')).length > 10)
-  ? appDataVendor
-  : path.join(tempDir);
+const appDataVendor = path.join(
+  process.env.LOCALAPPDATA || '',
+  'com.jingyun.dstudio',
+  'vendor',
+  'jingyun'
+);
+const srcVendor =
+  fs.existsSync(path.join(appDataVendor, 'node_modules')) &&
+  fs.readdirSync(path.join(appDataVendor, 'node_modules')).length > 10
+    ? appDataVendor
+    : path.join(tempDir);
 
 console.log(`[BuildDeps] Using pristine dependency source: ${srcVendor}`);
 
@@ -73,7 +88,9 @@ copyRealDir(srcVendor, stagingFolder);
 const srcDeepseek = path.join(baseDir, 'node_modules', '@deepseek-ai');
 const dstDeepseek = path.join(stagingFolder, 'node_modules', '@deepseek-ai');
 if (fs.existsSync(srcDeepseek)) {
-  console.log('[BuildDeps] Injecting real physical @deepseek-ai runtime packages...');
+  console.log(
+    '[BuildDeps] Injecting real physical @deepseek-ai runtime packages...'
+  );
   copyRealDir(srcDeepseek, dstDeepseek);
 }
 
@@ -81,7 +98,9 @@ if (fs.existsSync(srcDeepseek)) {
 console.log(`[BuildDeps] Compressing into ${targetZip}...`);
 fs.mkdirSync(targetVendorDir, { recursive: true });
 if (fs.existsSync(targetZip)) {
-  try { fs.unlinkSync(targetZip); } catch (e) {}
+  try {
+    fs.unlinkSync(targetZip);
+  } catch (e) {}
 }
 
 try {
@@ -93,7 +112,8 @@ try {
 }
 
 // Clean staging folder
-try { fs.rmSync(stagingFolder, { recursive: true, force: true }); } catch (e) {}
+try {
+  fs.rmSync(stagingFolder, { recursive: true, force: true });
+} catch (e) {}
 
 console.log('[BuildDeps] ✅ Static dependencies build complete!');
-

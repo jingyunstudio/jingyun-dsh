@@ -1,26 +1,23 @@
 {
   "name": "@jingyun-ai/jingyun-dsh",
   "version": "0.1.1",
-  "publishConfig": {
-    "access": "public"
-  },
   "description": "Branding customization plugin for DSH client",
   "keywords": [
-    "dsh-plugin",
-    "deepseek-harness",
-    "jingyun",
     "ai-agent",
+    "deepseek-harness",
+    "dsh-plugin",
+    "jingyun",
     "jingyun.studio",
     "tauri"
   ],
+  "homepage": "https://github.com/jingyunstudio/jingyun-dsh#readme",
+  "bugs": {
+    "url": "https://github.com/jingyunstudio/jingyun-dsh/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jingyunstudio/jingyun-dsh.git",
     "directory": "packages/jingyun-dsh"
-  },
-  "homepage": "https://github.com/jingyunstudio/jingyun-dsh#readme",
-  "bugs": {
-    "url": "https://github.com/jingyunstudio/jingyun-dsh/issues"
   },
   "type": "module",
   "main": "lib/index.mjs",
@@ -32,6 +29,26 @@
       "default": "./lib/client.js"
     },
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch"
+  },
+  "dependencies": {
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-commands": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.8"
   },
   "dsh": {
     "bundle": {
@@ -46,22 +63,5 @@
       ],
       "platform": "web"
     }
-  },
-  "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch"
-  },
-  "dependencies": {
-    "@deepseek-ai/schemastery": "^3.18.1"
-  },
-  "peerDependencies": {
-    "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-ui-commands": "0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.8"
-  },
-  "devDependencies": {
-    "@types/node": "^20.19.43"
   }
 }

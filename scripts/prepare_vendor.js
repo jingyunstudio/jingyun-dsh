@@ -12,13 +12,17 @@ console.log('[VendorPrepare] 🚀 Preparing workspace uncompressed resources...'
 
 // 1. Verify vendor_deps.zip exists
 if (!fs.existsSync(targetVendorDeps)) {
-  console.warn('[VendorPrepare] ⚠️ vendor_deps.zip missing in resources/vendor! Running build_deps.js automatically...');
+  console.warn(
+    '[VendorPrepare] ⚠️ vendor_deps.zip missing in resources/vendor! Running build_deps.js automatically...'
+  );
   await import('./build_deps.js');
 }
 
 // 2. Safely clear old workspace folder
 if (fs.existsSync(targetWorkspace)) {
-  try { fs.rmSync(targetWorkspace, { recursive: true, force: true }); } catch (e) { }
+  try {
+    fs.rmSync(targetWorkspace, { recursive: true, force: true });
+  } catch (e) {}
 }
 fs.mkdirSync(targetWorkspace, { recursive: true });
 
@@ -26,7 +30,11 @@ fs.mkdirSync(targetWorkspace, { recursive: true });
 function copyRealDir(src, dst) {
   if (!fs.existsSync(src)) return;
   let realSrc = src;
-  try { realSrc = fs.realpathSync(src); } catch (e) { return; }
+  try {
+    realSrc = fs.realpathSync(src);
+  } catch (e) {
+    return;
+  }
   fs.mkdirSync(dst, { recursive: true });
   const entries = fs.readdirSync(realSrc, { withFileTypes: true });
   for (const entry of entries) {
@@ -36,7 +44,9 @@ function copyRealDir(src, dst) {
     if (entry.isDirectory()) {
       copyRealDir(srcPath, dstPath);
     } else if (entry.isFile()) {
-      try { fs.copyFileSync(srcPath, dstPath); } catch (e) { }
+      try {
+        fs.copyFileSync(srcPath, dstPath);
+      } catch (e) {}
     } else if (entry.isSymbolicLink()) {
       try {
         const target = fs.realpathSync(srcPath);
@@ -45,7 +55,7 @@ function copyRealDir(src, dst) {
         } else {
           fs.copyFileSync(target, dstPath);
         }
-      } catch (e) { }
+      } catch (e) {}
     }
   }
 }
@@ -76,11 +86,16 @@ if (fs.existsSync(srcWsYaml)) {
 const distTauriTemp = path.join(baseDir, 'dist_tauri_temp');
 if (!fs.existsSync(distTauriTemp)) {
   fs.mkdirSync(distTauriTemp, { recursive: true });
-  fs.writeFileSync(path.join(distTauriTemp, 'index.html'), `<!DOCTYPE html>
+  fs.writeFileSync(
+    path.join(distTauriTemp, 'index.html'),
+    `<!DOCTYPE html>
 <html>
 <head><title>Jingyun.Studio</title></head>
 <body><div id="root">Loading...</div></body>
-</html>`);
+</html>`
+  );
 }
 
-console.log('[VendorPrepare] 🎉 Workspace uncompressed resources prepared in 0.05 seconds!');
+console.log(
+  '[VendorPrepare] 🎉 Workspace uncompressed resources prepared in 0.05 seconds!'
+);

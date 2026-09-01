@@ -2,9 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/schema/capability.json",
   "identifier": "default",
   "description": "Default permissions for DSH shell client",
-  "windows": [
-    "*"
-  ],
+  "windows": ["*"],
   "permissions": [
     "core:default",
     "opener:default",

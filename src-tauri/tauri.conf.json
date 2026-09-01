@@ -4,9 +4,7 @@
   "identifier": "com.jingyun.dstudio",
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis"
-    ],
+    "targets": ["nsis"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -14,15 +12,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": [
-      "resources/vendor/*.zip",
-      "resources/vendor/workspace"
-    ],
+    "resources": ["resources/vendor/*.zip", "resources/vendor/workspace"],
     "windows": {
       "nsis": {
-        "languages": [
-          "SimpChinese"
-        ],
+        "languages": ["SimpChinese"],
         "installerHooks": "hooks.nsh",
         "installerIcon": "icons/icon.ico",
         "template": "installer.nsi"
