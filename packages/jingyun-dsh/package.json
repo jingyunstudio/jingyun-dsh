@@ -55,10 +55,13 @@
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
     "@deepseek-ai/dsh-client-runtime": "0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.8",
-    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.8",
     "@deepseek-ai/dsh-client-ui-commands": "0.1.0-rc.8",
-    "@deepseek-ai/cordis": "^4.0.1"
+    "@deepseek-ai/dsh-client-ui-primitives": "0.1.0-rc.8",
+    "@deepseek-ai/dsh-client-ui-slots": "0.1.0-rc.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43"
   }
 }

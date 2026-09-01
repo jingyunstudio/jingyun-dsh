@@ -1,0 +1,18 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "react", "react-perf", "jsx-a11y", "import", "promise", "nextjs"],
+  "env": {
+    "browser": true
+  },
+  "categories": {
+    "correctness": "warn"
+  },
+  "rules": {
+    "no-unused-vars": "warn",
+    "eqeqeq": "warn",
+    "strict-boolean-expressions": "warn",
+    "typescript/consistent-type-imports": "warn",
+    "typescript/no-explicit-any": "warn"
+  },
+  "ignorePatterns": []
+}

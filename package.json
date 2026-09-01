@@ -10,7 +10,9 @@
     "watch": "pnpm -C packages/jingyun-dsh dev",
     "start": "node scripts/prepare_dev.js && node node_modules/@deepseek-ai/dsh/lib/bin.js --profile web",
     "tauri:dev": "npx --package @tauri-apps/cli tauri dev",
-    "tauri:build": "pnpm build && node scripts/prepare_vendor.js && npx --package @tauri-apps/cli tauri build"
+    "tauri:build": "pnpm build && node scripts/prepare_vendor.js && npx --package @tauri-apps/cli tauri build",
+    "lint": "oxlint",
+    "fmt": "oxfmt --write"
   },
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.0-rc.8",
@@ -25,6 +27,8 @@
     "@tauri-apps/cli": "^2.0.0",
     "@types/node": "^20.0.0",
     "concurrently": "^10.0.5",
+    "oxfmt": "^0.65.0",
+    "oxlint": "^1.80.0",
     "tsdown": "^0.22.2",
     "typescript": "^5.5.0"
   }
