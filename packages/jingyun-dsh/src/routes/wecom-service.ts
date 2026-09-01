@@ -3,6 +3,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
 import crypto from 'crypto'
+import { getDshHome } from '../common/paths'
 
 export interface WecomConfig {
   botId: string
@@ -24,7 +25,7 @@ interface NodeError extends Error {
   code?: string
 }
 
-const DEFAULT_CONFIG_PATH = path.join(os.homedir(), '.dsh', 'connectors', 'wecom.json')
+const DEFAULT_CONFIG_PATH = path.join(getDshHome(), 'connectors', 'wecom.json')
 // 企业微信智能机器人官方开放平台 WebSocket 地址 (对齐 @wecom/aibot-node-sdk)
 const OFFICIAL_WS_URL = 'wss://openws.work.weixin.qq.com'
 
@@ -44,7 +45,7 @@ export class WecomConnectorService {
   private reconnectTimer: NodeJS.Timeout | null = null
   private missedPongCount: number = 0
   private maxMissedPong: number = 2
-  private configPath: string = DEFAULT_CONFIG_PATH
+  private configPath: string = path.join(getDshHome(), 'connectors', 'wecom.json')
   constructor(customConfigPath?: string) {
     if (customConfigPath) {
       this.configPath = customConfigPath

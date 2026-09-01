@@ -6,11 +6,12 @@ import { fileURLToPath } from 'url'
 import { Config } from './config/schema'
 import { registerRoutes } from './routes'
 import { initSystemPromptHook } from './agent/agent-loader'
+import { getDshHome, getJingyunConfigPath } from './common/paths'
 
 
 // Resolve standard __dirname equivalent in ES Modules context
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const jsonPath = path.resolve(__dirname, '..', 'jingyun-config.json')
+const jsonPath = getJingyunConfigPath(__dirname)
 
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
 if (fs.existsSync(jsonPath)) {
@@ -33,6 +34,7 @@ if (fs.existsSync(jsonPath)) {
     console.error('[UIBranding] Top-level pre-load environment parameters failed:', e.message)
   }
 }
+
 
 export const name = 'jingyun-dsh'
 export const inject = ['webServer', 'settings', 'commands']
@@ -77,7 +79,7 @@ function copyFolderRecursiveSync(src: string, dest: string) {
 
 function syncBuiltinSkills() {
   try {
-    const baseDir = path.resolve(os.homedir(), '.dsh')
+    const baseDir = getDshHome()
     const targetSkillsDir = path.join(baseDir, 'skills')
     if (!fs.existsSync(targetSkillsDir)) {
       fs.mkdirSync(targetSkillsDir, { recursive: true })
@@ -119,9 +121,10 @@ export function apply(ctx: Context, config: Config) {
   syncBuiltinSkills()
 
   // 3. Pre-load initial configuration from local backup config file before registering settings
-  if (fs.existsSync(jsonPath)) {
+  const activeJsonPath = getJingyunConfigPath(__dirname)
+  if (fs.existsSync(activeJsonPath)) {
     try {
-      const raw = fs.readFileSync(jsonPath, 'utf8')
+      const raw = fs.readFileSync(activeJsonPath, 'utf8')
       const localData = JSON.parse(raw)
       if (localData.mode) config.mode = localData.mode
       if (localData.api_url) config.apiUrl = localData.api_url

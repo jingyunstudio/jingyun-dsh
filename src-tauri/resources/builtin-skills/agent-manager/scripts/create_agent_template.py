@@ -262,7 +262,7 @@ python3 scripts/register_agent_manifest.py <agent-dir-path>
 
 def parse_dsh_env_path():
     """Extract DSH config path from environment, fallback to ~/.dsh."""
-    config_dir = os.environ.get('DSH_CONFIG_DIR', '').strip()
+    config_dir = os.environ.get('DSH_HOME', os.environ.get('DSH_CONFIG_DIR', '')).strip()
     if not config_dir:
         config_dir = os.path.join(os.path.expanduser('~'), '.dsh')
     return Path(config_dir) / 'plugins' / 'marketplaces' / 'my-agents' / 'plugins'

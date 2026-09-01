@@ -6,6 +6,7 @@ import { exec, execFile } from 'child_process'
 import { promisify } from 'util'
 import { sendJson, sendError } from '../common/http'
 import { fileURLToPath } from 'url'
+import { getDshHome } from '../common/paths'
 
 const execAsync = promisify(exec)
 const execFileAsync = promisify(execFile)
@@ -16,7 +17,7 @@ let isCommunityInstalling = false
 // 辅助函数：自动为指定 profile 的 pnpm-workspace.yaml 注入并允许 allowBuilds
 function setProfileAllowBuilds(profile: string, packages: string[]) {
   try {
-    const file = path.resolve(os.homedir(), '.dsh', 'profiles', profile, 'pnpm-workspace.yaml')
+    const file = path.resolve(getDshHome(), 'profiles', profile, 'pnpm-workspace.yaml')
     let yaml = ''
     if (fs.existsSync(file)) {
       yaml = fs.readFileSync(file, 'utf8')
@@ -130,7 +131,23 @@ async function resolveNpmPackageForGithubRepo(cleanRepo: string): Promise<string
 // 辅助函数：获取绿色运行环境与 DSH CLI 路径
 function getDshRuntimeEnv() {
   const localAppData = process.env.LOCALAPPDATA || ''
-  const vendorDir = path.resolve(localAppData, 'com.jingyun.dstudio', 'vendor')
+  const dshHome = getDshHome()
+  const candidateVendorDirs = [
+    path.resolve(dshHome, 'vendor'),
+    path.resolve(localAppData, 'com.jingyun.dstudio', 'vendor'),
+    path.resolve(process.cwd(), 'resources', 'vendor'),
+    path.resolve(process.cwd(), 'vendor'),
+    path.resolve(dshHome, '..', 'resources', 'vendor'),
+    path.resolve(dshHome, '..', 'vendor')
+  ]
+  let vendorDir = candidateVendorDirs[0]
+  for (const v of candidateVendorDirs) {
+    if (fs.existsSync(path.resolve(v, 'node', 'node.exe'))) {
+      vendorDir = v
+      break
+    }
+  }
+
   const vendorNode = path.resolve(vendorDir, 'node', 'node.exe')
   const vendorGit = path.resolve(vendorDir, 'git', 'PortableGit', 'cmd')
 
@@ -143,6 +160,7 @@ function getDshRuntimeEnv() {
   const candidatePaths = [
     path.resolve(vendorDir, 'jingyun', 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'),
     path.resolve(process.cwd(), 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'),
+    path.resolve(dshHome, 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js'),
     path.resolve(os.homedir(), '.dsh', 'node_modules', '@deepseek-ai', 'dsh', 'lib', 'bin.js')
   ]
   for (const cand of candidatePaths) {
@@ -163,6 +181,8 @@ function getDshRuntimeEnv() {
   const customEnv: NodeJS.ProcessEnv = {
     ...process.env,
     PATH: injectedPath,
+    DSH_HOME: dshHome,
+    DSH_CONFIG_DIR: dshHome,
     npm_config_registry: 'https://registry.npmmirror.com',
     CI: 'true'
   }
@@ -218,7 +238,7 @@ export function registerPluginsRoutes(ctx: Context) {
         }
 
         try {
-          const profilePkgFile = path.resolve(os.homedir(), '.dsh', 'profiles', 'web', 'package.json')
+          const profilePkgFile = path.resolve(getDshHome(), 'profiles', 'web', 'package.json')
           if (fs.existsSync(profilePkgFile)) {
             const profilePkg = JSON.parse(fs.readFileSync(profilePkgFile, 'utf8'))
             const deps: Record<string, any> = { ...(profilePkg.dependencies || {}) }
@@ -432,7 +452,7 @@ export function registerPluginsRoutes(ctx: Context) {
           console.log(`[UIBranding] Install stdout:`, execOutput.stdout)
 
           try {
-            const profilePkgPath = path.resolve(os.homedir(), '.dsh', 'profiles', profileName, 'package.json')
+            const profilePkgPath = path.resolve(getDshHome(), 'profiles', profileName, 'package.json')
             if (fs.existsSync(profilePkgPath)) {
               const pkgContent = JSON.parse(fs.readFileSync(profilePkgPath, 'utf8'))
               const bundleName = installTarget || name || repo.split('/').pop() || repo
@@ -501,7 +521,7 @@ export function registerPluginsRoutes(ctx: Context) {
           }
 
           try {
-            const profilePkgPath = path.resolve(os.homedir(), '.dsh', 'profiles', profileName, 'package.json')
+            const profilePkgPath = path.resolve(getDshHome(), 'profiles', profileName, 'package.json')
             if (fs.existsSync(profilePkgPath)) {
               const pkgContent = JSON.parse(fs.readFileSync(profilePkgPath, 'utf8'))
               if (pkgContent.dependencies) {

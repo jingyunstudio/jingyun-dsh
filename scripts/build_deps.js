@@ -53,96 +53,41 @@ function copyRealDir(src, dst) {
   }
 }
 
-// 1. Prepare sandbox directory (Reuse existing if available for speed)
-const srcNodeModInSandbox = path.join(tempDir, 'node_modules');
-if (!fs.existsSync(srcNodeModInSandbox)) {
-  fs.mkdirSync(tempDir, { recursive: true });
-  const cleanPkgJson = {
-    name: "jingyun-dsh-deps-sandbox",
-    version: "0.1.0",
-    private: true,
-    dependencies: {
-      "@deepseek-ai/dsh": dshVersion
-    }
-  };
-  fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify(cleanPkgJson, null, 2));
-
-  console.log('[BuildDeps] Running official npm install in temp sandbox...');
-  try {
-    execSync('npm install --no-audit --no-fund --omit=dev', { cwd: tempDir, stdio: 'inherit' });
-  } catch (e) {
-    console.error('[BuildDeps] npm install warning:', e.message);
-  }
-} else {
-  console.log('[BuildDeps] ⚡ Reusing existing npm install sandbox directory!');
-}
-
-// 2. Prepare staging node_modules folder
+// 1. Prepare staging node_modules folder
 const stagingFolder = path.join(baseDir, 'temp_staging_node_modules');
 if (fs.existsSync(stagingFolder)) {
   try { fs.rmSync(stagingFolder, { recursive: true, force: true }); } catch (e) {}
 }
-const dstNodeMod = path.join(stagingFolder, 'node_modules');
-fs.mkdirSync(dstNodeMod, { recursive: true });
+fs.mkdirSync(stagingFolder, { recursive: true });
 
-console.log('[BuildDeps] Copying pristine node_modules with symlink dereferencing...');
-copyRealDir(srcNodeModInSandbox, dstNodeMod);
+const appDataVendor = path.join(process.env.LOCALAPPDATA || '', 'com.jingyun.dstudio', 'vendor', 'jingyun');
+const srcVendor = (fs.existsSync(path.join(appDataVendor, 'node_modules')) && fs.readdirSync(path.join(appDataVendor, 'node_modules')).length > 10)
+  ? appDataVendor
+  : path.join(tempDir);
 
-// Inject real physical @deepseek-ai package with lib/bin.js
+console.log(`[BuildDeps] Using pristine dependency source: ${srcVendor}`);
+
+copyRealDir(srcVendor, stagingFolder);
+
+// Ensure @deepseek-ai is included
 const srcDeepseek = path.join(baseDir, 'node_modules', '@deepseek-ai');
-const dstDeepseek = path.join(dstNodeMod, '@deepseek-ai');
+const dstDeepseek = path.join(stagingFolder, 'node_modules', '@deepseek-ai');
 if (fs.existsSync(srcDeepseek)) {
   console.log('[BuildDeps] Injecting real physical @deepseek-ai runtime packages...');
   copyRealDir(srcDeepseek, dstDeepseek);
 }
 
-// Inject @jingyun-ai/jingyun-dsh into @deepseek-ai/dsh dependencies for Healer self-linking
-const dshPkgPath = path.join(dstNodeMod, '@deepseek-ai', 'dsh', 'package.json');
-if (fs.existsSync(dshPkgPath)) {
-  console.log('[BuildDeps] Injecting @jingyun-ai/jingyun-dsh into @deepseek-ai/dsh dependencies...');
-  try {
-    const pkg = JSON.parse(fs.readFileSync(dshPkgPath, 'utf8'));
-    pkg.dependencies = pkg.dependencies || {};
-    pkg.dependencies['@jingyun-ai/jingyun-dsh'] = 'workspace:^';
-    fs.writeFileSync(dshPkgPath, JSON.stringify(pkg, null, 2));
-  } catch (err) {
-    console.error('[BuildDeps] Failed to inject custom plugin dependency:', err.message);
-  }
-}
-
-// Ensure js-yaml compatibility wrapper
-const jsYamlDir = path.join(dstNodeMod, 'js-yaml');
-if (fs.existsSync(jsYamlDir)) {
-  const jsYamlDist = path.join(jsYamlDir, 'dist');
-  fs.mkdirSync(jsYamlDist, { recursive: true });
-  const jsYamlMjs = path.join(jsYamlDist, 'js-yaml.mjs');
-  fs.writeFileSync(jsYamlMjs, `import jsYaml from '../index.js';
-export default jsYaml;
-export const load = jsYaml.load;
-export const dump = jsYaml.dump;
-export const loadAll = jsYaml.loadAll;
-export const dumpAll = jsYaml.dumpAll;
-export const FAILSAFE_SCHEMA = jsYaml.FAILSAFE_SCHEMA;
-export const JSON_SCHEMA = jsYaml.JSON_SCHEMA;
-export const DEFAULT_SCHEMA = jsYaml.DEFAULT_SCHEMA;
-export const Type = jsYaml.Type;
-export const Schema = jsYaml.Schema;
-`);
-}
-
-// 3. Compress into vendor_deps.zip using .NET Native Zip API for maximum performance
-console.log(`[BuildDeps] Ultra-fast compressing into ${targetZip} via .NET Native ZipEngine...`);
+// 3. Compress into vendor_deps.zip using .NET Native Zip API
+console.log(`[BuildDeps] Compressing into ${targetZip}...`);
 fs.mkdirSync(targetVendorDir, { recursive: true });
 if (fs.existsSync(targetZip)) {
-  try { fs.unlinkSync(targetZip); } catch (e) {
-    try { execSync(`powershell -Command "Remove-Item -Path '${targetZip}' -Force -ErrorAction SilentlyContinue"`); } catch (err) {}
-  }
+  try { fs.unlinkSync(targetZip); } catch (e) {}
 }
 
 try {
-  const psZipCmd = `Add-Type -Assembly System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('${stagingFolder}', '${targetZip}')`;
-  execSync(`powershell -Command "${psZipCmd}"`, { stdio: 'inherit' });
-  console.log('[BuildDeps] 🎉 Pristine vendor_deps.zip created successfully via .NET ZipEngine!');
+  const psCmd = `Add-Type -Assembly System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('${stagingFolder.replace(/\\/g, '/')}', '${targetZip.replace(/\\/g, '/')}')`;
+  execSync(`powershell -Command "${psCmd}"`, { stdio: 'inherit' });
+  console.log('[BuildDeps] 🎉 Pristine vendor_deps.zip created successfully!');
 } catch (e) {
   console.error('[BuildDeps] Zip compression error:', e.message);
 }
@@ -151,3 +96,4 @@ try {
 try { fs.rmSync(stagingFolder, { recursive: true, force: true }); } catch (e) {}
 
 console.log('[BuildDeps] ✅ Static dependencies build complete!');
+

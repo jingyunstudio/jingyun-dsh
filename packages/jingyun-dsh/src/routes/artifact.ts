@@ -4,6 +4,7 @@ import path from 'path'
 import os from 'os'
 import { spawn } from 'child_process'
 import { sendJson, sendError } from '../common/http'
+import { getDshHome } from '../common/paths'
 
 export function registerArtifactRoutes(ctx: Context) {
   // 1. 根据会话 ID 匹配底座物理工作区绝对路径并安全读取物理文件
@@ -21,7 +22,7 @@ export function registerArtifactRoutes(ctx: Context) {
           return
         }
 
-        const workspaceJsonPath = path.resolve(os.homedir(), '.dsh', 'storages', 'workspace.json')
+        const workspaceJsonPath = path.resolve(getDshHome(), 'storages', 'workspace.json')
         let resolvedWorkspacePath = ''
 
         if (fs.existsSync(workspaceJsonPath)) {

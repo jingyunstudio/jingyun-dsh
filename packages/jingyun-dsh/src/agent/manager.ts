@@ -1,8 +1,10 @@
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
+import { getDshHome } from '../common/paths'
 
-export const baseHome = path.resolve(os.homedir(), '.dsh')
+export const baseHome = getDshHome()
+
 
 export interface SessionAgentsConfig {
   sessions: Record<string, string>

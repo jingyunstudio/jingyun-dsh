@@ -4,9 +4,9 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { Config } from '../config/schema'
 import { sendJson, sendError } from '../common/http'
+import { getJingyunConfigPath, getJingyunConfigWritePath } from '../common/paths'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const jsonPath = path.resolve(__dirname, '..', 'jingyun-config.json')
 
 export function registerBrandingRoutes(ctx: Context, config: Config) {
   // 1. 获取 descriptors
@@ -71,9 +71,10 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
               custom_logo: ''
             }
 
-            if (fs.existsSync(jsonPath)) {
+            const currentReadPath = getJingyunConfigPath(__dirname)
+            if (fs.existsSync(currentReadPath)) {
               try {
-                jsonContent = JSON.parse(fs.readFileSync(jsonPath, 'utf8'))
+                jsonContent = JSON.parse(fs.readFileSync(currentReadPath, 'utf8'))
               } catch (e) {}
             }
 
@@ -83,8 +84,9 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
             if (patch.customName !== undefined) jsonContent.custom_name = patch.customName
             if (patch.customLogo !== undefined) jsonContent.custom_logo = patch.customLogo
 
-            fs.writeFileSync(jsonPath, JSON.stringify(jsonContent, null, 2), 'utf8')
-            console.log(`[UIBranding] Local JSON file synchronized: ${jsonPath}`)
+            const targetWritePath = getJingyunConfigWritePath(__dirname)
+            fs.writeFileSync(targetWritePath, JSON.stringify(jsonContent, null, 2), 'utf8')
+            console.log(`[UIBranding] Local JSON file synchronized: ${targetWritePath}`)
 
             // 同步回内存 config 引用
             if (patch.mode) config.mode = patch.mode
@@ -117,9 +119,10 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
         custom_logo: ''
       }
 
-      if (fs.existsSync(jsonPath)) {
+      const currentReadPath = getJingyunConfigPath(__dirname)
+      if (fs.existsSync(currentReadPath)) {
         try {
-          jsonContent = JSON.parse(fs.readFileSync(jsonPath, 'utf8'))
+          jsonContent = JSON.parse(fs.readFileSync(currentReadPath, 'utf8'))
         } catch (e) {}
       }
 
@@ -150,9 +153,10 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
         siteLogo = '/api/jingyun/branding/logo.png'
       }
 
-      if (fs.existsSync(jsonPath)) {
+      const currentReadPath = getJingyunConfigPath(__dirname)
+      if (fs.existsSync(currentReadPath)) {
         try {
-          const raw = fs.readFileSync(jsonPath, 'utf8')
+          const raw = fs.readFileSync(currentReadPath, 'utf8')
           const localData = JSON.parse(raw)
           if (localData.api_url) apiUrl = localData.api_url
           if (localData.tenant_host) tenantHost = localData.tenant_host
