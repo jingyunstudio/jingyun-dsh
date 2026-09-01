@@ -48,7 +48,8 @@
     }
   },
   "scripts": {
-    "build": "tsdown"
+    "build": "tsdown",
+    "dev": "tsdown --watch"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.1"

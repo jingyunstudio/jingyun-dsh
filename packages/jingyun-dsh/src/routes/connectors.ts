@@ -1,4 +1,5 @@
 import { Context } from '@deepseek-ai/cordis'
+import { wecomConnector, type WecomConfig } from './wecom-service'
 import fs from 'fs'
 import path from 'path'
 import os from 'os'
@@ -301,5 +302,263 @@ export function registerConnectorsRoutes(ctx: Context) {
         }
       })
     }
+  })
+
+  // 初始化企业微信连接器服务
+  wecomConnector.init().catch((err: unknown) => {
+    console.warn('[WecomConnector] Failed to initialize:', err)
+  })
+
+  // 获取企业微信扫码授权信息 (生成官方授权链接与 scode)
+  const handleWecomQrStart = async (_req: any, res: any) => {
+    try {
+      const https = await import('https')
+      const url = `https://work.weixin.qq.com/ai/qc/gen?source=codebuddy&state=state_${Date.now()}&timestamp=${Date.now()}`
+      https.get(url, (remoteRes) => {
+        let data = ''
+        remoteRes.on('data', c => { data += c })
+        remoteRes.on('end', () => {
+          const match = data.match(/window\.settings\s*=\s*(\{.*?\})/)
+          if (match) {
+            try {
+              const settings = JSON.parse(match[1])
+              sendJson(res, {
+                success: true,
+                data: {
+                  scode: settings.scode,
+                  authUrl: settings.auth_url
+                }
+              })
+            } catch (err: any) {
+              sendError(res, 500, `解析官方配置失败: ${err.message}`)
+            }
+          } else {
+            sendError(res, 500, '未能从企微获取到授权信息')
+          }
+        })
+      }).on('error', (err) => {
+        sendError(res, 500, `请求企微网关失败: ${err.message}`)
+      })
+    } catch (err: any) {
+      sendError(res, 500, err.message)
+    }
+  }
+
+  // 轮询企业微信扫码授权结果
+  const handleWecomQueryResult = async (req: any, res: any) => {
+    try {
+      const parsedUrl = new URL(req.url, 'http://127.0.0.1')
+      const scode = parsedUrl.searchParams.get('scode') || ''
+      if (!scode) {
+        sendError(res, 400, '缺少 scode 参数')
+        return
+      }
+
+      const https = await import('https')
+      const queryUrl = `https://work.weixin.qq.com/ai/qc/query_result?scode=${encodeURIComponent(scode)}`
+      https.get(queryUrl, (remoteRes) => {
+        let data = ''
+        remoteRes.on('data', c => { data += c })
+        remoteRes.on('end', async () => {
+          try {
+            const result = JSON.parse(data)
+            const status = result?.data?.status
+            const botInfo = result?.data?.bot_info
+
+            if (status === 'success' && botInfo) {
+              const botId = botInfo.botid
+              const botSecret = botInfo.secret
+              await wecomConnector.connect({
+                botId,
+                botSecret,
+                gatewayUrl: 'wss://openws.work.weixin.qq.com',
+                autoReconnect: true
+              })
+              sendJson(res, {
+                success: true,
+                status: 'success',
+                data: {
+                  status: 'success',
+                  botId,
+                  botName: botInfo.name || '企业微信智能机器人',
+                  bot_info: botInfo
+                }
+              })
+            } else if (status === 'expired') {
+              sendJson(res, { success: true, status: 'expired', data: { status: 'expired' } })
+            } else {
+              sendJson(res, { success: true, status: 'waiting', data: { status: 'waiting' } })
+            }
+          } catch (err: any) {
+            sendJson(res, { success: false, status: 'error', error: err.message })
+          }
+        })
+      }).on('error', (err) => {
+        sendJson(res, { success: false, status: 'error', error: err.message })
+      })
+    } catch (err: any) {
+      sendError(res, 500, err.message)
+    }
+  }
+
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/wecom/qr-start',
+    handler: handleWecomQrStart
+  })
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/wecom/query-result',
+    handler: handleWecomQueryResult
+  })
+
+  // 5. 获取企业微信连接状态与配置信息
+  const handleWecomStatus = async (_req: any, res: any) => {
+    const state = wecomConnector.getStatus()
+    const config = await wecomConnector.loadConfig()
+    sendJson(res, {
+      success: true,
+      data: {
+        ...state,
+        hasConfig: !!(config?.botId && config?.botSecret),
+        config: config ? {
+          botId: config.botId,
+          gatewayUrl: config.gatewayUrl || 'wss://work.weixin.qq.com/wework_admin/aibot/ws',
+          autoReconnect: config.autoReconnect !== false
+        } : null
+      }
+    })
+  }
+
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/wecom/status',
+    handler: handleWecomStatus
+  })
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/connectors/wecom/status',
+    handler: handleWecomStatus
+  })
+
+  // 6. 保存企业微信配置并建立连接
+  const handleWecomConnect = async (req: any, res: any) => {
+    let body = ''
+    req.on('data', (chunk: any) => { body += chunk })
+    req.on('end', async () => {
+      try {
+        const parsed = JSON.parse(body || '{}') as Partial<WecomConfig>
+        if (!parsed.botId || !parsed.botSecret) {
+          sendJson(res, { success: false, error: 'BotId 和 BotSecret 为必填项' })
+          return
+        }
+        const config: WecomConfig = {
+          botId: parsed.botId.trim(),
+          botSecret: parsed.botSecret.trim(),
+          gatewayUrl: parsed.gatewayUrl?.trim() || undefined,
+          autoReconnect: parsed.autoReconnect !== false
+        }
+        await wecomConnector.connect(config)
+        sendJson(res, {
+          success: true,
+          data: wecomConnector.getStatus()
+        })
+      } catch (err: unknown) {
+        const errorObj = err instanceof Error ? err : new Error(String(err))
+        sendJson(res, { success: false, error: errorObj.message })
+      }
+    })
+  }
+
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/wecom/connect',
+    handler: handleWecomConnect
+  })
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/connectors/wecom/connect',
+    handler: handleWecomConnect
+  })
+
+  // 7. 断开企业微信长连接
+  const handleWecomDisconnect = async (_req: any, res: any) => {
+    try {
+      wecomConnector.disconnect(true)
+      sendJson(res, {
+        success: true,
+        data: wecomConnector.getStatus()
+      })
+    } catch (err: unknown) {
+      const errorObj = err instanceof Error ? err : new Error(String(err))
+      sendJson(res, { success: false, error: errorObj.message })
+    }
+  }
+
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/wecom/disconnect',
+    handler: handleWecomDisconnect
+  })
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/connectors/wecom/disconnect',
+    handler: handleWecomDisconnect
+  })
+
+  // 8. 清除企业微信配置并解绑
+  const handleWecomClear = async (_req: any, res: any) => {
+    try {
+      await wecomConnector.clearConfig()
+      sendJson(res, {
+        success: true,
+        data: wecomConnector.getStatus()
+      })
+    } catch (err: unknown) {
+      const errorObj = err instanceof Error ? err : new Error(String(err))
+      sendJson(res, { success: false, error: errorObj.message })
+    }
+  }
+
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/wecom/clear',
+    handler: handleWecomClear
+  })
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/connectors/wecom/clear',
+    handler: handleWecomClear
+  })
+
+  // 9. 测试发送企微消息 (可选调试路由)
+  const handleWecomTestSend = async (req: any, res: any) => {
+    let body = ''
+    req.on('data', (chunk: any) => { body += chunk })
+    req.on('end', async () => {
+      try {
+        const parsed = JSON.parse(body || '{}')
+        if (!parsed.chatId || !parsed.content) {
+          sendJson(res, { success: false, error: 'chatId 和 content 为必填项' })
+          return
+        }
+        await wecomConnector.sendTextMessage(parsed.chatId, parsed.content)
+        sendJson(res, { success: true })
+      } catch (err: unknown) {
+        const errorObj = err instanceof Error ? err : new Error(String(err))
+        sendJson(res, { success: false, error: errorObj.message })
+      }
+    })
+  }
+
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/wecom/test-send',
+    handler: handleWecomTestSend
+  })
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/connectors/wecom/test-send',
+    handler: handleWecomTestSend
   })
 }

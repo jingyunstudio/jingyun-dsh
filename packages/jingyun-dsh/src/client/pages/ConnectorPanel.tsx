@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { QRCodeSVG } from 'qrcode.react'
+import { WecomDetailModal } from './WecomModal'
 
 interface Connector {
   id: string
@@ -68,15 +70,18 @@ const WechatWorkLogo = () => (
 
 export const ConnectorPanel = () => {
   const [larkStatus, setLarkStatus] = useState<any>(null)
+  const [wecomStatus, setWecomStatus] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showWecomModal, setShowWecomModal] = useState(false)
+  const [showWecomDetailModal, setShowWecomDetailModal] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
 
   const handleNewChatWithPrompt = (promptText: string) => {
     try {
       // 1. 尝试寻找并点击宿主 DSH 系统的“新建会话”按钮
-      const newChatBtn: any = document.querySelector('button[aria-label="新建会话"]') || 
+      const newChatBtn: any = document.querySelector('button[aria-label="新建会话"]') ||
                            Array.from(document.querySelectorAll('button')).find(el => el.textContent?.includes('新建任务'))
       if (newChatBtn) {
         newChatBtn.click()
@@ -94,7 +99,7 @@ export const ConnectorPanel = () => {
           const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set
           setter?.call(textarea, promptText)
           textarea.dispatchEvent(new Event('input', { bubbles: true }))
-          
+
           setTimeout(() => {
             textarea.focus()
           }, 50)
@@ -150,20 +155,49 @@ export const ConnectorPanel = () => {
       setLoading(false)
     }
   }
+  // 获取企业微信连接状态
+  const fetchWecomStatus = async () => {
+    try {
+      const res = await fetch('/api/jingyun/connectors/wecom/status')
+      if (res.ok) {
+        const json = await res.json()
+        if (json.success && json.data) {
+          setWecomStatus(json.data)
+        }
+      }
+    } catch (err) {
+      console.error('[ConnectorPanel] Failed to fetch wecom status:', err)
+    }
+  }
+
+  // 断开企业微信
+  const handleWecomDisconnect = async () => {
+    if (!confirm('确定要断开企业微信的连接吗？断开后相关的企业微信智能体能力将无法使用。')) return
+    try {
+      const res = await fetch('/api/jingyun/connectors/wecom/disconnect', { method: 'POST' })
+      if (res.ok) {
+        await fetchWecomStatus()
+      }
+    } catch (err) {
+      console.error('[ConnectorPanel] Failed to disconnect wecom:', err)
+    }
+  }
 
   useEffect(() => {
     fetchLarkStatus()
+    fetchWecomStatus()
   }, [])
 
   const isLarkConnected = larkStatus && larkStatus.identities?.user?.status === 'ready'
   const larkUser = larkStatus?.identities?.user?.userName || ''
   const larkAppId = larkStatus?.appId || ''
 
+  const isWecomConnected = wecomStatus?.hasConfig === true || wecomStatus?.status === 'connected'
+  const wecomBotName = wecomStatus?.botName || '企业微信智能机器人'
+  const wecomBotId = wecomStatus?.botId || wecomStatus?.config?.botId || ''
+
   return (
     <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
       width: '100%',
       padding: '24px 32px',
       boxSizing: 'border-box',
@@ -230,7 +264,7 @@ export const ConnectorPanel = () => {
           width: '100%'
         }}>
           {/* 飞书连接器行 */}
-          <div 
+          <div
             onClick={() => {
               if (isLarkConnected) {
                 setShowDetailModal(true)
@@ -286,7 +320,7 @@ export const ConnectorPanel = () => {
                   fontWeight: 600,
                   color: 'var(--dsw-alias-label-primary, #0f172a)'
                 }}>飞书 (Lark)</h3>
-                
+
                 <span style={{
                   fontSize: '10px',
                   color: 'var(--dsw-alias-label-tertiary, #64748b)',
@@ -312,7 +346,7 @@ export const ConnectorPanel = () => {
                   </span>
                 )}
               </div>
-              <p 
+              <p
                 style={{
                   margin: 0,
                   fontSize: '11.5px',
@@ -374,7 +408,7 @@ export const ConnectorPanel = () => {
           </div>
 
           {/* 钉钉列表行 */}
-          <div 
+          <div
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -414,7 +448,7 @@ export const ConnectorPanel = () => {
                   fontWeight: 600,
                   color: 'var(--dsw-alias-label-primary, #0f172a)'
                 }}>钉钉 (DingTalk)</h3>
-                
+
                 <span style={{
                   fontSize: '10px',
                   color: 'var(--dsw-alias-label-tertiary, #64748b)',
@@ -456,8 +490,14 @@ export const ConnectorPanel = () => {
             </div>
           </div>
 
-          {/* 企业微信列表行 */}
-          <div 
+          <div
+            onClick={() => {
+              if (isWecomConnected) {
+                setShowWecomDetailModal(true)
+              } else {
+                setShowWecomModal(true)
+              }
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -469,8 +509,16 @@ export const ConnectorPanel = () => {
               background: 'var(--dsw-alias-bg-card, #ffffff)',
               boxSizing: 'border-box',
               height: '80px',
-              opacity: 0.65,
-              cursor: 'not-allowed'
+              cursor: 'pointer',
+              transition: 'border-color 0.2s, background-color 0.2s'
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--dsw-alias-border-hover, #cbd5e1)'
+              e.currentTarget.style.background = 'var(--dsw-alias-bg-card-hover, #f8fafc)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--dsw-alias-border, #e2e8f0)'
+              e.currentTarget.style.background = 'var(--dsw-alias-bg-card, #ffffff)'
             }}
           >
             {/* Logo */}
@@ -497,14 +545,31 @@ export const ConnectorPanel = () => {
                   fontWeight: 600,
                   color: 'var(--dsw-alias-label-primary, #0f172a)'
                 }}>企业微信</h3>
-                
+
                 <span style={{
                   fontSize: '10px',
                   color: 'var(--dsw-alias-label-tertiary, #64748b)',
                   background: 'var(--dsw-alias-bg-card-hover, #f1f5f9)',
                   padding: '1px 6px',
                   borderRadius: '4px'
-                }}>即将上线</span>
+                }}>官方</span>
+
+                {isWecomConnected && (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '10px',
+                    color: '#16a34a',
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    fontWeight: 500
+                  }}>
+                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#22c55e' }} />
+                    已启用
+                  </span>
+                )}
               </div>
               <p style={{
                 margin: 0,
@@ -514,33 +579,79 @@ export const ConnectorPanel = () => {
                 overflow: 'hidden',
                 whiteSpace: 'nowrap'
               }}>
-                与企业微信深度集成，支持客户关系管理 (CRM) 机器人消息流自动推送。
+                与企业微信智能机器人深度集成，支持 WebSocket 长连接实时消息收发与协同。
               </p>
             </div>
 
             {/* Action */}
-            <div style={{ flexShrink: 0, marginLeft: '4px' }}>
-              <button
-                disabled
-                style={{
-                  height: '28px',
-                  padding: '0 14px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  background: 'var(--dsw-alias-border, #e2e8f0)',
-                  color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'not-allowed'
-                }}
-              >
-                未开放
-              </button>
+            <div onClick={e => e.stopPropagation()} style={{ flexShrink: 0, marginLeft: '4px' }}>
+              {isWecomConnected ? (
+                <button
+                  onClick={() => setShowWecomDetailModal(true)}
+                  style={{
+                    height: '28px',
+                    padding: '0 14px',
+                    borderRadius: '9999px',
+                    border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                    background: 'var(--dsw-alias-bg-card, #ffffff)',
+                    color: 'var(--dsw-alias-label-primary, #0f172a)',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  管理
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowWecomModal(true)}
+                  style={{
+                    height: '28px',
+                    padding: '0 14px',
+                    borderRadius: '9999px',
+                    border: 'none',
+                    background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
+                    color: 'var(--dsw-alias-label-inverse, #ffffff)',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: 'pointer'
+                  }}
+                >
+                  连接
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
+
+      {/* 企业微信授权扫码弹窗 (完全复用飞书 ConnectorAuthModal 组件) */}
+      {showWecomModal && (
+        <ConnectorAuthModal
+          channel="wecom"
+          title="企业微信授权连接"
+          onClose={() => setShowWecomModal(false)}
+          onSuccess={() => {
+            setShowWecomModal(false)
+            fetchWecomStatus()
+          }}
+        />
+      )}
+
+      {/* 企业微信管理详情弹窗 */}
+      {showWecomDetailModal && (
+        <WecomDetailModal
+          botName={wecomBotName}
+          botId={wecomBotId}
+          status={wecomStatus?.status || 'connected'}
+          onClose={() => setShowWecomDetailModal(false)}
+          onDisconnect={() => {
+            setShowWecomDetailModal(false)
+            handleWecomDisconnect()
+          }}
+        />
+      )}
       {/* 飞书授权扫码弹窗 */}
       {showAuthModal && (
         <ConnectorAuthModal
@@ -621,7 +732,7 @@ const ConnectorDetailModal = ({ channel, title, userName, appId, onClose, onDisc
         animation: 'slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
         {/* 关闭按钮 */}
-        <button 
+        <button
           onClick={onClose}
           style={{
             position: 'absolute',
@@ -726,10 +837,10 @@ const ConnectorDetailModal = ({ channel, title, userName, appId, onClose, onDisc
               <LightbulbIcon />
               试试这样用
             </div>
-            
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {PROMPT_SUGGESTIONS.map((item, idx) => (
-                <div 
+                <div
                   key={idx}
                   onClick={(e) => {
                     e.stopPropagation()
@@ -750,11 +861,11 @@ const ConnectorDetailModal = ({ channel, title, userName, appId, onClose, onDisc
                     border: '1px solid #f1f5f9',
                     transition: 'all 0.15s ease'
                   }}
-                  onMouseEnter={e => { 
+                  onMouseEnter={e => {
                     e.currentTarget.style.background = '#f1f5f9'
                     e.currentTarget.style.borderColor = '#e2e8f0'
                   }}
-                  onMouseLeave={e => { 
+                  onMouseLeave={e => {
                     e.currentTarget.style.background = '#f8fafc'
                     e.currentTarget.style.borderColor = '#f1f5f9'
                   }}
@@ -846,13 +957,30 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
     setLoading(true)
     setErrorMessage('')
     try {
+      if (channel === 'wecom') {
+        const res = await fetch('/api/jingyun/connectors/wecom/qr-start')
+        if (res.ok) {
+          const json = await res.json()
+          const qrData = json?.data || json
+          if (qrData && qrData.authUrl && qrData.scode) {
+            setAuthData({ verification_url: qrData.authUrl, device_code: qrData.scode, mode: 'wecom' })
+            setAuthMode('login')
+            startPolling(qrData.scode)
+          } else {
+            setErrorMessage(json?.error || '无法获取企业微信授权数据')
+          }
+        } else {
+          setErrorMessage('获取企业微信授权二维码失败')
+        }
+        return
+      }
+
       const res = await fetch(`/api/jingyun/connectors/${channel}/auth-start`, { method: 'POST' })
       if (res.ok) {
         const json = await res.json()
         if (json.success && json.data) {
           setAuthData(json.data)
           setAuthMode(json.data.mode || 'login')
-          // 开启轮询
           startPolling(json.data.device_code)
         } else {
           setErrorMessage(json.error || '无法初始化授权链接')
@@ -871,10 +999,35 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
   const startPolling = (deviceCode: string) => {
     let active = true
     let statusInterval: any = null
-
-    // 轨道 A：长挂起写入验证（唯一实例，防死锁）
+    // 轨道 A：轮询检查（飞书长轮询 / 企业微信查询接口）
     const runPoll = async () => {
+      if (!active) return
       try {
+        if (channel === 'wecom') {
+          const res = await fetch(`/api/jingyun/connectors/wecom/query-result?scode=${encodeURIComponent(deviceCode)}`)
+          if (res.ok && active) {
+            const json = await res.json()
+            const data = json?.data || {}
+            if (data.status === 'success' && data.bot_info) {
+              // 自动发起 connect 长连接建连
+              await fetch('/api/jingyun/connectors/wecom/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  botId: data.bot_info.botid,
+                  botSecret: data.bot_info.secret
+                })
+              }).catch(e => console.warn('[ConnectorAuthModal] Wecom connect error:', e))
+              triggerSuccess()
+              return
+            }
+          }
+          if (active) {
+            setTimeout(runPoll, 2000)
+          }
+          return
+        }
+
         const res = await fetch(`/api/jingyun/connectors/${channel}/auth-poll`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -887,11 +1040,11 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
               console.log('[ConnectorAuthModal] Phase 1 config init finished. Re-starting auth to get Phase 2 QR code...')
               active = false
               if (statusInterval) clearInterval(statusInterval)
-              
+
               setAuthMode('login')
               setLoading(true)
               setAuthData(null)
-              
+
               setTimeout(() => {
                 startAuth()
               }, 1500)
@@ -905,14 +1058,14 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
           }
         }
       } catch (err) {
-        console.warn('[ConnectorAuthModal] Long poll verification failed:', err)
+        console.warn('[ConnectorAuthModal] Poll verification failed:', err)
         if (active) {
-          setTimeout(runPoll, 4000)
+          setTimeout(runPoll, 3000)
         }
       }
     }
 
-    // 轨道 B：只读状态极速检测（每2秒，无锁冲突风险）
+    // 轨道 B：只读状态极速检测（每2秒）
     const checkStatus = async () => {
       if (!active) return
       try {
@@ -920,9 +1073,15 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
         if (res.ok && active) {
           const json = await res.json()
           if (json.success && json.data) {
-            const status = json.data.identities?.user?.status
-            if (status === 'ready') {
-              triggerSuccess()
+            if (channel === 'wecom') {
+              if (json.data.status === 'connected' || json.data.hasConfig) {
+                triggerSuccess()
+              }
+            } else {
+              const status = json.data.identities?.user?.status
+              if (status === 'ready') {
+                triggerSuccess()
+              }
             }
           }
         }
@@ -931,7 +1090,7 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
       }
     }
 
-    const triggerSuccess = (completedMode?: string) => {
+    const triggerSuccess = () => {
       if (!active) return
       active = false
       if (statusInterval) clearInterval(statusInterval)
@@ -940,15 +1099,10 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
         onSuccess()
       }, 1500)
     }
-    
-    // 延迟 1.5 秒后启动两条轨道
-    setTimeout(() => {
-      if (active) {
-        runPoll()
-        statusInterval = setInterval(checkStatus, 2000)
-        checkStatus() // 立即执行一次
-      }
-    }, 1500)
+
+    // 启动两条轨道
+    runPoll()
+    statusInterval = setInterval(checkStatus, 2000)
 
     intervalRef.current = {
       close: () => {
@@ -957,7 +1111,6 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
       }
     }
   }
-
   useEffect(() => {
     startAuth()
     return () => {
@@ -978,7 +1131,7 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
       backgroundColor: 'rgba(15, 23, 42, 0.4)',
       backdropFilter: 'blur(4px)'
     }}>
-      <div 
+      <div
         style={{
           width: '380px',
           background: 'var(--dsw-alias-bg-card, #ffffff)',
@@ -1036,7 +1189,7 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
         ) : (
           <>
             {/* 关闭按钮 */}
-            <button 
+            <button
               onClick={onClose}
               style={{
                 position: 'absolute',
@@ -1072,7 +1225,9 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
               lineHeight: '1.4',
               fontWeight: authMode === 'init' ? 500 : 'normal'
             }}>
-              {authMode === 'init' ? (
+              {channel === 'wecom' ? (
+                <>请使用手机企业微信扫描下方二维码完成授权，<br/>授权后智能体即可介入您的企业微信会话。</>
+              ) : authMode === 'init' ? (
                 <>
                   <strong style={{ display: 'block', color: '#d97706', marginBottom: '6px', fontSize: '13px' }}>第一步：选择应用</strong>
                   检测到本地尚未配置飞书。请扫码或打开下方配置网址，<br/>在浏览器中新建或选择您的飞书应用完成绑定。
@@ -1122,7 +1277,7 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
                   <line x1="12" y1="16" x2="12.01" y2="16"></line>
                 </svg>
                 <div>{errorMessage}</div>
-                <button 
+                <button
                   onClick={startAuth}
                   style={{
                     marginTop: '12px',
@@ -1147,45 +1302,23 @@ const ConnectorAuthModal = ({ channel, title, onClose, onSuccess }: AuthModalPro
               }}>
                 {/* 二维码图片容器 */}
                 <div style={{
-                  padding: '10px',
+                  padding: '12px',
                   border: '1px solid var(--dsw-alias-border, #e2e8f0)',
                   borderRadius: '12px',
                   background: '#ffffff',
-                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
                 }}>
-                  <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(authData.verification_url)}`}
-                    alt="Verification QR Code"
-                    style={{
-                      width: '180px',
-                      height: '180px',
-                      display: 'block'
-                    }}
+                  <QRCodeSVG
+                    value={authData.verification_url}
+                    size={180}
+                    level="M"
+                    bgColor="#ffffff"
+                    fgColor="#000000"
                   />
                 </div>
-
-                {/* 备用浏览器跳转链接 */}
-                <a
-                  href={authData.verification_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{
-                    fontSize: '12px',
-                    color: '#3370FF',
-                    textDecoration: 'none',
-                    fontWeight: 500,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  <span>{authMode === 'init' ? '或在浏览器中打开配置网址' : '或在浏览器中打开授权网址'}</span>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                  </svg>
-                </a>
               </div>
             ) : null}
 
