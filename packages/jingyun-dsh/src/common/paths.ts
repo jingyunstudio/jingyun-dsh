@@ -3,58 +3,30 @@ import os from 'os';
 import path from 'path';
 
 /**
- * 获取 DSH 根主目录（优先读取 DSH_HOME 环境变量，支持便携模式）
+ * 获取 DSH 数据根目录
+ * 优先级：
+ * 1. 显式设置的 DSH_HOME / DSH_CONFIG_DIR 环境变量
+ * 2. 当前工作目录下的 ./data（便携模式开发与运行一致）
+ * 3. 兜底回退系统用户目录 ~/.dsh
  */
 export function getDshHome(): string {
-  const envHome = process.env.DSH_HOME?.trim();
+  const envHome =
+    process.env.DSH_HOME?.trim() || process.env.DSH_CONFIG_DIR?.trim();
   if (envHome) {
     return path.resolve(envHome);
   }
-  const envConfigDir = process.env.DSH_CONFIG_DIR?.trim();
-  if (envConfigDir) {
-    return path.resolve(envConfigDir);
+
+  const localData = path.resolve(process.cwd(), 'data');
+  if (fs.existsSync(localData)) {
+    return localData;
   }
+
   return path.resolve(os.homedir(), '.dsh');
 }
 
 /**
- * 判断是否处于便携模式
+ * 获取 jingyun-config.json 配置文件路径（单源真理，读写一致）
  */
-export function isPortableMode(): boolean {
-  return process.env.DSH_PORTABLE === '1' || process.env.PORTABLE === '1';
-}
-
-/**
- * 获取 jingyun-config.json 读取路径
- * 优先从 DSH_HOME 目录中读取自定义覆盖配置，若不存在则回退读取内置默认配置
- */
-export function getJingyunConfigPath(fallbackDir: string): string {
-  const dshHome = getDshHome();
-  const customConfig = path.join(dshHome, 'jingyun-config.json');
-  if (fs.existsSync(customConfig)) {
-    return customConfig;
-  }
-  return path.resolve(fallbackDir, '..', 'jingyun-config.json');
-}
-
-/**
- * 获取 jingyun-config.json 写入目标路径
- * 写操作优先保存到 DSH_HOME，确保便携版与安装版配置完全独立且升级不被覆盖
- */
-export function getJingyunConfigWritePath(fallbackDir: string): string {
-  const dshHome = getDshHome();
-  const customConfig = path.join(dshHome, 'jingyun-config.json');
-  if (
-    fs.existsSync(customConfig) ||
-    isPortableMode() ||
-    fs.existsSync(dshHome)
-  ) {
-    if (!fs.existsSync(dshHome)) {
-      try {
-        fs.mkdirSync(dshHome, { recursive: true });
-      } catch {}
-    }
-    return customConfig;
-  }
-  return path.resolve(fallbackDir, '..', 'jingyun-config.json');
+export function getJingyunConfigPath(): string {
+  return path.join(getDshHome(), 'jingyun-config.json');
 }

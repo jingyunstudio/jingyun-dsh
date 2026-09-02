@@ -178,11 +178,13 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
           width: '100%',
         }}
       >
-        <span style={{ marginRight: isCollapsed ? '0' : '12px', display: 'inline-flex' }}>
-          <IconProjectAddOutline16
-            size={16}
-            className="link-icon"
-          />
+        <span
+          style={{
+            marginRight: isCollapsed ? '0' : '12px',
+            display: 'inline-flex',
+          }}
+        >
+          <IconProjectAddOutline16 size={16} className="link-icon" />
         </span>
         {!isCollapsed && <span>更多</span>}
         {!isCollapsed && (

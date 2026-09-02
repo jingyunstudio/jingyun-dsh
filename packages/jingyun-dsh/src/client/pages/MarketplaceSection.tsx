@@ -1139,20 +1139,23 @@ export const MarketplaceCommunityPluginsTab = () => {
                                   gap: '4px',
                                 }}
                               >
-                                {item.topics.slice(0, 6).map((t: string, idx: number) => (
-                                  <span
-                                    key={idx}
-                                    style={{
-                                      padding: '1px 6px',
-                                      background: 'rgba(0,0,0,0.04)',
-                                      borderRadius: '3px',
-                                      fontSize: '10px',
-                                      color: 'var(--dsw-alias-label-secondary)',
-                                    }}
-                                  >
-                                    #{t}
-                                  </span>
-                                ))}
+                                {item.topics
+                                  .slice(0, 6)
+                                  .map((t: string, idx: number) => (
+                                    <span
+                                      key={idx}
+                                      style={{
+                                        padding: '1px 6px',
+                                        background: 'rgba(0,0,0,0.04)',
+                                        borderRadius: '3px',
+                                        fontSize: '10px',
+                                        color:
+                                          'var(--dsw-alias-label-secondary)',
+                                      }}
+                                    >
+                                      #{t}
+                                    </span>
+                                  ))}
                               </div>
                             )}
 

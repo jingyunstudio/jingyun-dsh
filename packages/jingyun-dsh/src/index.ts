@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
 
 import type { Context } from '@deepseek-ai/cordis';
 
@@ -9,10 +8,7 @@ import { getDshHome, getJingyunConfigPath } from './common/paths';
 import { Config } from './config/schema';
 import { registerRoutes } from './routes';
 
-// Resolve standard __dirname equivalent in ES Modules context
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const jsonPath = getJingyunConfigPath(__dirname);
-
+const jsonPath = getJingyunConfigPath();
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
 if (fs.existsSync(jsonPath)) {
   try {
@@ -139,7 +135,7 @@ export function apply(ctx: Context, config: Config) {
   syncBuiltinSkills();
 
   // 3. Pre-load initial configuration from local backup config file before registering settings
-  const activeJsonPath = getJingyunConfigPath(__dirname);
+  const activeJsonPath = getJingyunConfigPath();
   if (fs.existsSync(activeJsonPath)) {
     try {
       const raw = fs.readFileSync(activeJsonPath, 'utf8');

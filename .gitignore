@@ -42,3 +42,4 @@ __pycache__/
 *.pyc
 
 tsconfig.tsbuildinfo
+/data

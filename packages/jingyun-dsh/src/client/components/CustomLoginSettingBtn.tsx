@@ -459,10 +459,7 @@ export function CustomLoginSettingBtn(props: any) {
           </div>
         ) : (
           <span style={{ flexShrink: 0, display: 'inline-flex' }}>
-            <IconUserOutline16
-              size={16}
-              className="link-icon"
-            />
+            <IconUserOutline16 size={16} className="link-icon" />
           </span>
         )}
 

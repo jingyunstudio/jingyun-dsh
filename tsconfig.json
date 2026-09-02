@@ -8,7 +8,5 @@
     "skipLibCheck": true
   },
   "files": [],
-  "references": [
-    { "path": "./packages/jingyun-dsh" }
-  ]
+  "references": [{ "path": "./packages/jingyun-dsh" }]
 }
