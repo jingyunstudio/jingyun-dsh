@@ -12,7 +12,8 @@
     "tauri:dev": "npx --package @tauri-apps/cli tauri dev",
     "tauri:build": "pnpm build && node scripts/prepare_vendor.js && npx --package @tauri-apps/cli tauri build",
     "lint": "oxlint --fix",
-    "fmt": "oxfmt --write"
+    "fmt": "oxfmt --write",
+    "typecheck": "tsc -b --noEmit"
   },
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.0-rc.8",

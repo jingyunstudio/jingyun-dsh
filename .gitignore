@@ -41,4 +41,4 @@ temp_*
 __pycache__/
 *.pyc
 
-
+tsconfig.tsbuildinfo

@@ -57,7 +57,7 @@ export function registerSkillsRoutes(ctx: Context) {
 
         const installedSlugsLower = installedSlugs.map((s) => s.toLowerCase());
 
-        const mappedSkills = clawResults.map((item: any) => {
+        const mappedSkills: any[] = clawResults.map((item: any) => {
           const slug = item.slug || '';
           const isInstalled = installedSlugsLower.includes(slug.toLowerCase());
 

@@ -26,7 +26,6 @@ interface NodeError extends Error {
   code?: string;
 }
 
-const DEFAULT_CONFIG_PATH = path.join(getDshHome(), 'connectors', 'wecom.json');
 // 企业微信智能机器人官方开放平台 WebSocket 地址 (对齐 @wecom/aibot-node-sdk)
 const OFFICIAL_WS_URL = 'wss://openws.work.weixin.qq.com';
 
@@ -211,6 +210,22 @@ export class WecomConnectorService {
     }
     this.status = 'disconnected';
     this.connectedAt = undefined;
+  }
+  public async sendTextMessage(chatId: string, content: string): Promise<void> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('企微长连接未建立');
+    }
+    const reqId = generateReqId('aibot_send_msg');
+    const frame = {
+      cmd: 'aibot_send_msg',
+      headers: { req_id: reqId },
+      body: {
+        chat_id: chatId,
+        msgtype: 'text',
+        text: { content },
+      },
+    };
+    this.ws.send(JSON.stringify(frame));
   }
 
   private handleMessage(data: RawData): void {

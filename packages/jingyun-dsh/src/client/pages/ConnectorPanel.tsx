@@ -863,7 +863,6 @@ export const ConnectorPanel = () => {
       {/* 企业微信管理详情弹窗 */}
       {showWecomDetailModal && (
         <WecomDetailModal
-          botName={wecomBotName}
           botId={wecomBotId}
           status={wecomStatus?.status || 'connected'}
           onClose={() => setShowWecomDetailModal(false)}

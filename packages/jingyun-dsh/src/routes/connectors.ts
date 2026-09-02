@@ -393,18 +393,18 @@ export function registerConnectorsRoutes(ctx: Context) {
                   },
                 });
               } catch (err: any) {
-                sendError(res, 500, `解析官方配置失败: ${err.message}`);
+                sendError(res, `解析官方配置失败: ${err.message}`, 500);
               }
             } else {
-              sendError(res, 500, '未能从企微获取到授权信息');
+              sendError(res, '未能从企微获取到授权信息', 500);
             }
           });
         })
         .on('error', (err) => {
-          sendError(res, 500, `请求企微网关失败: ${err.message}`);
+          sendError(res, `请求企微网关失败: ${err.message}`, 500);
         });
     } catch (err: any) {
-      sendError(res, 500, err.message);
+      sendError(res, err.message, 500);
     }
   };
 
@@ -414,7 +414,7 @@ export function registerConnectorsRoutes(ctx: Context) {
       const parsedUrl = new URL(req.url, 'http://127.0.0.1');
       const scode = parsedUrl.searchParams.get('scode') || '';
       if (!scode) {
-        sendError(res, 400, '缺少 scode 参数');
+        sendError(res, '缺少 scode 参数', 400);
         return;
       }
 
@@ -481,7 +481,7 @@ export function registerConnectorsRoutes(ctx: Context) {
           });
         });
     } catch (err: any) {
-      sendError(res, 500, err.message);
+      sendError(res, err.message, 500);
     }
   };
 
@@ -577,7 +577,7 @@ export function registerConnectorsRoutes(ctx: Context) {
   // 7. 断开企业微信长连接
   const handleWecomDisconnect = async (_req: any, res: any) => {
     try {
-      wecomConnector.disconnect(true);
+      wecomConnector.disconnect();
       sendJson(res, {
         success: true,
         data: wecomConnector.getStatus(),

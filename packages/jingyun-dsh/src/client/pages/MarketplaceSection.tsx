@@ -375,7 +375,7 @@ export const MarketplaceSkillsTab = () => {
             selectedId={filterType}
             onSelect={(id) => {
               setDropdownOpen(false);
-              setFilterType(id as string);
+              setFilterType(id as 'all' | 'enabled');
               setExpanded(null);
             }}
             align="end"
@@ -1139,7 +1139,7 @@ export const MarketplaceCommunityPluginsTab = () => {
                                   gap: '4px',
                                 }}
                               >
-                                {item.topics.slice(0, 6).map((t, idx) => (
+                                {item.topics.slice(0, 6).map((t: string, idx: number) => (
                                   <span
                                     key={idx}
                                     style={{

@@ -458,11 +458,12 @@ export function CustomLoginSettingBtn(props: any) {
             {displayName.slice(0, 1)}
           </div>
         ) : (
-          <IconUserOutline16
-            size={16}
-            className="link-icon"
-            style={{ flexShrink: 0 }}
-          />
+          <span style={{ flexShrink: 0, display: 'inline-flex' }}>
+            <IconUserOutline16
+              size={16}
+              className="link-icon"
+            />
+          </span>
         )}
 
         {!isCollapsed && (

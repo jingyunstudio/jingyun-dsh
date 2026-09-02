@@ -234,7 +234,7 @@ export function registerAssetsRoutes(ctx: Context) {
                 if (candidates.length > 0) {
                   let manifestFile = path.join(p, 'manifest.json');
 
-                  let targetName = slug;
+                  let targetName = name;
                   let leadAgentName = '';
                   if (fs.existsSync(manifestFile)) {
                     try {
@@ -249,10 +249,9 @@ export function registerAssetsRoutes(ctx: Context) {
                   }
 
                   const lookupName = leadAgentName || targetName;
-                  const kebabId = slug
+                  const kebabId = name
                     .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
                     .toLowerCase();
-
                   const nameMatch = candidates.find(
                     (f) => path.basename(f, '.md') === lookupName
                   );

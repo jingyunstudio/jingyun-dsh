@@ -9,8 +9,6 @@
   },
   "files": [],
   "references": [
-    { "path": "./packages/config-loader" },
-    { "path": "./packages/packager" },
     { "path": "./packages/jingyun-dsh" }
   ]
 }

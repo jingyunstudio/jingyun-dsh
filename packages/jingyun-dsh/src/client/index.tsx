@@ -103,6 +103,7 @@ export function apply(ctx: ClientContext) {
   ctx.slots.inject('settings.trigger', () =>
     ctx.slots.register(
       {
+        id: 'jingyun.settings.trigger',
         name: 'settings.trigger',
         priority: -100,
       },

@@ -1714,7 +1714,6 @@ export function AutomationPanel() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifycontent: 'space-between',
                     justifyContent: 'space-between',
                     fontSize: '12.5px',
                     color: '#334155',
