@@ -1,2 +1,30 @@
 packages:
   - 'packages/*'
+allowBuilds:
+  '@deepseek-ai/dsh-subprocess-local': true
+  '@google/genai': true
+  koffi: true
+  node-pty: true
+  protobufjs: true
+minimumReleaseAgeExclude:
+  - '@oxfmt/binding-android-arm-eabi@0.66.0'
+  - '@oxfmt/binding-android-arm64@0.66.0'
+  - '@oxfmt/binding-darwin-arm64@0.66.0'
+  - '@oxfmt/binding-darwin-x64@0.66.0'
+  - '@oxfmt/binding-freebsd-x64@0.66.0'
+  - '@oxfmt/binding-linux-arm-gnueabihf@0.66.0'
+  - '@oxfmt/binding-linux-arm-musleabihf@0.66.0'
+  - '@oxfmt/binding-linux-arm64-gnu@0.66.0'
+  - '@oxfmt/binding-linux-arm64-musl@0.66.0'
+  - '@oxfmt/binding-linux-ppc64-gnu@0.66.0'
+  - '@oxfmt/binding-linux-riscv64-gnu@0.66.0'
+  - '@oxfmt/binding-linux-riscv64-musl@0.66.0'
+  - '@oxfmt/binding-linux-s390x-gnu@0.66.0'
+  - '@oxfmt/binding-linux-x64-gnu@0.66.0'
+  - '@oxfmt/binding-linux-x64-musl@0.66.0'
+  - '@oxfmt/binding-openharmony-arm64@0.66.0'
+  - '@oxfmt/binding-win32-arm64-msvc@0.66.0'
+  - '@oxfmt/binding-win32-ia32-msvc@0.66.0'
+  - '@oxfmt/binding-win32-x64-msvc@0.66.0'
+  - oxfmt@0.66.0
+  - '@types/node@26.4.1'
