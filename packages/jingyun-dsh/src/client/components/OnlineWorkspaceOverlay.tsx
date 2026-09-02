@@ -149,7 +149,7 @@ export function OnlineWorkspaceOverlay() {
               { type: 'JY_THEME_CHANGE', theme: newTheme },
               '*'
             );
-          } catch (err) {}
+          } catch {}
         }
       }
     };
@@ -285,7 +285,7 @@ export function OnlineWorkspaceOverlay() {
                     );
                   }
                 }
-              } catch (e) {}
+              } catch {}
             }
 
             timerCount++;
@@ -459,7 +459,7 @@ export function OnlineWorkspaceOverlay() {
     const rawPath = currentHash.substring(pIdx + pathPrefix.length);
     try {
       subPath = decodeURIComponent(rawPath);
-    } catch (e) {
+    } catch {
       subPath = rawPath;
     }
   }
@@ -478,7 +478,7 @@ export function OnlineWorkspaceOverlay() {
       targetUrl.searchParams.set('token', cachedToken);
     }
     finalIframeUrl = targetUrl.toString();
-  } catch (e) {
+  } catch {
     const cleanHost = appHost.endsWith('/') ? appHost.slice(0, -1) : appHost;
     const cleanSubPath = subPath.startsWith('/') ? subPath : `/${subPath}`;
     finalIframeUrl = `${cleanHost}${cleanSubPath}${cleanSubPath.includes('?') ? '&' : '?'}embed=true&theme=${currentTheme}`;

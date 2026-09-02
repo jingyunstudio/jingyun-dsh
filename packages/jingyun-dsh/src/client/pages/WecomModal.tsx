@@ -76,7 +76,7 @@ export const WecomModal = ({
             handleAuthSuccess(result.bot_info);
           }
         }
-      } catch (e) {
+      } catch {
         // ignore poll errors
       }
     }, 2000);

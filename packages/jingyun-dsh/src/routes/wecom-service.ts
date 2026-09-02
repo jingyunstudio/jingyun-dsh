@@ -206,7 +206,7 @@ export class WecomConnectorService {
     if (this.ws) {
       try {
         this.ws.terminate();
-      } catch (e) {}
+      } catch {}
       this.ws = null;
     }
     this.status = 'disconnected';

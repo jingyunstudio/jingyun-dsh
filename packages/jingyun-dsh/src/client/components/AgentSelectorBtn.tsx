@@ -74,7 +74,7 @@ export const AgentSelectorBtn = (props: any) => {
               break;
             }
           }
-        } catch (e) {}
+        } catch {}
       }
     },
     [currentSessionId]
@@ -112,7 +112,7 @@ export const AgentSelectorBtn = (props: any) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ agentId: id, sessionId: sessId }),
           });
-        } catch (err) {}
+        } catch {}
       }
     };
     if (typeof window !== 'undefined') {
@@ -138,7 +138,7 @@ export const AgentSelectorBtn = (props: any) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId: id, sessionId: currentSessionId }),
       });
-    } catch (e) {}
+    } catch {}
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('jy_agent_changed', {

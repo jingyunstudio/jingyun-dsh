@@ -675,7 +675,7 @@ export const MarketplaceCommunityPluginsTab = () => {
           setInstalledItems(mappedInstalled);
         }
       }
-    } catch (e) {}
+    } catch {}
   };
 
   const loadCommunityNpmPlugins = async (

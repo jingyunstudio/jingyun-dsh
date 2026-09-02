@@ -25,7 +25,7 @@ export function JYCardActivateModal() {
         window.dispatchEvent(new CustomEvent('jy_auth_changed'));
         try {
           showToast('🎉 卡密激活成功！权益与积分已实时生效');
-        } catch (e) {}
+        } catch {}
       } else if (event.data?.type === 'JY_CARD_ACTIVATE_CLOSE') {
         setOpen(false);
       }

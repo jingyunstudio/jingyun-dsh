@@ -86,7 +86,7 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
                 jsonContent = JSON.parse(
                   fs.readFileSync(currentReadPath, 'utf8')
                 );
-              } catch (e) {}
+              } catch {}
             }
 
             if (patch.apiUrl) jsonContent.api_url = patch.apiUrl;
@@ -150,7 +150,7 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
       if (fs.existsSync(currentReadPath)) {
         try {
           jsonContent = JSON.parse(fs.readFileSync(currentReadPath, 'utf8'));
-        } catch (e) {}
+        } catch {}
       }
 
       sendJson(res, {
@@ -191,7 +191,7 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
           else if (localData.app_host) domain = localData.app_host;
           if (localData.custom_name) siteName = localData.custom_name;
           if (localData.custom_logo) siteLogo = localData.custom_logo;
-        } catch (e) {}
+        } catch {}
       }
 
       sendJson(res, {
@@ -234,7 +234,7 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
           });
           res.end(imgBuf);
           return;
-        } catch (e) {}
+        } catch {}
       }
       res.writeHead(404);
       res.end();

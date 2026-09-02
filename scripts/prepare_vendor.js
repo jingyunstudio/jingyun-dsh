@@ -22,7 +22,7 @@ if (!fs.existsSync(targetVendorDeps)) {
 if (fs.existsSync(targetWorkspace)) {
   try {
     fs.rmSync(targetWorkspace, { recursive: true, force: true });
-  } catch (e) {}
+  } catch {}
 }
 fs.mkdirSync(targetWorkspace, { recursive: true });
 
@@ -32,7 +32,7 @@ function copyRealDir(src, dst) {
   let realSrc = src;
   try {
     realSrc = fs.realpathSync(src);
-  } catch (e) {
+  } catch {
     return;
   }
   fs.mkdirSync(dst, { recursive: true });
@@ -46,7 +46,7 @@ function copyRealDir(src, dst) {
     } else if (entry.isFile()) {
       try {
         fs.copyFileSync(srcPath, dstPath);
-      } catch (e) {}
+      } catch {}
     } else if (entry.isSymbolicLink()) {
       try {
         const target = fs.realpathSync(srcPath);
@@ -55,7 +55,7 @@ function copyRealDir(src, dst) {
         } else {
           fs.copyFileSync(target, dstPath);
         }
-      } catch (e) {}
+      } catch {}
     }
   }
 }

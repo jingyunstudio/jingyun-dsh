@@ -113,11 +113,11 @@ function cleanPnpmStoreTmp() {
               recursive: true,
               force: true,
             });
-          } catch (e) {}
+          } catch {}
         }
       }
     }
-  } catch (e) {}
+  } catch {}
 }
 
 // 辅助函数：通过 GitHub 探测对应包名并快速验证 NPM 是否已发布
@@ -143,7 +143,7 @@ async function resolveNpmPackageForGithubRepo(
             break;
           }
         }
-      } catch (e) {}
+      } catch {}
     }
 
     if (pkgName) {

@@ -25,7 +25,7 @@ export function JYRechargeModal() {
         window.dispatchEvent(new CustomEvent('jy_auth_changed'));
         try {
           showToast('🎉 充值成功！积分余额已实时更新');
-        } catch (e) {}
+        } catch {}
       } else if (event.data?.type === 'JY_RECHARGE_CLOSE') {
         setOpen(false);
       }

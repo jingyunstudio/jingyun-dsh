@@ -75,13 +75,13 @@ export function registerAssetsRoutes(ctx: Context) {
                   desc = m.description || m.summary;
                 if (m.source) source = m.source;
                 if (m.author) author = m.author;
-              } catch (e) {}
+              } catch {}
             } else if (fs.existsSync(metaFile)) {
               try {
                 const m = JSON.parse(fs.readFileSync(metaFile, 'utf8'));
                 if (m.displayName || m.name)
                   skillName = m.displayName || m.name;
-              } catch (e) {}
+              } catch {}
             }
 
             const skillMd = path.join(p, 'SKILL.md');
@@ -130,7 +130,7 @@ export function registerAssetsRoutes(ctx: Context) {
                 ) {
                   source = 'custom';
                 }
-              } catch (e) {}
+              } catch {}
             }
 
             if (name === 'skill-creator' || name === 'agent-manager') {
@@ -220,7 +220,7 @@ export function registerAssetsRoutes(ctx: Context) {
                   );
                 }
                 if (Array.isArray(m.tools)) tools = m.tools;
-              } catch (e) {}
+              } catch {}
             }
 
             // 根据配置清单定义的优先级标识符智能定位人设 Markdown 文件路径
@@ -245,7 +245,7 @@ export function registerAssetsRoutes(ctx: Context) {
                       if (m.expertType === 'team' && m.teamInfo?.leadAgent) {
                         leadAgentName = m.teamInfo.leadAgent;
                       }
-                    } catch (e) {}
+                    } catch {}
                   }
 
                   const lookupName = leadAgentName || targetName;
@@ -270,13 +270,13 @@ export function registerAssetsRoutes(ctx: Context) {
                     promptFile = path.join(agentsSubDir, candidates[0]);
                   }
                 }
-              } catch (e) {}
+              } catch {}
             }
 
             if (promptFile && fs.existsSync(promptFile)) {
               try {
                 prompt = fs.readFileSync(promptFile, 'utf8');
-              } catch (e) {}
+              } catch {}
             }
 
             if (agName === name) {
@@ -295,7 +295,7 @@ export function registerAssetsRoutes(ctx: Context) {
                       .filter((l) => l && !l.startsWith('#'));
                     if (lines.length > 0) desc = lines[0];
                   }
-                } catch (e) {}
+                } catch {}
               }
             }
 
@@ -362,7 +362,7 @@ export function registerAssetsRoutes(ctx: Context) {
           const u = new URL(req.url, 'http://localhost');
           reqSessionId = u.searchParams.get('sessionId') || '';
         }
-      } catch (e) {}
+      } catch {}
 
       const { sessions, globalDefault } = getSessionAgentsConfig();
       let activeAgentId = 'none';
@@ -798,7 +798,7 @@ export function registerAssetsRoutes(ctx: Context) {
                 if (m.slug || m.id) slug = m.slug || m.id;
                 if (m.displayName || m.name)
                   displayName = m.displayName || m.name;
-              } catch (e) {}
+              } catch {}
             }
 
             const targetAgentDir = path.join(baseHome, 'agents', slug);
@@ -826,7 +826,7 @@ export function registerAssetsRoutes(ctx: Context) {
 
             try {
               fs.rmSync(tempDir, { recursive: true, force: true });
-            } catch (e) {}
+            } catch {}
 
             console.log(
               `[UIBranding] Agent package "${displayName}" (${slug}) imported. Bundled: ${bundledSkills.join(', ')}`
@@ -851,7 +851,7 @@ export function registerAssetsRoutes(ctx: Context) {
 
             try {
               fs.rmSync(tempDir, { recursive: true, force: true });
-            } catch (e) {}
+            } catch {}
 
             console.log(`[UIBranding] Skill package "${slug}" imported.`);
             sendJson(res, {

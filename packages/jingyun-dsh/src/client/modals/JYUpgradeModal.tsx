@@ -25,7 +25,7 @@ export function JYUpgradeModal() {
         window.dispatchEvent(new CustomEvent('jy_auth_changed'));
         try {
           showToast('🎉 升级成功！您的会员权益已生效');
-        } catch (e) {}
+        } catch {}
       } else if (event.data?.type === 'JY_UPGRADE_CLOSE') {
         setOpen(false);
       }

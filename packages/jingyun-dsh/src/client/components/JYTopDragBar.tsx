@@ -27,7 +27,7 @@ export function JYTopDragBar() {
       } else if (internals?.invoke) {
         internals.invoke('app_start_drag');
       }
-    } catch (err) {}
+    } catch {}
   };
 
   const handleDoubleClick = (e: React.MouseEvent) => {
@@ -43,7 +43,7 @@ export function JYTopDragBar() {
       } else if (internals?.invoke) {
         internals.invoke('app_toggle_maximize');
       }
-    } catch (err) {}
+    } catch {}
   };
 
   return createPortal(

@@ -23,7 +23,7 @@ const runConfigInitAndGetUrl = (): Promise<{ url: string; mode: string }> => {
       console.log('[UIBranding] Killing previous active config init process.');
       try {
         currentInitProcess.kill();
-      } catch (e) {}
+      } catch {}
     }
 
     const cmd = `lark-cli config init --new > "${tempLogPath}" 2>&1`;
@@ -41,7 +41,7 @@ const runConfigInitAndGetUrl = (): Promise<{ url: string; mode: string }> => {
         if (fs.existsSync(tempLogPath)) {
           fs.unlinkSync(tempLogPath);
         }
-      } catch (e) {}
+      } catch {}
     };
 
     checkInterval = setInterval(() => {
@@ -82,7 +82,7 @@ const runConfigInitAndGetUrl = (): Promise<{ url: string; mode: string }> => {
         cleanup();
         try {
           child.kill();
-        } catch (e) {}
+        } catch {}
         reject(new Error('等待获取初始化连接超时(120s)'));
       }
     }, 120000);
@@ -106,7 +106,7 @@ const connectorHandlers: Record<
         if (err.stdout) {
           try {
             return JSON.parse(err.stdout);
-          } catch (e) {}
+          } catch {}
         }
         return { status: 'needs_login', error: err.message };
       }
@@ -153,7 +153,7 @@ const connectorHandlers: Record<
     logout: async () => {
       try {
         await execAsync('lark-cli auth logout');
-      } catch (e) {}
+      } catch {}
       return { success: true };
     },
   },
@@ -254,7 +254,7 @@ export function registerConnectorsRoutes(ctx: Context) {
             );
             try {
               childProcessForLogin.kill();
-            } catch (e) {}
+            } catch {}
           }
         };
 
@@ -298,7 +298,7 @@ export function registerConnectorsRoutes(ctx: Context) {
             );
             try {
               currentPollProcess.kill();
-            } catch (e) {}
+            } catch {}
           }
 
           console.log(

@@ -52,7 +52,7 @@ export function getJingyunConfigWritePath(fallbackDir: string): string {
     if (!fs.existsSync(dshHome)) {
       try {
         fs.mkdirSync(dshHome, { recursive: true });
-      } catch (e) {}
+      } catch {}
     }
     return customConfig;
   }

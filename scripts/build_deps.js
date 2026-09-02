@@ -20,7 +20,7 @@ if (fs.existsSync(rootPkgPath)) {
     if (rootPkg.dependencies && rootPkg.dependencies['@deepseek-ai/dsh']) {
       dshVersion = rootPkg.dependencies['@deepseek-ai/dsh'];
     }
-  } catch (e) {}
+  } catch {}
 }
 
 console.log(`[BuildDeps] Target @deepseek-ai/dsh version: ${dshVersion}`);
@@ -31,7 +31,7 @@ function copyRealDir(src, dst) {
   let realSrc = src;
   try {
     realSrc = fs.realpathSync(src);
-  } catch (e) {
+  } catch {
     return;
   }
   fs.mkdirSync(dst, { recursive: true });
@@ -45,7 +45,7 @@ function copyRealDir(src, dst) {
     } else if (entry.isFile()) {
       try {
         fs.copyFileSync(srcPath, dstPath);
-      } catch (e) {}
+      } catch {}
     } else if (entry.isSymbolicLink()) {
       try {
         const target = fs.realpathSync(srcPath);
@@ -54,7 +54,7 @@ function copyRealDir(src, dst) {
         } else {
           fs.copyFileSync(target, dstPath);
         }
-      } catch (e) {}
+      } catch {}
     }
   }
 }
@@ -64,7 +64,7 @@ const stagingFolder = path.join(baseDir, 'temp_staging_node_modules');
 if (fs.existsSync(stagingFolder)) {
   try {
     fs.rmSync(stagingFolder, { recursive: true, force: true });
-  } catch (e) {}
+  } catch {}
 }
 fs.mkdirSync(stagingFolder, { recursive: true });
 
@@ -100,7 +100,7 @@ fs.mkdirSync(targetVendorDir, { recursive: true });
 if (fs.existsSync(targetZip)) {
   try {
     fs.unlinkSync(targetZip);
-  } catch (e) {}
+  } catch {}
 }
 
 try {
@@ -114,6 +114,6 @@ try {
 // Clean staging folder
 try {
   fs.rmSync(stagingFolder, { recursive: true, force: true });
-} catch (e) {}
+} catch {}
 
 console.log('[BuildDeps] ✅ Static dependencies build complete!');

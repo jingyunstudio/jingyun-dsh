@@ -115,7 +115,7 @@ export function CustomLoginSettingBtn(props: any) {
         if (u) {
           try {
             setUser(JSON.parse(u));
-          } catch (e) {}
+          } catch {}
         } else {
           setUser(null);
         }
@@ -197,7 +197,7 @@ export function CustomLoginSettingBtn(props: any) {
               iframeDoc.addEventListener('pointerdown', handleClickOutside);
               boundIframeDocs.push(iframeDoc);
             }
-          } catch (err) {
+          } catch {
             // 捕获可能存在的跨域 iframe 异常，不影响页面主流程
           }
         });
@@ -213,7 +213,7 @@ export function CustomLoginSettingBtn(props: any) {
       boundIframeDocs.forEach((iframeDoc) => {
         try {
           iframeDoc.removeEventListener('pointerdown', handleClickOutside);
-        } catch (err) {}
+        } catch {}
       });
     };
   }, [showMenu, showQrPopover]);
@@ -224,14 +224,14 @@ export function CustomLoginSettingBtn(props: any) {
       try {
         localStorage.setItem('jy_theme_mode', mode);
         localStorage.setItem('theme', mode);
-      } catch (err) {}
+      } catch {}
 
       // 1. 触发宿主 window 自定义事件
       try {
         window.dispatchEvent(
           new CustomEvent('jy_theme_change', { detail: mode })
         );
-      } catch (err) {}
+      } catch {}
 
       // 2. 遍历查找 document.querySelectorAll('iframe')
       const iframes = document.querySelectorAll('iframe');
@@ -241,7 +241,7 @@ export function CustomLoginSettingBtn(props: any) {
             { type: 'JY_THEME_CHANGE', theme: mode },
             '*'
           );
-        } catch (err) {}
+        } catch {}
       });
 
       // 3. 遍历 window.frames
@@ -251,7 +251,7 @@ export function CustomLoginSettingBtn(props: any) {
             { type: 'JY_THEME_CHANGE', theme: mode },
             '*'
           );
-        } catch (err) {}
+        } catch {}
       }
     }
   };
@@ -301,7 +301,7 @@ export function CustomLoginSettingBtn(props: any) {
     if (typeof document !== 'undefined') {
       try {
         localStorage.setItem('jy_theme_mode', mode);
-      } catch (err) {}
+      } catch {}
       if (mode === 'dark') {
         document.documentElement.classList.add('dark');
         document.body.classList.add('dark');
@@ -309,7 +309,7 @@ export function CustomLoginSettingBtn(props: any) {
         document.documentElement.setAttribute('data-theme', 'dark');
         try {
           localStorage.setItem('dsw_theme', 'dark');
-        } catch (err) {}
+        } catch {}
       } else {
         document.documentElement.classList.remove('dark');
         document.body.classList.remove('dark');
@@ -317,7 +317,7 @@ export function CustomLoginSettingBtn(props: any) {
         document.documentElement.setAttribute('data-theme', 'light');
         try {
           localStorage.setItem('dsw_theme', 'light');
-        } catch (err) {}
+        } catch {}
       }
       broadcastThemeChange(mode);
     }

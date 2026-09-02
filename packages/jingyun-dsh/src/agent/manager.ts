@@ -24,13 +24,13 @@ export function getSessionAgentsConfig(): SessionAgentsConfig {
       const data = JSON.parse(fs.readFileSync(sessionConfigFile, 'utf8'));
       if (data.sessions) sessions = data.sessions;
       if (data.globalDefault) globalDefault = data.globalDefault;
-    } catch (e) {}
+    } catch {}
   } else if (fs.existsSync(oldSessionConfigFile)) {
     try {
       const data = JSON.parse(fs.readFileSync(oldSessionConfigFile, 'utf8'));
       if (data.sessions) sessions = data.sessions;
       if (data.globalDefault) globalDefault = data.globalDefault;
-    } catch (e) {}
+    } catch {}
   }
 
   if (globalDefault === 'none' || !globalDefault) {
@@ -38,12 +38,12 @@ export function getSessionAgentsConfig(): SessionAgentsConfig {
       try {
         const data = JSON.parse(fs.readFileSync(activeConfigFile, 'utf8'));
         if (data.activeAgentId) globalDefault = data.activeAgentId;
-      } catch (e) {}
+      } catch {}
     } else if (fs.existsSync(oldActiveConfigFile)) {
       try {
         const data = JSON.parse(fs.readFileSync(oldActiveConfigFile, 'utf8'));
         if (data.activeExpertId) globalDefault = data.activeExpertId;
-      } catch (e) {}
+      } catch {}
     }
   }
 
@@ -112,5 +112,5 @@ export function saveSessionAgentsConfig(config: SessionAgentsConfig) {
       ),
       'utf8'
     );
-  } catch (e) {}
+  } catch {}
 }

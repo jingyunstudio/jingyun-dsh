@@ -63,7 +63,7 @@ export function initSystemPromptHook(ctx: Context) {
                 if (m.expertType === 'team' && m.teamInfo?.leadAgent) {
                   leadAgentName = m.teamInfo.leadAgent;
                 }
-              } catch (e) {}
+              } catch {}
             }
 
             // 根据配置清单定义的优先级标识符智能定位人设 Markdown 文件路径
@@ -103,7 +103,7 @@ export function initSystemPromptHook(ctx: Context) {
                     agentMarkdownPath = path.join(agentsSubDir, candidates[0]);
                   }
                 }
-              } catch (e) {}
+              } catch {}
             }
 
             if (agentMarkdownPath && fs.existsSync(agentMarkdownPath)) {
