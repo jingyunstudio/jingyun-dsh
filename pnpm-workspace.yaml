@@ -28,3 +28,5 @@ minimumReleaseAgeExclude:
   - '@oxfmt/binding-win32-x64-msvc@0.66.0'
   - oxfmt@0.66.0
   - '@types/node@26.4.1'
+patchedDependencies:
+  '@deepseek-ai/dsh-host-directory-picker-native': patches/@deepseek-ai__dsh-host-directory-picker-native.patch

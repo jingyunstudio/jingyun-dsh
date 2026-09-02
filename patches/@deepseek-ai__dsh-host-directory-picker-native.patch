@@ -1,0 +1,25 @@
+diff --git a/lib/index.js b/lib/index.js
+index 5ae777fed619c7a037193bc0508c9b42bb008b36..754db594404317f41a650a3ae9d162dd9d21aae7 100644
+--- a/lib/index.js
++++ b/lib/index.js
+@@ -165,6 +165,9 @@ async function pickWin32Directory(signal, internals = {}) {
+ 		};
+ 		signal.addEventListener("abort", onAbort, { once: true });
+ 		worker.on("message", (message) => {
++			if (!message || typeof message !== "object" || typeof message.kind !== "string") {
++				return;
++			}
+ 			switch (message.kind) {
+ 				case "showing":
+ 					dialogThreadId = message.threadId;
+@@ -181,8 +184,8 @@ async function pickWin32Directory(signal, internals = {}) {
+ 						reject(/* @__PURE__ */ new Error(`win32 folder dialog failed: ${message.message}`));
+ 					});
+ 					return;
+-				/* v8 ignore next 2 -- closed worker-owned union; a fourth kind becomes a compile error */
+-				default: assertNever(message);
++				default:
++					return;
+ 			}
+ 		});
+ 		worker.on("error", (error) => {
