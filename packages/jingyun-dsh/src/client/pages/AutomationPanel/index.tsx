@@ -832,8 +832,7 @@ export function AutomationPanel() {
                             border: 'none',
                             background: 'transparent',
                             cursor: 'pointer',
-                            color:
-                              'var(--dsw-alias-label-secondary, #334155)',
+                            color: 'var(--dsw-alias-label-secondary, #334155)',
                             padding: '4px',
                             borderRadius: '50%',
                             display: 'flex',
@@ -1219,8 +1218,7 @@ export function AutomationPanel() {
               className="jy-drawer-header"
               style={{
                 padding: '18px 24px',
-                borderBottom:
-                  '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
+                borderBottom: '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -1300,12 +1298,10 @@ export function AutomationPanel() {
                     height: '34px',
                     padding: '0 12px',
                     borderRadius: '8px',
-                    border:
-                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                    border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
                     fontSize: '13px',
                     outline: 'none',
-                    background:
-                      'var(--dsw-alias-bg-layer-3, #ffffff)',
+                    background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                     color: 'var(--dsw-alias-label-primary, #0f172a)',
                   }}
                 />
@@ -1343,12 +1339,10 @@ export function AutomationPanel() {
                     height: '34px',
                     padding: '0 12px',
                     borderRadius: '8px',
-                    border:
-                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                    border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
                     fontSize: '13px',
                     outline: 'none',
-                    background:
-                      'var(--dsw-alias-bg-layer-3, #ffffff)',
+                    background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                     color: 'var(--dsw-alias-label-primary, #0f172a)',
                   }}
                 />
@@ -1370,12 +1364,10 @@ export function AutomationPanel() {
                 </label>
                 <div
                   style={{
-                    border:
-                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                    border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
                     borderRadius: '10px',
                     overflow: 'hidden',
-                    background:
-                      'var(--dsw-alias-bg-layer-3, #ffffff)',
+                    background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                     display: 'flex',
                     flexDirection: 'column',
                   }}
@@ -1403,8 +1395,7 @@ export function AutomationPanel() {
                     className="jy-prompt-toolbar"
                     style={{
                       padding: '6px 12px',
-                      background:
-                        'var(--dsw-alias-bg-layer-3, #f8fafc)',
+                      background: 'var(--dsw-alias-bg-layer-3, #f8fafc)',
                       borderTop:
                         '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
                       display: 'flex',
@@ -1497,10 +1488,8 @@ export function AutomationPanel() {
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border:
-                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
-                    background:
-                      'var(--dsw-alias-bg-layer-3, #f8fafc)',
+                    border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                    background: 'var(--dsw-alias-bg-layer-3, #f8fafc)',
                     fontSize: '13px',
                     color: 'var(--dsw-alias-label-primary, #334155)',
                     display: 'flex',
@@ -1550,8 +1539,7 @@ export function AutomationPanel() {
                   style={{
                     display: 'flex',
                     gap: '6px',
-                    background:
-                      'var(--dsw-alias-bg-layer-3, #f1f5f9)',
+                    background: 'var(--dsw-alias-bg-layer-3, #f1f5f9)',
                     padding: '3px',
                     borderRadius: '8px',
                     width: 'fit-content',
@@ -1614,10 +1602,8 @@ export function AutomationPanel() {
                         height: '34px',
                         padding: '0 8px',
                         borderRadius: '6px',
-                        border:
-                          '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
-                        background:
-                          'var(--dsw-alias-bg-layer-3, #ffffff)',
+                        border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                        background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                         color: 'var(--dsw-alias-label-primary, #0f172a)',
                         fontSize: '12.5px',
                         width: '100px',
@@ -1637,10 +1623,8 @@ export function AutomationPanel() {
                         height: '34px',
                         padding: '0 8px',
                         borderRadius: '6px',
-                        border:
-                          '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
-                        background:
-                          'var(--dsw-alias-bg-layer-3, #ffffff)',
+                        border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                        background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                         color: 'var(--dsw-alias-label-primary, #0f172a)',
                         fontSize: '12.5px',
                         width: '110px',
@@ -1671,10 +1655,8 @@ export function AutomationPanel() {
                         width: '70px',
                         padding: '0 8px',
                         borderRadius: '6px',
-                        border:
-                          '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
-                        background:
-                          'var(--dsw-alias-bg-layer-3, #ffffff)',
+                        border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                        background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                         color: 'var(--dsw-alias-label-primary, #0f172a)',
                         fontSize: '12.5px',
                       }}
@@ -1685,10 +1667,8 @@ export function AutomationPanel() {
                         height: '34px',
                         padding: '0 8px',
                         borderRadius: '6px',
-                        border:
-                          '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
-                        background:
-                          'var(--dsw-alias-bg-layer-3, #ffffff)',
+                        border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                        background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                         color: 'var(--dsw-alias-label-primary, #0f172a)',
                         fontSize: '12.5px',
                       }}
@@ -1744,12 +1724,10 @@ export function AutomationPanel() {
                     height: '34px',
                     padding: '0 12px',
                     borderRadius: '8px',
-                    border:
-                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                    border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
                     fontSize: '13px',
                     outline: 'none',
-                    background:
-                      'var(--dsw-alias-bg-layer-3, #ffffff)',
+                    background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                     color: 'var(--dsw-alias-label-primary, #0f172a)',
                   }}
                 />
@@ -1841,8 +1819,7 @@ export function AutomationPanel() {
               className="jy-drawer-footer"
               style={{
                 padding: '18px 24px',
-                borderTop:
-                  '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
+                borderTop: '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
                 display: 'flex',
                 justifyContent: 'flex-end',
                 gap: '10px',
@@ -1857,10 +1834,8 @@ export function AutomationPanel() {
                   height: '34px',
                   padding: '0 16px',
                   borderRadius: '8px',
-                  border:
-                    '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
-                  background:
-                    'var(--dsw-alias-bg-layer-3, #ffffff)',
+                  border: '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                  background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
                   color: 'var(--dsw-alias-label-secondary, #334155)',
                   fontSize: '13px',
                   cursor: 'pointer',

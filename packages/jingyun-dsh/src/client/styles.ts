@@ -2155,4 +2155,3 @@ body.jy-resizing-artifact iframe {
   color: #ffffff !important;
 }
 `;
-

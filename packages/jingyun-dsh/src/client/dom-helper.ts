@@ -26,17 +26,25 @@ export function applyThemeMode(mode: 'light' | 'dark') {
   // 广播给 iframe 和其它监听器
   if (typeof window !== 'undefined') {
     try {
-      window.dispatchEvent(new CustomEvent('jy_theme_change', { detail: mode }));
+      window.dispatchEvent(
+        new CustomEvent('jy_theme_change', { detail: mode })
+      );
     } catch {}
     const iframes = document.querySelectorAll('iframe');
     iframes.forEach((iframe) => {
       try {
-        iframe.contentWindow?.postMessage({ type: 'JY_THEME_CHANGE', theme: mode }, '*');
+        iframe.contentWindow?.postMessage(
+          { type: 'JY_THEME_CHANGE', theme: mode },
+          '*'
+        );
       } catch {}
     });
     for (let i = 0; i < window.frames.length; i++) {
       try {
-        window.frames[i].postMessage({ type: 'JY_THEME_CHANGE', theme: mode }, '*');
+        window.frames[i].postMessage(
+          { type: 'JY_THEME_CHANGE', theme: mode },
+          '*'
+        );
       } catch {}
     }
   }
@@ -56,12 +64,18 @@ export function initClientBrandingDOM() {
     styleEl.textContent = styleSheetContent;
 
     // 初始化深浅主题 (持久化优先 -> 租户默认配置后备 -> 默认浅色)
-    const savedTheme = localStorage.getItem('jy_theme_mode') as 'light' | 'dark' | null;
+    const savedTheme = localStorage.getItem('jy_theme_mode') as
+      | 'light'
+      | 'dark'
+      | null;
     if (savedTheme) {
       applyThemeMode(savedTheme);
     } else {
       brandingManager.fetch().then((data: unknown) => {
-        const d = data as { default_theme?: string; theme_mode?: string } | null;
+        const d = data as {
+          default_theme?: string;
+          theme_mode?: string;
+        } | null;
         const defaultTheme = d?.default_theme || d?.theme_mode || 'light';
         applyThemeMode(defaultTheme === 'dark' ? 'dark' : 'light');
       });

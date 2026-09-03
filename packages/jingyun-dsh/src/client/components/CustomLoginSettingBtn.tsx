@@ -5,15 +5,14 @@ import {
 import React from 'react';
 import { createPortal } from 'react-dom';
 
-import { brandingManager, showToast } from './BrandBranding';
+import { applyThemeMode } from '../dom-helper';
+import { brandingManager, openExternalUrl, showToast } from './BrandBranding';
 import {
   openLoginModal,
   openUpgradeModal,
   openRechargeModal,
   openCardActivateModal,
 } from './NavigationRows';
-
-import { applyThemeMode } from '../dom-helper';
 
 export function CustomLoginSettingBtn(props: any) {
   const wide = props?.wide ?? true;
@@ -220,56 +219,27 @@ export function CustomLoginSettingBtn(props: any) {
     };
   }, [showMenu, showQrPopover]);
 
-  // 全通道广播主题变化给页面中所有 iframe 实例与子框架 (如 User-App)
-  const broadcastThemeChange = (mode: 'light' | 'dark') => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('jy_theme_mode', mode);
-        localStorage.setItem('theme', mode);
-      } catch {}
-
-      // 1. 触发宿主 window 自定义事件
-      try {
-        window.dispatchEvent(
-          new CustomEvent('jy_theme_change', { detail: mode })
-        );
-      } catch {}
-
-      // 2. 遍历查找 document.querySelectorAll('iframe')
-      const iframes = document.querySelectorAll('iframe');
-      iframes.forEach((iframe) => {
-        try {
-          iframe.contentWindow?.postMessage(
-            { type: 'JY_THEME_CHANGE', theme: mode },
-            '*'
-          );
-        } catch {}
-      });
-
-      // 3. 遍历 window.frames
-      for (let i = 0; i < window.frames.length; i++) {
-        try {
-          window.frames[i].postMessage(
-            { type: 'JY_THEME_CHANGE', theme: mode },
-            '*'
-          );
-        } catch {}
-      }
-    }
-  };
-
   // 检测与初始化深浅主题 (持久化优先 -> 租户默认设置后备)
   React.useEffect(() => {
     const updateFromCurrent = () => {
       if (typeof document !== 'undefined') {
-        const savedTheme = localStorage.getItem('jy_theme_mode') as 'light' | 'dark' | null;
+        const savedTheme = localStorage.getItem('jy_theme_mode') as
+          | 'light'
+          | 'dark'
+          | null;
         if (savedTheme) {
           setThemeMode(savedTheme);
           applyThemeMode(savedTheme);
         } else {
           brandingManager.fetch().then((data: unknown) => {
-            const d = data as { default_theme?: string; theme_mode?: string } | null;
-            const defaultTheme = (d?.default_theme || d?.theme_mode || 'light') === 'dark' ? 'dark' : 'light';
+            const d = data as {
+              default_theme?: string;
+              theme_mode?: string;
+            } | null;
+            const defaultTheme =
+              (d?.default_theme || d?.theme_mode || 'light') === 'dark'
+                ? 'dark'
+                : 'light';
             setThemeMode(defaultTheme);
             applyThemeMode(defaultTheme);
           });
@@ -472,10 +442,8 @@ export function CustomLoginSettingBtn(props: any) {
               title="打开网站网页端"
               onClick={(e) => {
                 e.stopPropagation();
-                const targetUrl = tenantDomain || 'https://demo.jingyun.online';
-                if (typeof window !== 'undefined') {
-                  window.open(targetUrl, '_blank');
-                }
+                const targetUrl = tenantDomain;
+                openExternalUrl(targetUrl);
               }}
             >
               <svg

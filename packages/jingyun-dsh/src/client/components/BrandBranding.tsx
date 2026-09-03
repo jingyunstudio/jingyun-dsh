@@ -209,3 +209,54 @@ export function showToast(message: string) {
     }
   }, 3000);
 }
+
+export function normalizeUrl(url?: string, defaultUrl = ''): string {
+  if (!url || typeof url !== 'string') return defaultUrl;
+  let trimmed = url.trim();
+  if (!trimmed) return defaultUrl;
+  if (!/^https?:\/\//i.test(trimmed)) {
+    trimmed = `https://${trimmed}`;
+  }
+  return trimmed.replace(/\/+$/, '');
+}
+
+export function openExternalUrl(url: string) {
+  if (!url) return;
+  const target = normalizeUrl(url);
+  try {
+    const winWithTauri =
+      typeof window !== 'undefined'
+        ? (window as Window & {
+            __TAURI__?: {
+              opener?: { openUrl: (url: string) => Promise<void> };
+              core?: {
+                invoke: (
+                  cmd: string,
+                  args?: Record<string, unknown>
+                ) => Promise<unknown>;
+              };
+            };
+          })
+        : undefined;
+    const tauri = winWithTauri?.__TAURI__;
+    if (tauri?.opener?.openUrl) {
+      tauri.opener.openUrl(target).catch(() => {
+        window.open(target, '_blank', 'noopener,noreferrer');
+      });
+      return;
+    }
+    if (tauri?.core?.invoke) {
+      tauri.core
+        .invoke('plugin:opener|open_url', {
+          rule: { type: 'open', url: target },
+        })
+        .catch(() => {
+          window.open(target, '_blank', 'noopener,noreferrer');
+        });
+      return;
+    }
+  } catch {}
+  if (typeof window !== 'undefined') {
+    window.open(target, '_blank', 'noopener,noreferrer');
+  }
+}
