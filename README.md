@@ -13,7 +13,7 @@
 [![pnpm](https://img.shields.io/badge/pnpm-Monorepo-yellow.svg)](https://pnpm.io/)
 [![Website](https://img.shields.io/badge/官网-jingyun.studio-indigo.svg)](https://jingyun.studio/zh)
 
-[官网](https://jingyun.studio/zh) · [开发文档](https://acnq1rombfk4.feishu.cn/wiki/NuZWwBU7Ri0WZUkaLAHclwy2nxc) · [加入社群](#-加入社群)
+[官网](https://jingyun.studio/zh) · [开发文档](https://acnq1rombfk4.feishu.cn/wiki/GHqVw1295i9AfbkbrQUcv8WCnHd) · [加入社群](#-加入社群)
 
 </div>
 
@@ -23,7 +23,7 @@
 
 **Jingyun DSH Client** 不只是一个 AI 对话客户端。
 
-它是 **[Jingyun Studio（井云）](https://jingyun.studio/zh)** 与 **[DeepSeek Harness（DSH）](https://github.com/nicepkg/dsh)** 深度融合的产物 —— 一个**将 AI 智能体 / 技能 / 工作流转化为可交易商品**的完整商业化平台客户端。
+它是 **[Jingyun Studio（井云）](https://jingyun.studio/zh)** 与 **[DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness)** 深度融合的产物 —— 一个**将 AI 智能体 / 技能 / 工作流转化为可交易商品**的完整商业化平台客户端。
 
 > 井云为 DSH 注入了完整的商业闭环：**会员体系 → 订阅支付 → 算力管控 → 资产分发 → 私域运营**，让 AI 开发者 30 分钟内将自己的智能体封装为独立的商业产品。
 
@@ -240,8 +240,7 @@ run_pack.bat
 ## 🔗 相关链接
 
 - 🌐 **官网**：[jingyun.studio](https://jingyun.studio/zh)
-- 📖 **开发文档**：[飞书知识库](https://acnq1rombfk4.feishu.cn/wiki/NuZWwBU7Ri0WZUkaLAHclwy2nxc)
-- 💰 **价格方案**：[jingyun.studio/pricing](https://jingyun.studio/zh/pricing)
+- 📖 **开发文档**：[飞书知识库](https://acnq1rombfk4.feishu.cn/wiki/GHqVw1295i9AfbkbrQUcv8WCnHd)
 - 🏪 **应用市场**：[jingyun.studio/apps](https://jingyun.studio/zh/apps)
 
 ---
