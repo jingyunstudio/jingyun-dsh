@@ -30,3 +30,47 @@ export function getDshHome(): string {
 export function getJingyunConfigPath(): string {
   return path.join(getDshHome(), 'jingyun-config.json');
 }
+
+/**
+ * 安全读取 jingyun-config.json 配置文件，返回解析后的 JSON 对象，失败返回空对象
+ */
+export function readJingyunConfig(): Record<string, any> {
+  const configPath = getJingyunConfigPath();
+  if (fs.existsSync(configPath)) {
+    try {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    } catch {}
+  }
+  return {};
+}
+
+/**
+ * 统一解析远端服务 Host（优先级：请求 query -> 磁盘配置 -> 内存配置，不设兜底）
+ */
+export function getRemoteBaseUrl(
+  config?: { appHost?: string; tenantHost?: string; apiUrl?: string },
+  reqUrl?: string
+): string {
+  if (reqUrl) {
+    try {
+      const parsed = new URL(reqUrl, 'http://localhost');
+      const target = parsed.searchParams.get('targetBaseUrl');
+      if (target && target.trim()) {
+        return target.trim().replace(/\/+$/, '');
+      }
+    } catch {}
+  }
+
+  const localData = readJingyunConfig();
+  const host =
+    localData.app_host ||
+    localData.domain ||
+    localData.tenant_host ||
+    localData.api_url ||
+    config?.appHost ||
+    config?.tenantHost ||
+    config?.apiUrl ||
+    '';
+
+  return host ? host.replace(/\/+$/, '') : '';
+}

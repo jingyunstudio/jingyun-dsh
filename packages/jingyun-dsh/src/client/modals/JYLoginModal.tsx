@@ -9,7 +9,7 @@ export function JYLoginModal() {
 
   React.useEffect(() => {
     brandingManager.fetch().then((data) => {
-      const host = (data && data.appHost) || 'https://demo.jingyun.online/';
+      const host = (data && data.appHost) || '';
       setAppHost(host);
     });
 
@@ -48,7 +48,7 @@ export function JYLoginModal() {
   if (!open || !appHost || typeof document === 'undefined') return null;
 
   // 动态拼装用户自定义 appHost 域名下的纯弹窗独立路由地址 (/auth-modal)
-  let baseHost = appHost || 'https://demo.jingyun.online/';
+  let baseHost = appHost;
   baseHost = baseHost.endsWith('/') ? baseHost : baseHost + '/';
   const loginIframeUrl = `${baseHost}auth-modal?embed=true`;
 

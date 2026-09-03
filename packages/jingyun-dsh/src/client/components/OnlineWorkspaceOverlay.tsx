@@ -20,7 +20,7 @@ export function OnlineWorkspaceOverlay() {
 
   React.useEffect(() => {
     brandingManager.fetch().then((data) => {
-      const host = (data && data.appHost) || 'https://demo.jingyun.online/';
+      const host = (data && data.appHost) || '';
       setAppHost(host);
     });
 

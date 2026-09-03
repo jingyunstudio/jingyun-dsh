@@ -5,7 +5,11 @@ import { fileURLToPath } from 'url';
 import type { Context } from '@deepseek-ai/cordis';
 
 import { sendJson, sendError } from '../common/http';
-import { getJingyunConfigPath } from '../common/paths';
+import {
+  getJingyunConfigPath,
+  getRemoteBaseUrl,
+  readJingyunConfig,
+} from '../common/paths';
 import type { Config } from '../config/schema';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -69,20 +73,14 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
           );
 
           if (ns === 'jingyun-dsh') {
-            let jsonContent = {
+            const jsonContent = {
               api_url: '',
               tenant_host: '',
               domain: '',
               custom_name: '',
               custom_logo: '',
+              ...readJingyunConfig(),
             };
-
-            const configPath = getJingyunConfigPath();
-            if (fs.existsSync(configPath)) {
-              try {
-                jsonContent = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-              } catch {}
-            }
 
             if (patch.apiUrl) jsonContent.api_url = patch.apiUrl;
             if (patch.tenantHost) jsonContent.tenant_host = patch.tenantHost;
@@ -91,6 +89,8 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
               jsonContent.custom_name = patch.customName;
             if (patch.customLogo !== undefined)
               jsonContent.custom_logo = patch.customLogo;
+
+            const configPath = getJingyunConfigPath();
 
             const configDir = path.dirname(configPath);
             if (!fs.existsSync(configDir)) {
@@ -136,29 +136,16 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
     kind: 'exact',
     path: '/api/jingyun/branding/settings',
     handler: async (req, res) => {
-      let jsonContent = {
-        api_url: '',
-        tenant_host: '',
-        domain: '',
-        custom_name: '',
-        custom_logo: '',
-      };
-
-      const currentReadPath = getJingyunConfigPath();
-      if (fs.existsSync(currentReadPath)) {
-        try {
-          jsonContent = JSON.parse(fs.readFileSync(currentReadPath, 'utf8'));
-        } catch {}
-      }
+      const jsonContent = readJingyunConfig();
 
       sendJson(res, {
         mode: 'local',
-        apiUrl: jsonContent.api_url,
-        tenantHost: jsonContent.tenant_host,
-        domain: jsonContent.domain,
-        appHost: jsonContent.domain,
-        customName: jsonContent.custom_name,
-        customLogo: jsonContent.custom_logo,
+        apiUrl: jsonContent.api_url || '',
+        tenantHost: jsonContent.tenant_host || '',
+        domain: jsonContent.domain || '',
+        appHost: jsonContent.domain || jsonContent.app_host || '',
+        customName: jsonContent.custom_name || '',
+        customLogo: jsonContent.custom_logo || '',
       });
     },
   });
@@ -168,28 +155,19 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
     kind: 'exact',
     path: '/api/jingyun/branding',
     handler: async (req, res) => {
-      let apiUrl = '';
-      let tenantHost = '';
-      let domain = '';
-      let siteName = '';
       let siteLogo = '';
       const customLogoFile = path.resolve(__dirname, '..', '..', 'logo.png');
       if (fs.existsSync(customLogoFile)) {
         siteLogo = '/api/jingyun/branding/logo.png';
       }
 
-      const currentReadPath = getJingyunConfigPath();
-      if (fs.existsSync(currentReadPath)) {
-        try {
-          const raw = fs.readFileSync(currentReadPath, 'utf8');
-          const localData = JSON.parse(raw);
-          if (localData.api_url) apiUrl = localData.api_url;
-          if (localData.tenant_host) tenantHost = localData.tenant_host;
-          if (localData.domain) domain = localData.domain;
-          else if (localData.app_host) domain = localData.app_host;
-          if (localData.custom_name) siteName = localData.custom_name;
-          if (localData.custom_logo) siteLogo = localData.custom_logo;
-        } catch {}
+      const localData = readJingyunConfig();
+      const apiUrl = localData.api_url || '';
+      const tenantHost = localData.tenant_host || '';
+      const domain = localData.domain || localData.app_host || '';
+      const siteName = localData.custom_name || '';
+      if (localData.custom_logo) {
+        siteLogo = localData.custom_logo;
       }
 
       sendJson(res, {
@@ -238,4 +216,74 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
       res.end();
     },
   });
+
+  // 6. 代理云端租户信息接口（规避浏览器同源策略及 CORS 头冲突）
+  ctx.webServer.register({
+    kind: 'prefix',
+    path: '/api/jingyun/tenant/info',
+    handler: async (req, res) => {
+      try {
+        const remoteBase = getRemoteBaseUrl(config, req.url);
+        if (!remoteBase) {
+          sendError(res, 'Remote host is not configured', 400);
+          return;
+        }
+        const remoteRes = await fetch(`${remoteBase}/v1/public/tenant/info`, {
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+        const data = await remoteRes.json();
+        sendJson(res, data, remoteRes.status);
+      } catch (err: any) {
+        console.error('[UIBranding] Failed to proxy tenant info:', err.message);
+        sendError(res, `Failed to proxy tenant info: ${err.message}`, 502);
+      }
+    },
+  });
+
+  // 7. 代理云端用户 Profile 接口（透传 Authorization Token）
+  ctx.webServer.register({
+    kind: 'prefix',
+    path: '/api/jingyun/user/profile',
+    handler: async (req, res) => {
+      try {
+        const remoteBase = getRemoteBaseUrl(config, req.url);
+        if (!remoteBase) {
+          sendError(res, 'Remote host is not configured', 400);
+          return;
+        }
+        const authHeader =
+          req.headers['authorization'] || req.headers['Authorization'];
+
+        const headers: Record<string, string> = {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        };
+        if (authHeader) {
+          headers['Authorization'] = Array.isArray(authHeader)
+            ? authHeader[0]
+            : authHeader;
+        }
+
+        const remoteRes = await fetch(
+          `${remoteBase}/v1/plugins/user_auth/profile`,
+          {
+            headers,
+          }
+        );
+        const data = await remoteRes.json();
+        sendJson(res, data, remoteRes.status);
+      } catch (err: any) {
+        console.error(
+          '[UIBranding] Failed to proxy user profile:',
+          err.message
+        );
+        sendError(res, `Failed to proxy user profile: ${err.message}`, 502);
+      }
+    },
+  });
 }
+
+
+

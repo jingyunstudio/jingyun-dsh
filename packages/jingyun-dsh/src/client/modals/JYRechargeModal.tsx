@@ -9,7 +9,7 @@ export function JYRechargeModal() {
 
   React.useEffect(() => {
     brandingManager.fetch().then((data) => {
-      const host = (data && data.appHost) || 'https://demo.jingyun.online/';
+      const host = (data && data.appHost) || '';
       setAppHost(host);
     });
 
@@ -44,7 +44,7 @@ export function JYRechargeModal() {
 
   if (!open || !appHost || typeof document === 'undefined') return null;
 
-  let baseHost = appHost || 'https://demo.jingyun.online/';
+  let baseHost = appHost;
   baseHost = baseHost.endsWith('/') ? baseHost : baseHost + '/';
   const token =
     typeof localStorage !== 'undefined'

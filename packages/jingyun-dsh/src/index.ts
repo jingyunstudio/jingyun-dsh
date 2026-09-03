@@ -4,40 +4,29 @@ import path from 'path';
 import type { Context } from '@deepseek-ai/cordis';
 
 import { initSystemPromptHook } from './agent/agent-loader';
-import { getDshHome, getJingyunConfigPath } from './common/paths';
+import { getDshHome, readJingyunConfig } from './common/paths';
 import { Config } from './config/schema';
 import { registerRoutes } from './routes';
 
-const jsonPath = getJingyunConfigPath();
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
-if (fs.existsSync(jsonPath)) {
-  try {
-    const raw = fs.readFileSync(jsonPath, 'utf8');
-    const localData = JSON.parse(raw);
-    if (localData.api_url) {
-      process.env.JINGYUN_API_URL = localData.api_url;
-      console.log(
-        `[UIBranding] Top-level pre-injected JINGYUN_API_URL: ${localData.api_url}`
-      );
-    }
-    if (localData.tenant_host) {
-      process.env.JINGYUN_TENANT_HOST = localData.tenant_host;
-      console.log(
-        `[UIBranding] Top-level pre-injected JINGYUN_TENANT_HOST: ${localData.tenant_host}`
-      );
-    }
-    if (localData.app_host) {
-      process.env.JINGYUN_APP_HOST = localData.app_host;
-      console.log(
-        `[UIBranding] Top-level pre-injected JINGYUN_APP_HOST: ${localData.app_host}`
-      );
-    }
-  } catch (e: any) {
-    console.error(
-      '[UIBranding] Top-level pre-load environment parameters failed:',
-      e.message
-    );
-  }
+const initialData = readJingyunConfig();
+if (initialData.api_url) {
+  process.env.JINGYUN_API_URL = initialData.api_url;
+  console.log(
+    `[UIBranding] Top-level pre-injected JINGYUN_API_URL: ${initialData.api_url}`
+  );
+}
+if (initialData.tenant_host) {
+  process.env.JINGYUN_TENANT_HOST = initialData.tenant_host;
+  console.log(
+    `[UIBranding] Top-level pre-injected JINGYUN_TENANT_HOST: ${initialData.tenant_host}`
+  );
+}
+if (initialData.app_host) {
+  process.env.JINGYUN_APP_HOST = initialData.app_host;
+  console.log(
+    `[UIBranding] Top-level pre-injected JINGYUN_APP_HOST: ${initialData.app_host}`
+  );
 }
 
 export const name = 'jingyun-dsh';
@@ -135,26 +124,15 @@ export function apply(ctx: Context, config: Config) {
   syncBuiltinSkills();
 
   // 3. Pre-load initial configuration from local backup config file before registering settings
-  const activeJsonPath = getJingyunConfigPath();
-  if (fs.existsSync(activeJsonPath)) {
-    try {
-      const raw = fs.readFileSync(activeJsonPath, 'utf8');
-      const localData = JSON.parse(raw);
-      if (localData.mode) config.mode = localData.mode;
-      if (localData.api_url) config.apiUrl = localData.api_url;
-      if (localData.tenant_host) config.tenantHost = localData.tenant_host;
-      if (localData.app_host) config.appHost = localData.app_host;
-      if (localData.custom_name !== undefined)
-        config.customName = localData.custom_name;
-      if (localData.custom_logo !== undefined)
-        config.customLogo = localData.custom_logo;
-    } catch (e: any) {
-      console.error(
-        '[UIBranding] Failed to read initial local backup config file:',
-        e.message
-      );
-    }
-  }
+  const localData = readJingyunConfig();
+  if (localData.mode) config.mode = localData.mode;
+  if (localData.api_url) config.apiUrl = localData.api_url;
+  if (localData.tenant_host) config.tenantHost = localData.tenant_host;
+  if (localData.app_host) config.appHost = localData.app_host;
+  if (localData.custom_name !== undefined)
+    config.customName = localData.custom_name;
+  if (localData.custom_logo !== undefined)
+    config.customLogo = localData.custom_logo;
 
   // Register settings card automatically without polluting SQLite database
   let current = () => config;

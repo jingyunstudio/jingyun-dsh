@@ -67,8 +67,14 @@ export function CustomLoginSettingBtn(props: any) {
           setConfigured(!!(branding?.apiUrl || branding?.appHost));
         }
 
-        // 拉取公开的小程序与租户配置 (方案A)
-        const res = await fetch(`${baseUrl}/v1/public/tenant/info`);
+        // 如果未配置云端域名，不发起任何网络请求，不要有兜底
+        if (!baseUrl) {
+          return;
+        }
+
+        // 拉取公开的小程序与租户配置 (通过本地后端代理避开浏览器 CORS 冲突)
+        const targetQuery = `?targetBaseUrl=${encodeURIComponent(baseUrl)}`;
+        const res = await fetch(`/api/jingyun/tenant/info${targetQuery}`);
         if (res.ok) {
           const data = await res.json();
           if (active && data) {
@@ -86,8 +92,12 @@ export function CustomLoginSettingBtn(props: any) {
     loadBrandingAndConfig();
 
     const fetchUserProfile = async (authToken: string, baseUrl: string) => {
+      if (!baseUrl) {
+        return;
+      }
       try {
-        const res = await fetch(`${baseUrl}/v1/plugins/user_auth/profile`, {
+        const targetQuery = `?targetBaseUrl=${encodeURIComponent(baseUrl)}`;
+        const res = await fetch(`/api/jingyun/user/profile${targetQuery}`, {
           headers: {
             Authorization: `Bearer ${authToken}`,
             'Content-Type': 'application/json',
@@ -128,7 +138,9 @@ export function CustomLoginSettingBtn(props: any) {
             const baseUrl = appHost.endsWith('/')
               ? appHost.slice(0, -1)
               : appHost;
-            fetchUserProfile(t, baseUrl);
+            if (baseUrl) {
+              fetchUserProfile(t, baseUrl);
+            }
           }
         });
       }
