@@ -6,7 +6,7 @@
 
 **让每一个 AI 创业者都拥有自己的商业闭环**
 
-基于 [Jingyun Studio](https://jingyun.studio/zh) + [DeepSeek Harness (DSH)](https://github.com/nicepkg/dsh) 打造的一站式 AI 商业化桌面客户端
+基于 [Jingyun Studio](https://jingyun.studio/zh) + [DeepSeek Harness (DSH)](https://github.com/deepseek-ai/deepseek-harness) 打造的一站式 AI 商业化桌面客户端
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Tauri](https://img.shields.io/badge/Tauri-v2-orange.svg)](https://v2.tauri.app/)
