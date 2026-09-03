@@ -297,7 +297,10 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
           sendError(res, 'Missing url parameter', 400);
           return;
         }
-        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+        if (
+          !targetUrl.startsWith('http://') &&
+          !targetUrl.startsWith('https://')
+        ) {
           sendError(res, 'Invalid url parameter', 400);
           return;
         }
@@ -320,7 +323,8 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
           return;
         }
 
-        const contentType = remoteRes.headers.get('content-type') || 'image/jpeg';
+        const contentType =
+          remoteRes.headers.get('content-type') || 'image/jpeg';
         const buffer = Buffer.from(await remoteRes.arrayBuffer());
 
         res.writeHead(200, {
@@ -336,6 +340,3 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
     },
   });
 }
-
-
-

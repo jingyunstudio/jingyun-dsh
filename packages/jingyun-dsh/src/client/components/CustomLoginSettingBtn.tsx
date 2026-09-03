@@ -57,18 +57,27 @@ export function CustomLoginSettingBtn(props: any) {
       const popoverWidth = 190;
       let left = rect.right - popoverWidth;
       if (left < 12) left = 12;
-      if (typeof window !== 'undefined' && left + popoverWidth > window.innerWidth - 12) {
+      if (
+        typeof window !== 'undefined' &&
+        left + popoverWidth > window.innerWidth - 12
+      ) {
         left = window.innerWidth - popoverWidth - 12;
       }
       setQrPopoverPos({
         left,
-        bottom: (typeof window !== 'undefined' ? window.innerHeight : 800) - rect.top + 8,
+        bottom:
+          (typeof window !== 'undefined' ? window.innerHeight : 800) -
+          rect.top +
+          8,
       });
     } else if (btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect();
       setQrPopoverPos({
         left: Math.max(12, rect.left),
-        bottom: (typeof window !== 'undefined' ? window.innerHeight : 800) - rect.top + 8,
+        bottom:
+          (typeof window !== 'undefined' ? window.innerHeight : 800) -
+          rect.top +
+          8,
       });
     }
   };
@@ -1160,7 +1169,8 @@ export function CustomLoginSettingBtn(props: any) {
               width: '190px',
               backgroundColor:
                 'var(--dsw-alias-bg-popover, var(--dsw-alias-bg-layer-2, #ffffff))',
-              border: '1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.08))',
+              border:
+                '1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.08))',
               borderRadius: '12px',
               padding: '12px',
               boxShadow:
@@ -1223,7 +1233,8 @@ export function CustomLoginSettingBtn(props: any) {
                 height: '156px',
                 borderRadius: '8px',
                 objectFit: 'contain',
-                border: '1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.06))',
+                border:
+                  '1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.06))',
                 backgroundColor: '#ffffff',
                 padding: '4px',
                 boxSizing: 'border-box',

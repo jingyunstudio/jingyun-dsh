@@ -47,7 +47,7 @@
         transition: background-color 0.3s ease;
       }
 
-      /* 顶部透明窗口拖拽区 */
+      /* 顶部透明窗口拖拽区与窗口控制按钮 */
       .drag-region {
         position: fixed;
         top: 0;
@@ -57,8 +57,52 @@
         z-index: 9999;
         -webkit-app-region: drag;
         app-region: drag;
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        padding-right: 8px;
       }
 
+      .win-controls {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        -webkit-app-region: no-drag;
+        app-region: no-drag;
+      }
+
+      .win-btn {
+        width: 32px;
+        height: 28px;
+        border: none;
+        background: transparent;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        color: var(--text-secondary);
+        border-radius: 4px;
+        transition:
+          background 0.15s ease,
+          color 0.15s ease;
+      }
+
+      .win-btn:hover {
+        background: rgba(0, 0, 0, 0.08);
+        color: var(--text-primary);
+      }
+
+      @media (prefers-color-scheme: dark) {
+        .win-btn:hover {
+          background: rgba(255, 255, 255, 0.12);
+          color: var(--text-primary);
+        }
+      }
+
+      .win-btn.close:hover {
+        background: #ef4444;
+        color: #ffffff;
+      }
       /* 主容器 */
       .splash-container {
         display: flex;
@@ -152,9 +196,25 @@
     </style>
   </head>
   <body>
-    <!-- 顶部无边框拖拽区域 -->
-    <div class="drag-region" data-tauri-drag-region></div>
-
+    <!-- 顶部无边框拖拽区域与窗口控制按钮 -->
+    <div class="drag-region" data-tauri-drag-region>
+      <div class="win-controls">
+        <button class="win-btn" id="btn-min" title="最小化">
+          <svg width="10" height="10" viewBox="0 0 10 1">
+            <rect width="10" height="1" fill="currentColor" />
+          </svg>
+        </button>
+        <button class="win-btn close" id="btn-close" title="关闭">
+          <svg width="10" height="10" viewBox="0 0 10 10">
+            <path
+              d="M1 1L9 9M9 1L1 9"
+              stroke="currentColor"
+              stroke-width="1.2"
+            />
+          </svg>
+        </button>
+      </div>
+    </div>
     <div class="splash-container">
       <!-- 居中标题：统一纯净颜色，去除杂乱色调 -->
       <h1 class="splash-title">
@@ -177,8 +237,40 @@
 
         let currentProgress = 5;
         let isReady = false;
+        let nativeControlled = false;
 
-        // 状态提示文案轮换
+        // 提供原生 Tauri 调用的阶段进度通知
+        // 窗口控制按钮绑定
+        const btnMin = document.getElementById('btn-min');
+        const btnClose = document.getElementById('btn-close');
+        if (btnMin) {
+          btnMin.addEventListener('click', () => {
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              window.__TAURI__.core.invoke('app_minimize').catch(() => {});
+            }
+          });
+        }
+        if (btnClose) {
+          btnClose.addEventListener('click', () => {
+            if (window.__TAURI__ && window.__TAURI__.core) {
+              window.__TAURI__.core.invoke('app_close').catch(() => {});
+            }
+          });
+        }
+
+        window.setSplashStatus = function (text, progress) {
+          nativeControlled = true;
+          if (isReady) return;
+          if (typeof text === 'string' && text) {
+            statusText.textContent = text;
+          }
+          if (typeof progress === 'number') {
+            currentProgress = Math.max(currentProgress, progress);
+            progressBar.style.width = currentProgress + '%';
+          }
+        };
+
+        // 状态提示文案轮换（在无原生指定状态时作为保底提示）
         const steps = [
           { threshold: 15, text: '正在检测环境依赖...' },
           { threshold: 40, text: '正在启动智能核心引擎...' },
@@ -187,6 +279,7 @@
         ];
 
         function updateStatus(val) {
+          if (nativeControlled) return;
           for (let i = steps.length - 1; i >= 0; i--) {
             if (val >= steps[i].threshold) {
               statusText.textContent = steps[i].text;
@@ -195,10 +288,10 @@
           }
         }
 
-        // 模拟平滑进度推进（就绪前停在 88%）
+        // 平滑进度推进（就绪前停在 88%）
         const progressTimer = setInterval(() => {
           if (isReady) return;
-          if (currentProgress < 88) {
+          if (!nativeControlled && currentProgress < 88) {
             currentProgress += Math.random() * 8 + 3;
             if (currentProgress > 88) currentProgress = 88;
             progressBar.style.width = currentProgress + '%';

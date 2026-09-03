@@ -82,17 +82,24 @@ if (fs.existsSync(srcWsYaml)) {
   fs.copyFileSync(srcWsYaml, dstWsYaml);
 }
 
-// 6. Ensure frontendDist directory exists for Tauri WebView
+// 6. Ensure frontendDist directory exists for Tauri WebView with proper splash template
 const distTauriTemp = path.join(baseDir, 'dist_tauri_temp');
 if (!fs.existsSync(distTauriTemp)) {
   fs.mkdirSync(distTauriTemp, { recursive: true });
+}
+const splashTemplatePath = path.join(
+  baseDir,
+  'src-tauri',
+  'resources',
+  'splash',
+  'index.html'
+);
+if (fs.existsSync(splashTemplatePath)) {
+  fs.copyFileSync(splashTemplatePath, path.join(distTauriTemp, 'index.html'));
+} else if (!fs.existsSync(path.join(distTauriTemp, 'index.html'))) {
   fs.writeFileSync(
     path.join(distTauriTemp, 'index.html'),
-    `<!DOCTYPE html>
-<html>
-<head><title>Jingyun.Studio</title></head>
-<body><div id="root">Loading...</div></body>
-</html>`
+    `<!DOCTYPE html><html><head><title>Jingyun.Studio</title></head><body><div id="root">Loading...</div></body></html>`
   );
 }
 
