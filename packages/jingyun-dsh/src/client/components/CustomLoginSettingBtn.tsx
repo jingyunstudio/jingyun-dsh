@@ -29,11 +29,17 @@ export function CustomLoginSettingBtn(props: any) {
   }>({ left: 0, bottom: 0 });
   const [wechatConfig, setWechatConfig] = React.useState<any>(null);
   const [showQrPopover, setShowQrPopover] = React.useState(false);
+  const [qrPopoverPos, setQrPopoverPos] = React.useState<{
+    left: number;
+    bottom: number;
+  }>({ left: 12, bottom: 60 });
   const [tenantDomain, setTenantDomain] = React.useState<string>('');
   const [configured, setConfigured] = React.useState(true);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const btnRef = React.useRef<HTMLButtonElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
+  const qrBtnRef = React.useRef<HTMLDivElement>(null);
+  const qrPopoverRef = React.useRef<HTMLDivElement>(null);
 
   const updateMenuPos = () => {
     if (btnRef.current) {
@@ -41,6 +47,28 @@ export function CustomLoginSettingBtn(props: any) {
       setMenuPos({
         left: Math.max(12, rect.left),
         bottom: window.innerHeight - rect.top + 8,
+      });
+    }
+  };
+
+  const updateQrPopoverPos = () => {
+    if (qrBtnRef.current) {
+      const rect = qrBtnRef.current.getBoundingClientRect();
+      const popoverWidth = 190;
+      let left = rect.right - popoverWidth;
+      if (left < 12) left = 12;
+      if (typeof window !== 'undefined' && left + popoverWidth > window.innerWidth - 12) {
+        left = window.innerWidth - popoverWidth - 12;
+      }
+      setQrPopoverPos({
+        left,
+        bottom: (typeof window !== 'undefined' ? window.innerHeight : 800) - rect.top + 8,
+      });
+    } else if (btnRef.current) {
+      const rect = btnRef.current.getBoundingClientRect();
+      setQrPopoverPos({
+        left: Math.max(12, rect.left),
+        bottom: (typeof window !== 'undefined' ? window.innerHeight : 800) - rect.top + 8,
       });
     }
   };
@@ -159,12 +187,11 @@ export function CustomLoginSettingBtn(props: any) {
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(target) &&
-        menuRef.current &&
-        !menuRef.current.contains(target)
-      ) {
+      const inContainer = containerRef.current?.contains(target);
+      const inMenu = menuRef.current?.contains(target);
+      const inQrPopover = qrPopoverRef.current?.contains(target);
+
+      if (!inContainer && !inMenu && !inQrPopover) {
         setShowMenu(false);
         setShowQrPopover(false);
       }
@@ -173,6 +200,9 @@ export function CustomLoginSettingBtn(props: any) {
     const handleScrollOrResize = () => {
       if (showMenu) {
         updateMenuPos();
+      }
+      if (showQrPopover) {
+        updateQrPopoverPos();
       }
     };
 
@@ -367,6 +397,7 @@ export function CustomLoginSettingBtn(props: any) {
             if (isLogin) {
               if (!showMenu) {
                 updateMenuPos();
+                setShowQrPopover(false);
               }
               setShowMenu(!showMenu);
             } else {
@@ -476,11 +507,16 @@ export function CustomLoginSettingBtn(props: any) {
 
             {/* 手机端小程序码 */}
             <div
+              ref={qrBtnRef}
               className="jy-preview-action-btn"
               title="微信小程序扫码体验"
               onClick={(e) => {
                 e.stopPropagation();
                 if (wechatConfig?.wechat_qrcode_url) {
+                  if (!showQrPopover) {
+                    updateQrPopoverPos();
+                    setShowMenu(false);
+                  }
                   setShowQrPopover(!showQrPopover);
                 } else {
                   showToast('暂未配置小程序 请联系管理员');
@@ -529,89 +565,6 @@ export function CustomLoginSettingBtn(props: any) {
           </div>
         )}
       </div>
-
-      {/* 微信小程序扫码 Popover 卡片 */}
-      {showQrPopover && wechatConfig?.wechat_qrcode_url && (
-        <div
-          className="jy-qr-popover-card"
-          style={{
-            position: 'absolute',
-            bottom: '50px',
-            left: '8px',
-            width: '180px',
-            backgroundColor:
-              'var(--dsw-alias-bg-popover, var(--dsw-alias-bg-layer-2, #ffffff))',
-            border: '1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.08))',
-            borderRadius: '12px',
-            padding: '10px',
-            boxShadow:
-              '0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-            zIndex: 99999,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* 顶部标题栏 */}
-          <div
-            style={{
-              display: 'flex',
-              width: '100%',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-            }}
-          >
-            <span
-              style={{
-                fontSize: '11px',
-                fontWeight: 600,
-                color: 'var(--dsw-alias-label-primary)',
-              }}
-            >
-              手机扫码预览
-            </span>
-            <span
-              style={{
-                fontSize: '13px',
-                cursor: 'pointer',
-                color: 'var(--dsw-alias-label-tertiary)',
-                fontWeight: 'bold',
-                padding: '0 4px',
-              }}
-              onClick={() => setShowQrPopover(false)}
-            >
-              ×
-            </span>
-          </div>
-
-          {/* 二维码图片 */}
-          <img
-            src={wechatConfig.wechat_qrcode_url}
-            alt="小程序体验码"
-            style={{
-              width: '150px',
-              height: '150px',
-              borderRadius: '6px',
-              objectFit: 'contain',
-              border: '1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.04))',
-              backgroundColor: '#ffffff',
-            }}
-          />
-
-          {/* 卡片底注 */}
-          <span
-            style={{
-              fontSize: '9px',
-              color: 'var(--dsw-alias-label-tertiary)',
-              textAlign: 'center',
-            }}
-          >
-            使用微信扫码预览小程序
-          </span>
-        </div>
-      )}
 
       {/* 使用 Portal 挂载至 document.body，防溢出隐藏遮挡，全局 z-index: 999999 */}
       {isLogin &&
@@ -1188,6 +1141,105 @@ export function CustomLoginSettingBtn(props: any) {
               </svg>
               <span>退出登录</span>
             </div>
+          </div>,
+          document.body
+        )}
+
+      {/* 微信小程序扫码 Popover 卡片（使用 Portal 挂载至 document.body，防溢出隐藏遮挡，全局 z-index: 999999） */}
+      {showQrPopover &&
+        wechatConfig?.wechat_qrcode_url &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            ref={qrPopoverRef}
+            className="jy-qr-popover-card"
+            style={{
+              position: 'fixed',
+              bottom: `${qrPopoverPos.bottom}px`,
+              left: `${qrPopoverPos.left}px`,
+              width: '190px',
+              backgroundColor:
+                'var(--dsw-alias-bg-popover, var(--dsw-alias-bg-layer-2, #ffffff))',
+              border: '1px solid var(--dsw-alias-border-l2, rgba(0, 0, 0, 0.08))',
+              borderRadius: '12px',
+              padding: '12px',
+              boxShadow:
+                '0 12px 28px -4px rgba(0, 0, 0, 0.2), 0 8px 12px -6px rgba(0, 0, 0, 0.12)',
+              zIndex: 999999,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '8px',
+              boxSizing: 'border-box',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 顶部标题栏 */}
+            <div
+              style={{
+                display: 'flex',
+                width: '100%',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--dsw-alias-label-primary, #18181b)',
+                }}
+              >
+                手机扫码预览
+              </span>
+              <span
+                style={{
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  color: 'var(--dsw-alias-label-tertiary, #a1a1aa)',
+                  fontWeight: 'bold',
+                  padding: '0 4px',
+                  lineHeight: '14px',
+                }}
+                onClick={() => setShowQrPopover(false)}
+              >
+                ×
+              </span>
+            </div>
+
+            {/* 二维码图片 */}
+            <img
+              src={
+                wechatConfig.wechat_qrcode_url
+                  ? wechatConfig.wechat_qrcode_url.includes('?')
+                    ? `${wechatConfig.wechat_qrcode_url}&wx_fmt=jpeg`
+                    : `${wechatConfig.wechat_qrcode_url}?wx_fmt=jpeg`
+                  : ''
+              }
+              alt="小程序体验码"
+              referrerPolicy="no-referrer"
+              style={{
+                width: '156px',
+                height: '156px',
+                borderRadius: '8px',
+                objectFit: 'contain',
+                border: '1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.06))',
+                backgroundColor: '#ffffff',
+                padding: '4px',
+                boxSizing: 'border-box',
+              }}
+            />
+
+            {/* 卡片底注 */}
+            <span
+              style={{
+                fontSize: '11px',
+                color: 'var(--dsw-alias-label-tertiary, #a1a1aa)',
+                textAlign: 'center',
+              }}
+            >
+              微信扫一扫体验小程序
+            </span>
           </div>,
           document.body
         )}

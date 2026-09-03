@@ -283,6 +283,58 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
       }
     },
   });
+
+  // 8. 代理外部防盗链图片（规避微信等 CDN 的 Referer 拦截与 Mixed Content 问题）
+  ctx.webServer.register({
+    kind: 'prefix',
+    path: '/api/jingyun/proxy/image',
+    handler: async (req, res) => {
+      try {
+        const reqUrl = req.url || '';
+        const u = new URL(reqUrl, 'http://localhost');
+        const targetUrl = u.searchParams.get('url');
+        if (!targetUrl) {
+          sendError(res, 'Missing url parameter', 400);
+          return;
+        }
+        if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+          sendError(res, 'Invalid url parameter', 400);
+          return;
+        }
+
+        const remoteRes = await fetch(targetUrl, {
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            Accept:
+              'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+          },
+        });
+
+        if (!remoteRes.ok) {
+          sendError(
+            res,
+            `Failed to fetch image: status ${remoteRes.status}`,
+            remoteRes.status
+          );
+          return;
+        }
+
+        const contentType = remoteRes.headers.get('content-type') || 'image/jpeg';
+        const buffer = Buffer.from(await remoteRes.arrayBuffer());
+
+        res.writeHead(200, {
+          'Content-Type': contentType,
+          'Content-Length': buffer.length,
+          'Cache-Control': 'public, max-age=86400',
+        });
+        res.end(buffer);
+      } catch (err: any) {
+        console.error('[UIBranding] Failed to proxy image:', err.message);
+        sendError(res, `Failed to proxy image: ${err.message}`, 502);
+      }
+    },
+  });
 }
 
 
