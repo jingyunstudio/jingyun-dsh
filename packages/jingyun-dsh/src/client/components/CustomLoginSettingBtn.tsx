@@ -13,6 +13,8 @@ import {
   openCardActivateModal,
 } from './NavigationRows';
 
+import { applyThemeMode } from '../dom-helper';
+
 export function CustomLoginSettingBtn(props: any) {
   const wide = props?.wide ?? true;
   const isCollapsed = !wide;
@@ -258,39 +260,37 @@ export function CustomLoginSettingBtn(props: any) {
 
   // 检测与初始化深浅主题 (持久化优先 -> 租户默认设置后备)
   React.useEffect(() => {
-    if (typeof document !== 'undefined') {
-      const savedTheme = localStorage.getItem('jy_theme_mode') as
-        | 'light'
-        | 'dark'
-        | null;
-      if (savedTheme) {
-        setThemeMode(savedTheme);
-        if (savedTheme === 'dark') {
-          document.documentElement.classList.add('dark');
-          document.body.classList.add('dark');
-          document.body.setAttribute('data-ds-dark-theme', 'true');
-          document.documentElement.setAttribute('data-theme', 'dark');
+    const updateFromCurrent = () => {
+      if (typeof document !== 'undefined') {
+        const savedTheme = localStorage.getItem('jy_theme_mode') as 'light' | 'dark' | null;
+        if (savedTheme) {
+          setThemeMode(savedTheme);
+          applyThemeMode(savedTheme);
         } else {
-          document.documentElement.classList.remove('dark');
-          document.body.classList.remove('dark');
-          document.body.removeAttribute('data-ds-dark-theme');
-          document.documentElement.setAttribute('data-theme', 'light');
+          brandingManager.fetch().then((data: unknown) => {
+            const d = data as { default_theme?: string; theme_mode?: string } | null;
+            const defaultTheme = (d?.default_theme || d?.theme_mode || 'light') === 'dark' ? 'dark' : 'light';
+            setThemeMode(defaultTheme);
+            applyThemeMode(defaultTheme);
+          });
         }
-      } else {
-        brandingManager.fetch().then((data: any) => {
-          const defaultTheme =
-            data?.default_theme || data?.theme_mode || 'light';
-          if (defaultTheme === 'dark') {
-            setThemeMode('dark');
-            document.documentElement.classList.add('dark');
-            document.body.classList.add('dark');
-            document.body.setAttribute('data-ds-dark-theme', 'true');
-            document.documentElement.setAttribute('data-theme', 'dark');
-          }
-        });
       }
+    };
+
+    updateFromCurrent();
+    if (typeof window !== 'undefined') {
+      const handleThemeEvent = (e: Event) => {
+        const customEvt = e as CustomEvent<'light' | 'dark'>;
+        if (customEvt.detail) {
+          setThemeMode(customEvt.detail);
+        }
+      };
+      window.addEventListener('jy_theme_change', handleThemeEvent);
+      return () => {
+        window.removeEventListener('jy_theme_change', handleThemeEvent);
+      };
     }
-  }, [showMenu]);
+  }, []);
 
   const toggleTheme = (mode: 'light' | 'dark', e?: React.MouseEvent) => {
     if (e) {
@@ -298,29 +298,7 @@ export function CustomLoginSettingBtn(props: any) {
       e.preventDefault();
     }
     setThemeMode(mode);
-    if (typeof document !== 'undefined') {
-      try {
-        localStorage.setItem('jy_theme_mode', mode);
-      } catch {}
-      if (mode === 'dark') {
-        document.documentElement.classList.add('dark');
-        document.body.classList.add('dark');
-        document.body.setAttribute('data-ds-dark-theme', 'true');
-        document.documentElement.setAttribute('data-theme', 'dark');
-        try {
-          localStorage.setItem('dsw_theme', 'dark');
-        } catch {}
-      } else {
-        document.documentElement.classList.remove('dark');
-        document.body.classList.remove('dark');
-        document.body.removeAttribute('data-ds-dark-theme');
-        document.documentElement.setAttribute('data-theme', 'light');
-        try {
-          localStorage.setItem('dsw_theme', 'light');
-        } catch {}
-      }
-      broadcastThemeChange(mode);
-    }
+    applyThemeMode(mode);
   };
 
   const handleLogout = () => {

@@ -1,6 +1,47 @@
 import { brandingManager } from './components/BrandBranding';
 import { styleSheetContent } from './styles';
 
+export function applyThemeMode(mode: 'light' | 'dark') {
+  if (typeof document === 'undefined') return;
+  try {
+    localStorage.setItem('jy_theme_mode', mode);
+    localStorage.setItem('dsw_theme', mode);
+    localStorage.setItem('theme', mode);
+  } catch {}
+
+  if (mode === 'dark') {
+    document.documentElement.classList.add('dark');
+    document.body.classList.add('dark');
+    document.body.setAttribute('data-ds-dark-theme', 'true');
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.documentElement.style.colorScheme = 'dark';
+  } else {
+    document.documentElement.classList.remove('dark');
+    document.body.classList.remove('dark');
+    document.body.removeAttribute('data-ds-dark-theme');
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.documentElement.style.colorScheme = 'light';
+  }
+
+  // 广播给 iframe 和其它监听器
+  if (typeof window !== 'undefined') {
+    try {
+      window.dispatchEvent(new CustomEvent('jy_theme_change', { detail: mode }));
+    } catch {}
+    const iframes = document.querySelectorAll('iframe');
+    iframes.forEach((iframe) => {
+      try {
+        iframe.contentWindow?.postMessage({ type: 'JY_THEME_CHANGE', theme: mode }, '*');
+      } catch {}
+    });
+    for (let i = 0; i < window.frames.length; i++) {
+      try {
+        window.frames[i].postMessage({ type: 'JY_THEME_CHANGE', theme: mode }, '*');
+      } catch {}
+    }
+  }
+}
+
 export function initClientBrandingDOM() {
   if (typeof document !== 'undefined') {
     // 1. 无论是否定制品牌，首先注入我们自定义按钮与面板的基础样式，防止排版错乱
@@ -13,6 +54,18 @@ export function initClientBrandingDOM() {
       document.head.appendChild(styleEl);
     }
     styleEl.textContent = styleSheetContent;
+
+    // 初始化深浅主题 (持久化优先 -> 租户默认配置后备 -> 默认浅色)
+    const savedTheme = localStorage.getItem('jy_theme_mode') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      applyThemeMode(savedTheme);
+    } else {
+      brandingManager.fetch().then((data: unknown) => {
+        const d = data as { default_theme?: string; theme_mode?: string } | null;
+        const defaultTheme = d?.default_theme || d?.theme_mode || 'light';
+        applyThemeMode(defaultTheme === 'dark' ? 'dark' : 'light');
+      });
+    }
 
     brandingManager.fetch().then((data: any) => {
       const hasCustom = !!(data?.site_name || data?.site_logo);

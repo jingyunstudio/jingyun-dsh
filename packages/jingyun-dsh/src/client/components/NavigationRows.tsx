@@ -307,15 +307,12 @@ function OnlineWorkspaceOverlay() {
 
   const [currentTheme, setCurrentTheme] = React.useState<string>(() => {
     if (typeof document !== 'undefined') {
+      const saved = localStorage.getItem('jy_theme_mode');
+      if (saved) return saved;
       const isDark =
         document.documentElement.classList.contains('dark') ||
         document.body.classList.contains('dark');
-      if (isDark) return 'dark';
-      return (
-        (typeof localStorage !== 'undefined' &&
-          localStorage.getItem('jy_theme_mode')) ||
-        'light'
-      );
+      return isDark ? 'dark' : 'light';
     }
     return 'light';
   });
