@@ -1853,4 +1853,306 @@ body.jy-resizing-artifact iframe {
   color: #f4f4f5 !important;
 }
 
+/* ==================================================== */
+/* 连接器页面 (ConnectorPanel) 暗黑模式规则 */
+/* ==================================================== */
+.jy-connector-panel {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  background-color: var(--dsw-alias-bg-layer-1, #ffffff);
+  color: var(--dsw-alias-label-primary, #09090b);
+  overflow-y: auto;
+  position: relative;
+}
+
+.dark .jy-connector-panel,
+[data-ds-dark-theme] .jy-connector-panel,
+[data-theme="dark"] .jy-connector-panel,
+.dark-theme .jy-connector-panel {
+  background-color: var(--dsw-alias-bg-layer-1, #18181b) !important;
+  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
+}
+
+.dark .jy-connector-card,
+[data-ds-dark-theme] .jy-connector-card,
+[data-theme="dark"] .jy-connector-card,
+.dark-theme .jy-connector-card {
+  background-color: var(--dsw-alias-bg-layer-2, #27272a) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .jy-connector-card:hover,
+[data-ds-dark-theme] .jy-connector-card:hover,
+[data-theme="dark"] .jy-connector-card:hover,
+.dark-theme .jy-connector-card:hover {
+  background-color: var(--dsw-alias-interactive-bg-hover, #2e2e32) !important;
+  border-color: var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.2)) !important;
+}
+
+.dark .jy-card-icon-box,
+[data-ds-dark-theme] .jy-card-icon-box,
+[data-theme="dark"] .jy-card-icon-box,
+.dark-theme .jy-card-icon-box {
+  background-color: var(--dsw-alias-bg-layer-3, rgba(255, 255, 255, 0.06)) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08)) !important;
+}
+
+.dark .jy-badge-gray,
+[data-ds-dark-theme] .jy-badge-gray,
+[data-theme="dark"] .jy-badge-gray,
+.dark-theme .jy-badge-gray {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: #a1a1aa !important;
+}
+
+.dark .jy-btn-secondary,
+[data-ds-dark-theme] .jy-btn-secondary,
+[data-theme="dark"] .jy-btn-secondary,
+.dark-theme .jy-btn-secondary {
+  background-color: var(--dsw-alias-bg-layer-3, #27272a) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
+}
+
+.dark .jy-btn-secondary:hover,
+[data-ds-dark-theme] .jy-btn-secondary:hover,
+[data-theme="dark"] .jy-btn-secondary:hover,
+.dark-theme .jy-btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .jy-btn-primary,
+[data-ds-dark-theme] .jy-btn-primary,
+[data-theme="dark"] .jy-btn-primary,
+.dark-theme .jy-btn-primary {
+  background-color: var(--dsw-alias-bg-button-primary, #f4f4f5) !important;
+  color: var(--dsw-alias-label-inverse, #09090b) !important;
+}
+
+/* 连接器详情与扫码弹窗暗黑模式 */
+.dark .jy-detail-modal,
+[data-ds-dark-theme] .jy-detail-modal,
+[data-theme="dark"] .jy-detail-modal,
+.dark-theme .jy-detail-modal {
+  background-color: var(--dsw-alias-bg-layer-2, #1f1f22) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12)) !important;
+  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
+  box-shadow: 0 20px 30px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark .jy-detail-desc-box,
+[data-ds-dark-theme] .jy-detail-desc-box,
+[data-theme="dark"] .jy-detail-desc-box,
+.dark-theme .jy-detail-desc-box {
+  background-color: var(--dsw-alias-bg-layer-3, #27272a) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.08)) !important;
+  color: var(--dsw-alias-label-secondary, #a1a1aa) !important;
+}
+
+.dark .jy-prompt-suggestion-item,
+[data-ds-dark-theme] .jy-prompt-suggestion-item,
+[data-theme="dark"] .jy-prompt-suggestion-item,
+.dark-theme .jy-prompt-suggestion-item {
+  background-color: var(--dsw-alias-bg-layer-3, #27272a) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.06)) !important;
+  color: var(--dsw-alias-label-secondary, #d4d4d8) !important;
+}
+
+.dark .jy-prompt-suggestion-item:hover,
+[data-ds-dark-theme] .jy-prompt-suggestion-item:hover,
+[data-theme="dark"] .jy-prompt-suggestion-item:hover,
+.dark-theme .jy-prompt-suggestion-item:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+/* ==================================================== */
+/* 自动化页面 (AutomationPanel) 暗黑模式规则 */
+/* ==================================================== */
+.jy-automation-panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  background-color: var(--dsw-alias-bg-layer-1, #ffffff);
+  color: var(--dsw-alias-label-primary, #09090b);
+  overflow-y: auto;
+}
+
+.dark .jy-automation-panel,
+[data-ds-dark-theme] .jy-automation-panel,
+[data-theme="dark"] .jy-automation-panel,
+.dark-theme .jy-automation-panel {
+  background-color: var(--dsw-alias-bg-layer-1, #18181b) !important;
+  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
+}
+
+/* 保持唤醒通知条暗黑 */
+.dark .jy-keep-awake-bar,
+[data-ds-dark-theme] .jy-keep-awake-bar,
+[data-theme="dark"] .jy-keep-awake-bar,
+.dark-theme .jy-keep-awake-bar {
+  background-color: rgba(59, 130, 246, 0.12) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+  color: #93c5fd !important;
+}
+
+.dark .jy-keep-awake-bar span,
+[data-ds-dark-theme] .jy-keep-awake-bar span,
+[data-theme="dark"] .jy-keep-awake-bar span,
+.dark-theme .jy-keep-awake-bar span {
+  color: #bfdbfe !important;
+}
+
+/* 自动化任务卡片 */
+.dark .jy-auto-task-card,
+[data-ds-dark-theme] .jy-auto-task-card,
+[data-theme="dark"] .jy-auto-task-card,
+.dark-theme .jy-auto-task-card {
+  background-color: var(--dsw-alias-bg-layer-2, #27272a) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.1)) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .jy-auto-task-card:hover,
+[data-ds-dark-theme] .jy-auto-task-card:hover,
+[data-theme="dark"] .jy-auto-task-card:hover,
+.dark-theme .jy-auto-task-card:hover {
+  border-color: var(--dsw-alias-border-l1, rgba(255, 255, 255, 0.2)) !important;
+}
+
+/* 自动化操作浮层菜单 Popover */
+.dark .jy-auto-menu-popover,
+[data-ds-dark-theme] .jy-auto-menu-popover,
+[data-theme="dark"] .jy-auto-menu-popover,
+.dark-theme .jy-auto-menu-popover {
+  background-color: var(--dsw-alias-bg-layer-2, #202023) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12)) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .jy-auto-menu-item,
+[data-ds-dark-theme] .jy-auto-menu-item,
+[data-theme="dark"] .jy-auto-menu-item,
+.dark-theme .jy-auto-menu-item {
+  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
+}
+
+.dark .jy-auto-menu-item:hover,
+[data-ds-dark-theme] .jy-auto-menu-item:hover,
+[data-theme="dark"] .jy-auto-menu-item:hover,
+.dark-theme .jy-auto-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* 执行历史表格暗黑模式 */
+.dark .jy-history-table-wrapper,
+[data-ds-dark-theme] .jy-history-table-wrapper,
+[data-theme="dark"] .jy-history-table-wrapper,
+.dark-theme .jy-history-table-wrapper {
+  background-color: var(--dsw-alias-bg-layer-2, #27272a) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.dark .jy-history-table-wrapper thead tr,
+[data-ds-dark-theme] .jy-history-table-wrapper thead tr,
+[data-theme="dark"] .jy-history-table-wrapper thead tr,
+.dark-theme .jy-history-table-wrapper thead tr {
+  background-color: var(--dsw-alias-bg-layer-3, #202024) !important;
+  border-bottom-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.1)) !important;
+}
+
+.dark .jy-history-table-wrapper tbody tr,
+[data-ds-dark-theme] .jy-history-table-wrapper tbody tr,
+[data-theme="dark"] .jy-history-table-wrapper tbody tr,
+.dark-theme .jy-history-table-wrapper tbody tr {
+  border-bottom-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* 新建/编辑任务抽屉弹窗 (Drawer) 暗黑模式 */
+.dark .jy-drawer-modal,
+[data-ds-dark-theme] .jy-drawer-modal,
+[data-theme="dark"] .jy-drawer-modal,
+.dark-theme .jy-drawer-modal {
+  background-color: var(--dsw-alias-bg-layer-2, #1c1c1f) !important;
+  border-left-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.12)) !important;
+  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
+  box-shadow: -6px 0 30px rgba(0, 0, 0, 0.6) !important;
+}
+
+.dark .jy-drawer-header,
+.dark .jy-drawer-footer,
+[data-ds-dark-theme] .jy-drawer-header,
+[data-ds-dark-theme] .jy-drawer-footer,
+[data-theme="dark"] .jy-drawer-header,
+[data-theme="dark"] .jy-drawer-footer,
+.dark-theme .jy-drawer-header,
+.dark-theme .jy-drawer-footer {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .jy-form-label,
+[data-ds-dark-theme] .jy-form-label,
+[data-theme="dark"] .jy-form-label,
+.dark-theme .jy-form-label {
+  color: var(--dsw-alias-label-secondary, #d4d4d8) !important;
+}
+
+.dark .jy-form-input,
+.dark .jy-form-textarea,
+.dark .jy-form-select,
+[data-ds-dark-theme] .jy-form-input,
+[data-ds-dark-theme] .jy-form-textarea,
+[data-ds-dark-theme] .jy-form-select,
+[data-theme="dark"] .jy-form-input,
+[data-theme="dark"] .jy-form-textarea,
+[data-theme="dark"] .jy-form-select,
+.dark-theme .jy-form-input,
+.dark-theme .jy-form-textarea,
+.dark-theme .jy-form-select {
+  background-color: var(--dsw-alias-bg-layer-3, #27272a) !important;
+  border-color: var(--dsw-alias-border-l2, rgba(255, 255, 255, 0.15)) !important;
+  color: var(--dsw-alias-label-primary, #f4f4f5) !important;
+}
+
+.dark .jy-form-input:focus,
+.dark .jy-form-textarea:focus,
+.dark .jy-form-select:focus,
+[data-ds-dark-theme] .jy-form-input:focus,
+[data-ds-dark-theme] .jy-form-textarea:focus,
+[data-ds-dark-theme] .jy-form-select:focus,
+[data-theme="dark"] .jy-form-input:focus,
+[data-theme="dark"] .jy-form-textarea:focus,
+[data-theme="dark"] .jy-form-select:focus {
+  border-color: var(--dsw-alias-brand-primary, #3b82f6) !important;
+}
+
+.dark .jy-prompt-toolbar,
+[data-ds-dark-theme] .jy-prompt-toolbar,
+[data-theme="dark"] .jy-prompt-toolbar,
+.dark-theme .jy-prompt-toolbar {
+  background-color: var(--dsw-alias-bg-layer-3, #222226) !important;
+  border-top-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--dsw-alias-label-tertiary, #a1a1aa) !important;
+}
+
+.dark .jy-freq-segment,
+[data-ds-dark-theme] .jy-freq-segment,
+[data-theme="dark"] .jy-freq-segment,
+.dark-theme .jy-freq-segment {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.dark .jy-freq-segment-active,
+[data-ds-dark-theme] .jy-freq-segment-active,
+[data-theme="dark"] .jy-freq-segment-active,
+.dark-theme .jy-freq-segment-active {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+}
 `;
+

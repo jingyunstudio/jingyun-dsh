@@ -122,23 +122,29 @@ export const WecomModal = ({
   return (
     <div
       style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(4px)',
         animation: 'fade-in 0.15s ease-out',
       }}
       onClick={onClose}
     >
       <div
+        className="jy-detail-modal"
         style={{
           width: '380px',
-          background: 'var(--dsw-alias-bg-card, #ffffff)',
+          background:
+            'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
           borderRadius: '16px',
-          border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+          border:
+            '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
           boxShadow:
-            '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
           padding: '28px',
           boxSizing: 'border-box',
           display: 'flex',
@@ -246,11 +252,12 @@ export const WecomModal = ({
         ) : (
           <>
             <div
+              className="jy-card-icon-box"
               style={{
                 width: '48px',
                 height: '48px',
                 borderRadius: '12px',
-                background: '#e0f2fe',
+                background: 'rgba(24, 117, 240, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -304,13 +311,14 @@ export const WecomModal = ({
                 {errorMsg}
               </div>
             )}
-            {/* 纯净原生 SVG 二维码容器 */}
+            {/* 纯净原生 SVG 二维码容器 (保持白底衬垫以确保扫码清晰) */}
             <div
               style={{
                 width: '240px',
                 height: '240px',
                 borderRadius: '12px',
-                border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                border:
+                  '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                 background: '#ffffff',
                 display: 'flex',
                 alignItems: 'center',
@@ -410,7 +418,7 @@ export const WecomDetailModal = ({
       style={{
         position: 'fixed',
         inset: 0,
-        background: 'rgba(0, 0, 0, 0.45)',
+        background: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(4px)',
         display: 'flex',
         alignItems: 'center',
@@ -420,15 +428,18 @@ export const WecomDetailModal = ({
       }}
     >
       <div
+        className="jy-detail-modal"
         style={{
-          background: 'var(--dsw-alias-bg-card, #ffffff)',
-          border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+          background:
+            'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
+          border:
+            '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
           borderRadius: '16px',
           width: '460px',
           maxWidth: '90vw',
           padding: '24px',
           boxShadow:
-            '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
           display: 'flex',
           flexDirection: 'column',
           gap: '20px',
@@ -444,11 +455,12 @@ export const WecomDetailModal = ({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
+              className="jy-card-icon-box"
               style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '10px',
-                background: '#e0f2fe',
+                background: 'rgba(24, 117, 240, 0.1)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -541,14 +553,17 @@ export const WecomDetailModal = ({
 
         {/* 状态详情卡片 */}
         <div
+          className="jy-detail-desc-box"
           style={{
-            background: 'var(--dsw-alias-bg-subtle, #f8fafc)',
+            background:
+              'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-subtle, #f8fafc))',
             borderRadius: '10px',
             padding: '14px 16px',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
-            border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+            border:
+              '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
           }}
         >
           <div
@@ -634,8 +649,8 @@ export const WecomDetailModal = ({
                 gap: '4px',
                 padding: '6px 12px',
                 borderRadius: '6px',
-                border: '1px solid #fee2e2',
-                background: '#fff1f2',
+                border: '1px solid rgba(225, 29, 72, 0.3)',
+                background: 'rgba(225, 29, 72, 0.1)',
                 color: '#e11d48',
                 fontSize: '12px',
                 fontWeight: 500,
@@ -649,6 +664,7 @@ export const WecomDetailModal = ({
           <div style={{ display: 'flex', gap: '8px' }}>
             {onTryIt && (
               <button
+                className="jy-btn-primary"
                 onClick={onTryIt}
                 style={{
                   display: 'inline-flex',
@@ -662,22 +678,33 @@ export const WecomDetailModal = ({
                   fontSize: '12px',
                   fontWeight: 500,
                   cursor: 'pointer',
+                  transition: 'opacity 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
                 }}
               >
                 去试试
               </button>
             )}
             <button
+              className="jy-btn-secondary"
               onClick={onClose}
               style={{
                 padding: '6px 14px',
                 borderRadius: '6px',
-                border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-                background: 'var(--dsw-alias-bg-card, #ffffff)',
+                border:
+                  '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+                background:
+                  'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
                 color: 'var(--dsw-alias-label-primary, #0f172a)',
                 fontSize: '12px',
                 fontWeight: 500,
                 cursor: 'pointer',
+                transition: 'all 0.15s ease',
               }}
             >
               关闭

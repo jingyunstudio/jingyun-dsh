@@ -234,6 +234,7 @@ export function AutomationPanel() {
 
   return (
     <div
+      className="jy-automation-panel"
       style={{
         width: '100%',
         height: '100%',
@@ -241,7 +242,9 @@ export function AutomationPanel() {
         flexDirection: 'column',
         padding: '24px 32px',
         boxSizing: 'border-box',
-        background: 'var(--dsw-alias-bg-main, #ffffff)',
+        background:
+          'var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-main, #ffffff))',
+        color: 'var(--dsw-alias-label-primary, #0f172a)',
         overflowY: 'auto',
       }}
     >
@@ -331,13 +334,16 @@ export function AutomationPanel() {
         {/* 右侧动作按钮组 (向上浮动以与页签视觉对齐，且不贴死底线) */}
         <div style={{ display: 'flex', gap: '10px', paddingBottom: '8px' }}>
           <button
+            className="jy-btn-secondary"
             onClick={handleOpenCreate}
             style={{
               height: '32px',
               padding: '0 16px',
               borderRadius: '8px',
-              border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-              background: '#ffffff',
+              border:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+              background:
+                'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
               color: 'var(--dsw-alias-label-primary, #0f172a)',
               fontSize: '12.5px',
               fontWeight: 500,
@@ -346,19 +352,14 @@ export function AutomationPanel() {
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-              transition: 'background 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f8fafc';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#ffffff';
+              transition: 'all 0.15s ease',
             }}
           >
             手动新建
           </button>
 
           <button
+            className="jy-btn-primary"
             onClick={() => {
               window.location.hash = '#/';
               setTimeout(() => {
@@ -380,7 +381,7 @@ export function AutomationPanel() {
               borderRadius: '8px',
               border: 'none',
               background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-              color: '#ffffff',
+              color: 'var(--dsw-alias-label-inverse, #ffffff)',
               fontSize: '12.5px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -431,16 +432,17 @@ export function AutomationPanel() {
               <>
                 {/* 电脑保持唤醒通知条 */}
                 <div
+                  className="jy-keep-awake-bar"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     padding: '10px 16px',
                     borderRadius: '10px',
-                    background: 'rgba(59, 130, 246, 0.06)',
-                    border: '1px solid rgba(59, 130, 246, 0.12)',
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px solid rgba(59, 130, 246, 0.2)',
                     fontSize: '12px',
-                    color: '#1e40af',
+                    color: '#2563eb',
                   }}
                 >
                   <div
@@ -474,7 +476,12 @@ export function AutomationPanel() {
                       gap: '8px',
                     }}
                   >
-                    <span style={{ fontSize: '11px', color: '#475569' }}>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        color: 'var(--dsw-alias-label-secondary, #475569)',
+                      }}
+                    >
                       保持电脑唤醒
                     </span>
                     <input
@@ -502,16 +509,19 @@ export function AutomationPanel() {
                   {tasks.map((task) => (
                     <div
                       key={task.id}
+                      className="jy-auto-task-card"
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '14px 18px',
                         borderRadius: '12px',
-                        border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-                        background: 'var(--dsw-alias-bg-card, #ffffff)',
+                        border:
+                          '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+                        background:
+                          'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
                         boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-                        transition: 'border-color 0.15s ease',
+                        transition: 'all 0.15s ease',
                         position: 'relative',
                       }}
                     >
@@ -526,16 +536,17 @@ export function AutomationPanel() {
                         }}
                       >
                         <div
+                          className="jy-card-icon-box"
                           style={{
                             width: '36px',
                             height: '36px',
                             borderRadius: '8px',
-                            background: '#f8fafc',
+                            background: 'var(--dsw-alias-bg-layer-3, #f8fafc)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             border:
-                              '1px solid var(--dsw-alias-border, #e2e8f0)',
+                              '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                           }}
                         >
                           <svg
@@ -543,7 +554,7 @@ export function AutomationPanel() {
                             height="18"
                             viewBox="0 0 24 24"
                             fill="none"
-                            stroke="#64748b"
+                            stroke="var(--dsw-alias-label-secondary, #64748b)"
                             strokeWidth="2.2"
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -581,11 +592,13 @@ export function AutomationPanel() {
                             </span>
                             {task.workspace && (
                               <span
+                                className="jy-badge-gray"
                                 style={{
                                   fontSize: '10px',
                                   color:
                                     'var(--dsw-alias-label-tertiary, #64748b)',
-                                  background: '#f1f5f9',
+                                  background:
+                                    'var(--dsw-alias-bg-layer-3, #f1f5f9)',
                                   padding: '1px 6px',
                                   borderRadius: '4px',
                                   fontWeight: 500,
@@ -631,19 +644,13 @@ export function AutomationPanel() {
                               border: 'none',
                               background: 'transparent',
                               cursor: 'pointer',
-                              color: '#64748b',
+                              color: 'var(--dsw-alias-label-tertiary, #64748b)',
                               padding: '6px',
                               borderRadius: '6px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
                               transition: 'background 0.15s ease',
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#f1f5f9';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'transparent';
                             }}
                           >
                             <svg
@@ -662,7 +669,7 @@ export function AutomationPanel() {
                             </svg>
                           </button>
 
-                          {/* 三点更多操作的 Popover 气泡浮层 (对齐截图 1 2) */}
+                          {/* 三点更多操作的 Popover 气泡浮层 */}
                           {activeMenuTaskId === task.id && (
                             <>
                               {/* 遮罩背景，用于点击空白处自动关闭 */}
@@ -682,18 +689,19 @@ export function AutomationPanel() {
                                 }}
                               />
                               <div
+                                className="jy-auto-menu-popover"
                                 onClick={(e) => e.stopPropagation()}
                                 style={{
                                   position: 'absolute',
                                   right: '0px',
                                   top: '32px',
                                   background:
-                                    'var(--dsw-alias-bg-card, #ffffff)',
+                                    'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
                                   borderRadius: '12px',
                                   border:
-                                    '1px solid var(--dsw-alias-border, rgba(0,0,0,0.06))',
+                                    '1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.06))',
                                   boxShadow:
-                                    '0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.02)',
+                                    '0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)',
                                   padding: '6px',
                                   zIndex: 999,
                                   minWidth: '120px',
@@ -703,8 +711,9 @@ export function AutomationPanel() {
                                   gap: '2px',
                                 }}
                               >
-                                {/* 暂停 / 启用选项 (对齐截图 1) */}
+                                {/* 暂停 / 启用选项 */}
                                 <div
+                                  className="jy-auto-menu-item"
                                   onClick={() => {
                                     toggleTaskEnabled(task.id);
                                     setActiveMenuTaskId(null);
@@ -721,14 +730,6 @@ export function AutomationPanel() {
                                     borderRadius: '8px',
                                     transition: 'background 0.15s ease',
                                     fontWeight: 500,
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background =
-                                      'rgba(0, 0, 0, 0.04)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background =
-                                      'transparent';
                                   }}
                                 >
                                   {task.enabled ? (
@@ -780,8 +781,9 @@ export function AutomationPanel() {
                                   )}
                                 </div>
 
-                                {/* 删除选项 (对齐截图 1 极简灰度色，不花哨) */}
+                                {/* 删除选项 */}
                                 <div
+                                  className="jy-auto-menu-item"
                                   onClick={() => {
                                     handleDeleteTask(task.id);
                                     setActiveMenuTaskId(null);
@@ -798,14 +800,6 @@ export function AutomationPanel() {
                                     borderRadius: '8px',
                                     transition: 'background 0.15s ease',
                                     fontWeight: 500,
-                                  }}
-                                  onMouseEnter={(e) => {
-                                    e.currentTarget.style.background =
-                                      'rgba(0, 0, 0, 0.04)';
-                                  }}
-                                  onMouseLeave={(e) => {
-                                    e.currentTarget.style.background =
-                                      'transparent';
                                   }}
                                 >
                                   <svg
@@ -828,7 +822,7 @@ export function AutomationPanel() {
                           )}
                         </div>
 
-                        {/* 立即单次运行 (圆圈播放 Play Icon，100% 对齐截图 2) */}
+                        {/* 立即单次运行 */}
                         <button
                           title="立即单次触发运行"
                           onClick={() => {
@@ -838,19 +832,14 @@ export function AutomationPanel() {
                             border: 'none',
                             background: 'transparent',
                             cursor: 'pointer',
-                            color: '#334155',
+                            color:
+                              'var(--dsw-alias-label-secondary, #334155)',
                             padding: '4px',
                             borderRadius: '50%',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             transition: 'color 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.color = '#000000';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.color = '#334155';
                           }}
                         >
                           <svg
@@ -871,14 +860,16 @@ export function AutomationPanel() {
                           </svg>
                         </button>
 
-                        {/* 启用 Toggle 滑动 Switch 开关 (100% 对齐截图 2 绿色 iOS滑块) */}
+                        {/* 启用 Toggle 滑动 Switch 开关 */}
                         <div
                           onClick={() => toggleTaskEnabled(task.id)}
                           style={{
                             width: '34px',
                             height: '20px',
                             borderRadius: '9999px',
-                            background: task.enabled ? '#0fa968' : '#e2e8f0',
+                            background: task.enabled
+                              ? '#0fa968'
+                              : 'var(--dsw-alias-border-l2, #e2e8f0)',
                             position: 'relative',
                             cursor: 'pointer',
                             transition: 'background-color 0.2s ease',
@@ -907,7 +898,7 @@ export function AutomationPanel() {
                 </div>
               </>
             ) : (
-              /* 空状态，100% 对齐截图 1 */
+              /* 空状态 */
               <div
                 style={{
                   display: 'flex',
@@ -920,16 +911,18 @@ export function AutomationPanel() {
                 }}
               >
                 <div
+                  className="jy-card-icon-box"
                   style={{
                     width: '64px',
                     height: '64px',
                     borderRadius: '50%',
-                    background: '#f8fafc',
+                    background: 'var(--dsw-alias-bg-layer-3, #f8fafc)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     marginBottom: '16px',
-                    border: '1px dashed var(--dsw-alias-border, #cbd5e1)',
+                    border:
+                      '1px dashed var(--dsw-alias-border-l2, var(--dsw-alias-border, #cbd5e1))',
                   }}
                 >
                   <svg
@@ -957,6 +950,7 @@ export function AutomationPanel() {
                 </p>
 
                 <button
+                  className="jy-btn-primary"
                   onClick={handleOpenCreate}
                   style={{
                     height: '34px',
@@ -964,7 +958,7 @@ export function AutomationPanel() {
                     borderRadius: '8px',
                     border: 'none',
                     background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-                    color: '#ffffff',
+                    color: 'var(--dsw-alias-label-inverse, #ffffff)',
                     fontSize: '13px',
                     fontWeight: 500,
                     cursor: 'pointer',
@@ -972,6 +966,13 @@ export function AutomationPanel() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px',
+                    transition: 'opacity 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
                   }}
                 >
                   ＋ 添加自动化
@@ -1015,10 +1016,12 @@ export function AutomationPanel() {
         {/* Tab 2: 执行历史 */}
         {activeTab === 'history' && (
           <div
+            className="jy-history-table-wrapper"
             style={{
-              background: '#ffffff',
+              background: 'var(--dsw-alias-bg-layer-2, #ffffff)',
               borderRadius: '12px',
-              border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+              border:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
               overflow: 'hidden',
               width: '100%',
             }}
@@ -1034,8 +1037,9 @@ export function AutomationPanel() {
               <thead>
                 <tr
                   style={{
-                    background: '#f8fafc',
-                    borderBottom: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                    background: 'var(--dsw-alias-bg-layer-3, #f8fafc)',
+                    borderBottom:
+                      '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                   }}
                 >
                   <th
@@ -1092,7 +1096,7 @@ export function AutomationPanel() {
                     style={{
                       borderBottom:
                         idx < historyList.length - 1
-                          ? '1px solid var(--dsw-alias-border, #f1f5f9)'
+                          ? '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #f1f5f9))'
                           : 'none',
                     }}
                   >
@@ -1129,8 +1133,8 @@ export function AutomationPanel() {
                             item.status === 'success' ? '#16a34a' : '#dc2626',
                           background:
                             item.status === 'success'
-                              ? 'rgba(34, 197, 94, 0.08)'
-                              : 'rgba(239, 68, 68, 0.08)',
+                              ? 'rgba(34, 197, 94, 0.1)'
+                              : 'rgba(239, 68, 68, 0.1)',
                           padding: '2px 6px',
                           borderRadius: '4px',
                           fontWeight: 500,
@@ -1184,7 +1188,7 @@ export function AutomationPanel() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'rgba(0, 0, 0, 0.4)',
+            background: 'rgba(0, 0, 0, 0.5)',
             display: 'flex',
             justifyContent: 'flex-end',
             zIndex: 999,
@@ -1194,12 +1198,15 @@ export function AutomationPanel() {
           onClick={() => setShowModal(false)}
         >
           <div
+            className="jy-drawer-modal"
             style={{
               width: '560px',
               height: '100%',
-              background: 'var(--dsw-alias-bg-card, #ffffff)',
-              borderLeft: '1px solid var(--dsw-alias-border, #e2e8f0)',
-              boxShadow: '-4px 0 25px rgba(0,0,0,0.08)',
+              background:
+                'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
+              borderLeft:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+              boxShadow: '-4px 0 25px rgba(0,0,0,0.15)',
               display: 'flex',
               flexDirection: 'column',
               animation: 'slide-left 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -1209,9 +1216,11 @@ export function AutomationPanel() {
           >
             {/* Header */}
             <div
+              className="jy-drawer-header"
               style={{
                 padding: '18px 24px',
-                borderBottom: '1px solid #f1f5f9',
+                borderBottom:
+                  '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
@@ -1223,7 +1232,7 @@ export function AutomationPanel() {
                   margin: 0,
                   fontSize: '15px',
                   fontWeight: 600,
-                  color: '#0f172a',
+                  color: 'var(--dsw-alias-label-primary, #0f172a)',
                 }}
               >
                 {editingTask ? '编辑自动化' : '新建自动化'}
@@ -1234,7 +1243,7 @@ export function AutomationPanel() {
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  color: '#94a3b8',
+                  color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
                   padding: '4px',
                 }}
               >
@@ -1272,16 +1281,18 @@ export function AutomationPanel() {
                 style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
               >
                 <label
+                  className="jy-form-label"
                   style={{
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-secondary, #334155)',
                   }}
                 >
                   名称
                 </label>
                 <input
                   type="text"
+                  className="jy-form-input"
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="请输入自动化任务名称"
@@ -1289,10 +1300,13 @@ export function AutomationPanel() {
                     height: '34px',
                     padding: '0 12px',
                     borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
+                    border:
+                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
                     fontSize: '13px',
                     outline: 'none',
-                    background: '#ffffff',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, #ffffff)',
+                    color: 'var(--dsw-alias-label-primary, #0f172a)',
                   }}
                 />
               </div>
@@ -1302,19 +1316,26 @@ export function AutomationPanel() {
                 style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
               >
                 <label
+                  className="jy-form-label"
                   style={{
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-secondary, #334155)',
                   }}
                 >
                   工作空间{' '}
-                  <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                  <span
+                    style={{
+                      fontWeight: 400,
+                      color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
+                    }}
+                  >
                     (可选)
                   </span>
                 </label>
                 <input
                   type="text"
+                  className="jy-form-input"
                   value={formWorkspace}
                   onChange={(e) => setFormWorkspace(e.target.value)}
                   placeholder="选择工作空间"
@@ -1322,38 +1343,45 @@ export function AutomationPanel() {
                     height: '34px',
                     padding: '0 12px',
                     borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
+                    border:
+                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
                     fontSize: '13px',
                     outline: 'none',
-                    background: '#ffffff',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, #ffffff)',
+                    color: 'var(--dsw-alias-label-primary, #0f172a)',
                   }}
                 />
               </div>
 
-              {/*提示词 (带四个底部小微标标签，完全还原图 3) */}
+              {/*提示词 (带四个底部小微标标签) */}
               <div
                 style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
               >
                 <label
+                  className="jy-form-label"
                   style={{
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-secondary, #334155)',
                   }}
                 >
                   提示词
                 </label>
                 <div
                   style={{
-                    border: '1px solid #cbd5e1',
+                    border:
+                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
                     borderRadius: '10px',
                     overflow: 'hidden',
-                    background: '#ffffff',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, #ffffff)',
                     display: 'flex',
                     flexDirection: 'column',
                   }}
                 >
                   <textarea
+                    className="jy-form-textarea"
                     value={formPrompt}
                     onChange={(e) => setFormPrompt(e.target.value)}
                     placeholder="请输入当自动化运行时，希望智能体执行的具体工作内容或流程..."
@@ -1366,19 +1394,24 @@ export function AutomationPanel() {
                       lineHeight: '1.5',
                       resize: 'none',
                       fontFamily: 'inherit',
+                      background: 'transparent',
+                      color: 'var(--dsw-alias-label-primary, #0f172a)',
                     }}
                   />
                   {/* 输入框底部小辅助条 */}
                   <div
+                    className="jy-prompt-toolbar"
                     style={{
                       padding: '6px 12px',
-                      background: '#f8fafc',
-                      borderTop: '1px solid #f1f5f9',
+                      background:
+                        'var(--dsw-alias-bg-layer-3, #f8fafc)',
+                      borderTop:
+                        '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
                       fontSize: '11.5px',
-                      color: '#64748b',
+                      color: 'var(--dsw-alias-label-tertiary, #64748b)',
                     }}
                   >
                     <div
@@ -1443,14 +1476,20 @@ export function AutomationPanel() {
                 style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
               >
                 <label
+                  className="jy-form-label"
                   style={{
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-secondary, #334155)',
                   }}
                 >
                   连接器{' '}
-                  <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                  <span
+                    style={{
+                      fontWeight: 400,
+                      color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
+                    }}
+                  >
                     (勾选即授权该连接器在任务中免确认使用)
                   </span>
                 </label>
@@ -1458,10 +1497,12 @@ export function AutomationPanel() {
                   style={{
                     padding: '8px 12px',
                     borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
-                    background: '#f8fafc',
+                    border:
+                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, #f8fafc)',
                     fontSize: '13px',
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-primary, #334155)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
@@ -1485,24 +1526,32 @@ export function AutomationPanel() {
                 style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
               >
                 <label
+                  className="jy-form-label"
                   style={{
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-secondary, #334155)',
                   }}
                 >
                   执行频率{' '}
-                  <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                  <span
+                    style={{
+                      fontWeight: 400,
+                      color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
+                    }}
+                  >
                     (建议避开上午高峰时段，选择非高峰期执行更稳定)
                   </span>
                 </label>
 
                 {/* 频率 Tab 切换 */}
                 <div
+                  className="jy-freq-segment"
                   style={{
                     display: 'flex',
                     gap: '6px',
-                    background: '#f1f5f9',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, #f1f5f9)',
                     padding: '3px',
                     borderRadius: '8px',
                     width: 'fit-content',
@@ -1516,14 +1565,22 @@ export function AutomationPanel() {
                     <button
                       key={f.id}
                       type="button"
+                      className={
+                        formFreqType === f.id ? 'jy-freq-segment-active' : ''
+                      }
                       onClick={() => setFormFreqType(f.id as any)}
                       style={{
                         padding: '4px 16px',
                         border: 'none',
                         borderRadius: '6px',
                         background:
-                          formFreqType === f.id ? '#ffffff' : 'transparent',
-                        color: formFreqType === f.id ? '#0f172a' : '#64748b',
+                          formFreqType === f.id
+                            ? 'var(--dsw-alias-bg-layer-2, #ffffff)'
+                            : 'transparent',
+                        color:
+                          formFreqType === f.id
+                            ? 'var(--dsw-alias-label-primary, #0f172a)'
+                            : 'var(--dsw-alias-label-tertiary, #64748b)',
                         fontSize: '12px',
                         fontWeight: formFreqType === f.id ? 600 : 500,
                         cursor: 'pointer',
@@ -1531,6 +1588,7 @@ export function AutomationPanel() {
                           formFreqType === f.id
                             ? '0 1px 2px rgba(0,0,0,0.05)'
                             : 'none',
+                        transition: 'all 0.15s ease',
                       }}
                     >
                       {f.label}
@@ -1538,7 +1596,7 @@ export function AutomationPanel() {
                   ))}
                 </div>
 
-                {/* 周期表单展开细节 (高还原图 3) */}
+                {/* 周期表单展开细节 */}
                 {formFreqType === 'cycle' && (
                   <div
                     style={{
@@ -1549,14 +1607,18 @@ export function AutomationPanel() {
                     }}
                   >
                     <select
+                      className="jy-form-select"
                       value={formFreqCycle}
                       onChange={(e) => setFormFreqCycle(e.target.value)}
                       style={{
                         height: '34px',
                         padding: '0 8px',
                         borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
+                        border:
+                          '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                        background:
+                          'var(--dsw-alias-bg-layer-3, #ffffff)',
+                        color: 'var(--dsw-alias-label-primary, #0f172a)',
                         fontSize: '12.5px',
                         width: '100px',
                       }}
@@ -1568,14 +1630,18 @@ export function AutomationPanel() {
 
                     <input
                       type="time"
+                      className="jy-form-input"
                       value={formFreqTime}
                       onChange={(e) => setFormFreqTime(e.target.value)}
                       style={{
                         height: '34px',
                         padding: '0 8px',
                         borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
-                        background: '#ffffff',
+                        border:
+                          '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                        background:
+                          'var(--dsw-alias-bg-layer-3, #ffffff)',
+                        color: 'var(--dsw-alias-label-primary, #0f172a)',
                         fontSize: '12.5px',
                         width: '110px',
                       }}
@@ -1592,28 +1658,38 @@ export function AutomationPanel() {
                       gap: '8px',
                       marginTop: '4px',
                       fontSize: '13px',
-                      color: '#475569',
+                      color: 'var(--dsw-alias-label-secondary, #475569)',
                     }}
                   >
                     <span>每隔</span>
                     <input
                       type="number"
+                      className="jy-form-input"
                       defaultValue={2}
                       style={{
                         height: '34px',
                         width: '70px',
                         padding: '0 8px',
                         borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
+                        border:
+                          '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                        background:
+                          'var(--dsw-alias-bg-layer-3, #ffffff)',
+                        color: 'var(--dsw-alias-label-primary, #0f172a)',
                         fontSize: '12.5px',
                       }}
                     />
                     <select
+                      className="jy-form-select"
                       style={{
                         height: '34px',
                         padding: '0 8px',
                         borderRadius: '6px',
-                        border: '1px solid #cbd5e1',
+                        border:
+                          '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                        background:
+                          'var(--dsw-alias-bg-layer-3, #ffffff)',
+                        color: 'var(--dsw-alias-label-primary, #0f172a)',
                         fontSize: '12.5px',
                       }}
                     >
@@ -1629,7 +1705,7 @@ export function AutomationPanel() {
                     style={{
                       marginTop: '4px',
                       fontSize: '12px',
-                      color: '#64748b',
+                      color: 'var(--dsw-alias-label-tertiary, #64748b)',
                     }}
                   >
                     任务将仅被单次触发（您也可以随时在面板中点击“▶
@@ -1643,28 +1719,38 @@ export function AutomationPanel() {
                 style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}
               >
                 <label
+                  className="jy-form-label"
                   style={{
                     fontSize: '12px',
                     fontWeight: 600,
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-secondary, #334155)',
                   }}
                 >
                   生效日期区间{' '}
-                  <span style={{ fontWeight: 400, color: '#94a3b8' }}>
+                  <span
+                    style={{
+                      fontWeight: 400,
+                      color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
+                    }}
+                  >
                     (可选，留空表示始终生效)
                   </span>
                 </label>
                 <input
                   type="date"
+                  className="jy-form-input"
                   placeholder="选择生效日期"
                   style={{
                     height: '34px',
                     padding: '0 12px',
                     borderRadius: '8px',
-                    border: '1px solid #cbd5e1',
+                    border:
+                      '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
                     fontSize: '13px',
                     outline: 'none',
-                    background: '#ffffff',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, #ffffff)',
+                    color: 'var(--dsw-alias-label-primary, #0f172a)',
                   }}
                 />
               </div>
@@ -1684,7 +1770,7 @@ export function AutomationPanel() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     fontSize: '12.5px',
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-secondary, #334155)',
                   }}
                 >
                   <div
@@ -1697,7 +1783,10 @@ export function AutomationPanel() {
                     <span>推送到微信小程序</span>
                     <span
                       title="推送并接收微信推送卡片服务"
-                      style={{ cursor: 'help', color: '#94a3b8' }}
+                      style={{
+                        cursor: 'help',
+                        color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
+                      }}
                     >
                       ⓘ
                     </span>
@@ -1716,7 +1805,7 @@ export function AutomationPanel() {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     fontSize: '12.5px',
-                    color: '#334155',
+                    color: 'var(--dsw-alias-label-secondary, #334155)',
                   }}
                 >
                   <div
@@ -1729,7 +1818,10 @@ export function AutomationPanel() {
                     <span>推送到企业微信 bot</span>
                     <span
                       title="向绑定的企业微信机器人推送消息"
-                      style={{ cursor: 'help', color: '#94a3b8' }}
+                      style={{
+                        cursor: 'help',
+                        color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
+                      }}
                     >
                       ⓘ
                     </span>
@@ -1746,9 +1838,11 @@ export function AutomationPanel() {
 
             {/* Footer */}
             <div
+              className="jy-drawer-footer"
               style={{
                 padding: '18px 24px',
-                borderTop: '1px solid #f1f5f9',
+                borderTop:
+                  '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
                 display: 'flex',
                 justifyContent: 'flex-end',
                 gap: '10px',
@@ -1757,21 +1851,26 @@ export function AutomationPanel() {
             >
               <button
                 type="button"
+                className="jy-btn-secondary"
                 onClick={() => setShowModal(false)}
                 style={{
                   height: '34px',
                   padding: '0 16px',
                   borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  color: '#334155',
+                  border:
+                    '1px solid var(--dsw-alias-border-l2, #cbd5e1)',
+                  background:
+                    'var(--dsw-alias-bg-layer-3, #ffffff)',
+                  color: 'var(--dsw-alias-label-secondary, #334155)',
                   fontSize: '13px',
                   cursor: 'pointer',
+                  transition: 'all 0.15s ease',
                 }}
               >
                 取消
               </button>
               <button
+                className="jy-btn-primary"
                 onClick={handleSaveTask}
                 style={{
                   height: '34px',
@@ -1779,10 +1878,17 @@ export function AutomationPanel() {
                   borderRadius: '8px',
                   border: 'none',
                   background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-                  color: '#ffffff',
+                  color: 'var(--dsw-alias-label-inverse, #ffffff)',
                   fontSize: '13px',
                   fontWeight: 500,
                   cursor: 'pointer',
+                  transition: 'opacity 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
                 }}
               >
                 保存
@@ -1832,14 +1938,17 @@ const TemplateCard = ({ tpl, onClick }: TplCardProps) => {
   return (
     <div
       onClick={onClick}
+      className="jy-auto-task-card"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
         padding: '14px 18px',
         borderRadius: '12px',
-        border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-        background: 'var(--dsw-alias-bg-card, #ffffff)',
+        border:
+          '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+        background:
+          'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
         boxSizing: 'border-box',
         height: '88px',
         cursor: 'pointer',
@@ -1847,27 +1956,30 @@ const TemplateCard = ({ tpl, onClick }: TplCardProps) => {
       }}
       onMouseEnter={(e) => {
         e.currentTarget.style.borderColor =
-          'var(--dsw-alias-border-hover, rgba(0,0,0,0.15))';
-        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+          'var(--dsw-alias-border-hover, rgba(255,255,255,0.2))';
+        e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.08)';
         e.currentTarget.style.transform = 'translateY(-1px)';
       }}
       onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = 'var(--dsw-alias-border, #e2e8f0)';
+        e.currentTarget.style.borderColor =
+          'var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))';
         e.currentTarget.style.boxShadow = 'none';
         e.currentTarget.style.transform = 'none';
       }}
     >
       {/* Icon 容器 */}
       <div
+        className="jy-card-icon-box"
         style={{
           width: '40px',
           height: '40px',
           borderRadius: '8px',
-          background: '#f8fafc',
+          background: 'var(--dsw-alias-bg-layer-3, #f8fafc)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+          border:
+            '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
           flexShrink: 0,
         }}
       >
@@ -1913,7 +2025,7 @@ const TemplateCard = ({ tpl, onClick }: TplCardProps) => {
 
 // 模板各类 SVG Icon
 const TemplateIcon = ({ type }: { type: string }) => {
-  const strokeColor = '#475569';
+  const strokeColor = 'var(--dsw-alias-label-secondary, #475569)';
   switch (type) {
     case 'news':
       return (

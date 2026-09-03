@@ -297,11 +297,15 @@ export const ConnectorPanel = () => {
 
   return (
     <div
+      className="jy-connector-panel"
       style={{
         width: '100%',
+        height: '100%',
         padding: '24px 32px',
         boxSizing: 'border-box',
-        background: 'var(--dsw-alias-bg-main, #ffffff)',
+        background:
+          'var(--dsw-alias-bg-layer-1, var(--dsw-alias-bg-main, #ffffff))',
+        color: 'var(--dsw-alias-label-primary, #0f172a)',
         overflowY: 'auto',
         position: 'relative',
       }}
@@ -314,12 +318,12 @@ export const ConnectorPanel = () => {
             left: '50%',
             transform: 'translateX(-50%)',
             background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-            color: '#ffffff',
+            color: 'var(--dsw-alias-label-inverse, #ffffff)',
             padding: '8px 16px',
             borderRadius: '20px',
             fontSize: '12px',
             fontWeight: 500,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
@@ -378,6 +382,7 @@ export const ConnectorPanel = () => {
         >
           {/* 飞书连接器行 */}
           <div
+            className="jy-connector-card"
             onClick={() => {
               if (isLarkConnected) {
                 setShowDetailModal(true);
@@ -392,36 +397,31 @@ export const ConnectorPanel = () => {
               gap: '12px',
               padding: '14px 18px',
               borderRadius: '12px',
-              border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-              background: 'var(--dsw-alias-bg-card, #ffffff)',
+              border:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+              background:
+                'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
               boxSizing: 'border-box',
               cursor: 'pointer',
               height: '80px',
               transition: 'all 0.2s ease',
               boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor =
-                'var(--dsw-alias-label-tertiary, #cbd5e1)';
-              e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor =
-                'var(--dsw-alias-border, #e2e8f0)';
-              e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.02)';
-            }}
           >
-            {/* 1. Logo 容器 (对齐图 1 h-10 w-10 灰底圆角框) */}
+            {/* 1. Logo 容器 */}
             <div
+              className="jy-card-icon-box"
               style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '8px',
-                background: 'var(--dsw-alias-bg-card-hover, #f8fafc)',
+                background:
+                  'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                border:
+                  '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                 flexShrink: 0,
               }}
             >
@@ -458,10 +458,12 @@ export const ConnectorPanel = () => {
                 </h3>
 
                 <span
+                  className="jy-badge-gray"
                   style={{
                     fontSize: '10px',
                     color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                    background: 'var(--dsw-alias-bg-card-hover, #f1f5f9)',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f1f5f9))',
                     padding: '1px 6px',
                     borderRadius: '4px',
                   }}
@@ -518,30 +520,28 @@ export const ConnectorPanel = () => {
             >
               {isLarkConnected ? (
                 <button
+                  className="jy-btn-secondary"
                   onClick={() => setShowDetailModal(true)}
                   style={{
                     height: '28px',
                     padding: '0 14px',
                     borderRadius: '9999px',
-                    border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-                    background: '#ffffff',
+                    border:
+                      '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
                     color: 'var(--dsw-alias-label-primary, #0f172a)',
                     fontSize: '12px',
                     fontWeight: 500,
                     cursor: 'pointer',
-                    transition: 'background 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f8fafc';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#ffffff';
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   管理
                 </button>
               ) : (
                 <button
+                  className="jy-btn-primary"
                   onClick={() => setShowAuthModal(true)}
                   style={{
                     height: '28px',
@@ -549,7 +549,7 @@ export const ConnectorPanel = () => {
                     borderRadius: '9999px',
                     border: 'none',
                     background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-                    color: '#ffffff',
+                    color: 'var(--dsw-alias-label-inverse, #ffffff)',
                     fontSize: '12px',
                     fontWeight: 500,
                     cursor: 'pointer',
@@ -570,6 +570,7 @@ export const ConnectorPanel = () => {
 
           {/* 钉钉列表行 */}
           <div
+            className="jy-connector-card"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -577,8 +578,10 @@ export const ConnectorPanel = () => {
               gap: '12px',
               padding: '14px 18px',
               borderRadius: '12px',
-              border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-              background: 'var(--dsw-alias-bg-card, #ffffff)',
+              border:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+              background:
+                'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
               boxSizing: 'border-box',
               height: '80px',
               opacity: 0.65,
@@ -587,15 +590,18 @@ export const ConnectorPanel = () => {
           >
             {/* Logo */}
             <div
+              className="jy-card-icon-box"
               style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '8px',
-                background: 'var(--dsw-alias-bg-card-hover, #f8fafc)',
+                background:
+                  'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                border:
+                  '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                 flexShrink: 0,
               }}
             >
@@ -627,10 +633,12 @@ export const ConnectorPanel = () => {
                 </h3>
 
                 <span
+                  className="jy-badge-gray"
                   style={{
                     fontSize: '10px',
                     color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                    background: 'var(--dsw-alias-bg-card-hover, #f1f5f9)',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f1f5f9))',
                     padding: '1px 6px',
                     borderRadius: '4px',
                   }}
@@ -661,7 +669,8 @@ export const ConnectorPanel = () => {
                   padding: '0 14px',
                   borderRadius: '9999px',
                   border: 'none',
-                  background: 'var(--dsw-alias-border, #e2e8f0)',
+                  background:
+                    'var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                   color: 'var(--dsw-alias-label-tertiary, #64748b)',
                   fontSize: '12px',
                   fontWeight: 500,
@@ -673,7 +682,9 @@ export const ConnectorPanel = () => {
             </div>
           </div>
 
+          {/* 企业微信列表行 */}
           <div
+            className="jy-connector-card"
             onClick={() => {
               if (isWecomConnected) {
                 setShowWecomDetailModal(true);
@@ -688,37 +699,30 @@ export const ConnectorPanel = () => {
               gap: '12px',
               padding: '14px 18px',
               borderRadius: '12px',
-              border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-              background: 'var(--dsw-alias-bg-card, #ffffff)',
+              border:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+              background:
+                'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
               boxSizing: 'border-box',
               height: '80px',
               cursor: 'pointer',
-              transition: 'border-color 0.2s, background-color 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor =
-                'var(--dsw-alias-border-hover, #cbd5e1)';
-              e.currentTarget.style.background =
-                'var(--dsw-alias-bg-card-hover, #f8fafc)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor =
-                'var(--dsw-alias-border, #e2e8f0)';
-              e.currentTarget.style.background =
-                'var(--dsw-alias-bg-card, #ffffff)';
+              transition: 'all 0.2s ease',
             }}
           >
             {/* Logo */}
             <div
+              className="jy-card-icon-box"
               style={{
                 width: '40px',
                 height: '40px',
                 borderRadius: '8px',
-                background: 'var(--dsw-alias-bg-card-hover, #f8fafc)',
+                background:
+                  'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                border:
+                  '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                 flexShrink: 0,
               }}
             >
@@ -750,10 +754,12 @@ export const ConnectorPanel = () => {
                 </h3>
 
                 <span
+                  className="jy-badge-gray"
                   style={{
                     fontSize: '10px',
                     color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                    background: 'var(--dsw-alias-bg-card-hover, #f1f5f9)',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f1f5f9))',
                     padding: '1px 6px',
                     borderRadius: '4px',
                   }}
@@ -809,23 +815,28 @@ export const ConnectorPanel = () => {
             >
               {isWecomConnected ? (
                 <button
+                  className="jy-btn-secondary"
                   onClick={() => setShowWecomDetailModal(true)}
                   style={{
                     height: '28px',
                     padding: '0 14px',
                     borderRadius: '9999px',
-                    border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-                    background: 'var(--dsw-alias-bg-card, #ffffff)',
+                    border:
+                      '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+                    background:
+                      'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
                     color: 'var(--dsw-alias-label-primary, #0f172a)',
                     fontSize: '12px',
                     fontWeight: 500,
                     cursor: 'pointer',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   管理
                 </button>
               ) : (
                 <button
+                  className="jy-btn-primary"
                   onClick={() => setShowWecomModal(true)}
                   style={{
                     height: '28px',
@@ -837,6 +848,13 @@ export const ConnectorPanel = () => {
                     fontSize: '12px',
                     fontWeight: 500,
                     cursor: 'pointer',
+                    transition: 'opacity 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.opacity = '0.9';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.opacity = '1';
                   }}
                 >
                   连接
@@ -939,7 +957,7 @@ const ConnectorDetailModal = ({
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'rgba(0, 0, 0, 0.4)',
+        background: 'rgba(0, 0, 0, 0.5)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -949,14 +967,16 @@ const ConnectorDetailModal = ({
       }}
     >
       <div
+        className="jy-detail-modal"
         style={{
           width: '512px',
           maxHeight: '85vh',
-          background: '#ffffff',
+          background: 'var(--dsw-alias-bg-layer-2, #ffffff)',
           borderRadius: '16px',
-          border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+          border:
+            '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
           boxShadow:
-            '0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04)',
+            '0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1)',
           display: 'flex',
           flexDirection: 'column',
           padding: '24px',
@@ -997,7 +1017,7 @@ const ConnectorDetailModal = ({
           </svg>
         </button>
 
-        {/* 1. Header Area (对齐图 2) */}
+        {/* 1. Header Area */}
         <div
           style={{
             display: 'flex',
@@ -1007,15 +1027,16 @@ const ConnectorDetailModal = ({
           }}
         >
           <div
+            className="jy-card-icon-box"
             style={{
               width: '56px',
               height: '56px',
               borderRadius: '12px',
-              background: 'rgba(51, 112, 255, 0.05)',
+              background: 'rgba(51, 112, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: '1px solid rgba(51, 112, 255, 0.1)',
+              border: '1px solid rgba(51, 112, 255, 0.15)',
               flexShrink: 0,
             }}
           >
@@ -1090,13 +1111,16 @@ const ConnectorDetailModal = ({
             paddingRight: '2px',
           }}
         >
-          {/* 详细说明框 (bg-muted/40) */}
+          {/* 详细说明框 */}
           <div
+            className="jy-detail-desc-box"
             style={{
-              background: 'var(--dsw-alias-bg-card-hover, #f8fafc)',
+              background:
+                'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
               padding: '16px',
               borderRadius: '12px',
-              border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+              border:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
               fontSize: '13px',
               color: 'var(--dsw-alias-label-secondary, #475569)',
               lineHeight: '1.6',
@@ -1115,7 +1139,8 @@ const ConnectorDetailModal = ({
             具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。
             <div
               style={{
-                borderTop: '1px dashed var(--dsw-alias-border, #e2e8f0)',
+                borderTop:
+                  '1px dashed var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                 marginTop: '12px',
                 paddingTop: '12px',
                 fontSize: '11.5px',
@@ -1161,12 +1186,13 @@ const ConnectorDetailModal = ({
               {PROMPT_SUGGESTIONS.map((item, idx) => (
                 <div
                   key={idx}
+                  className="jy-prompt-suggestion-item"
                   onClick={(e) => {
                     e.stopPropagation();
                     onSendPrompt(item.text);
                   }}
                   style={{
-                    background: '#f8fafc',
+                    background: 'var(--dsw-alias-bg-layer-3, #f8fafc)',
                     padding: '10px 12px',
                     borderRadius: '10px',
                     fontSize: '12px',
@@ -1177,16 +1203,8 @@ const ConnectorDetailModal = ({
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: '8px',
-                    border: '1px solid #f1f5f9',
+                    border: '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
                     transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = '#f1f5f9';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = '#f8fafc';
-                    e.currentTarget.style.borderColor = '#f1f5f9';
                   }}
                 >
                   <span
@@ -1207,25 +1225,28 @@ const ConnectorDetailModal = ({
           </div>
         </div>
 
-        {/* 3. Bottom Action Footer (对齐图 2) */}
+        {/* 3. Bottom Action Footer */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'flex-end',
             gap: '10px',
             paddingTop: '16px',
-            borderTop: '1px solid var(--dsw-alias-border, #e2e8f0)',
+            borderTop:
+              '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
             marginTop: '20px',
           }}
         >
           <button
+            className="jy-btn-secondary"
             onClick={onDisconnect}
             style={{
               height: '34px',
               padding: '0 16px',
               borderRadius: '9999px',
-              border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-              background: '#ffffff',
+              border:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+              background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
               color: 'var(--dsw-alias-label-primary, #0f172a)',
               fontSize: '13px',
               fontWeight: 500,
@@ -1234,19 +1255,14 @@ const ConnectorDetailModal = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '4px',
-              transition: 'background 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f8fafc';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#ffffff';
+              transition: 'all 0.15s ease',
             }}
           >
             <UnbindIcon />
             解绑
           </button>
           <button
+            className="jy-btn-primary"
             onClick={onTryIt}
             style={{
               height: '34px',
@@ -1254,7 +1270,7 @@ const ConnectorDetailModal = ({
               borderRadius: '9999px',
               border: 'none',
               background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-              color: '#ffffff',
+              color: 'var(--dsw-alias-label-inverse, #ffffff)',
               fontSize: '13px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -1500,18 +1516,21 @@ const ConnectorAuthModal = ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(15, 23, 42, 0.4)',
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
         backdropFilter: 'blur(4px)',
       }}
     >
       <div
+        className="jy-detail-modal"
         style={{
           width: '380px',
-          background: 'var(--dsw-alias-bg-card, #ffffff)',
+          background:
+            'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
           borderRadius: '16px',
-          border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+          border:
+            '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
           boxShadow:
-            '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            '0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1)',
           padding: '28px',
           boxSizing: 'border-box',
           display: 'flex',
@@ -1682,7 +1701,8 @@ const ConnectorAuthModal = ({
                 style={{
                   width: '200px',
                   height: '200px',
-                  border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                  border:
+                    '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                   borderRadius: '12px',
                   display: 'flex',
                   alignItems: 'center',
@@ -1698,7 +1718,7 @@ const ConnectorAuthModal = ({
                 style={{
                   width: '200px',
                   height: '200px',
-                  border: '1px solid #fee2e2',
+                  border: '1px solid rgba(239, 68, 68, 0.3)',
                   borderRadius: '12px',
                   padding: '16px',
                   boxSizing: 'border-box',
@@ -1707,7 +1727,7 @@ const ConnectorAuthModal = ({
                   alignItems: 'center',
                   justifyContent: 'center',
                   textAlign: 'center',
-                  background: '#fef2f2',
+                  background: 'rgba(239, 68, 68, 0.1)',
                   color: '#ef4444',
                   fontSize: '12px',
                 }}
@@ -1751,11 +1771,12 @@ const ConnectorAuthModal = ({
                   gap: '16px',
                 }}
               >
-                {/* 二维码图片容器 */}
+                {/* 二维码图片容器 (白底保证扫码识别率) */}
                 <div
                   style={{
                     padding: '12px',
-                    border: '1px solid var(--dsw-alias-border, #e2e8f0)',
+                    border:
+                      '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
                     borderRadius: '12px',
                     background: '#ffffff',
                     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
@@ -1785,24 +1806,19 @@ const ConnectorAuthModal = ({
               }}
             >
               <button
+                className="jy-btn-secondary"
                 onClick={onClose}
                 style={{
                   padding: '6px 20px',
                   borderRadius: '6px',
-                  border: '1px solid var(--dsw-alias-border, #e2e8f0)',
-                  background: 'transparent',
+                  border:
+                    '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+                  background: 'var(--dsw-alias-bg-layer-3, transparent)',
                   color: 'var(--dsw-alias-label-secondary, #475569)',
                   fontSize: '13px',
                   fontWeight: 500,
                   cursor: 'pointer',
-                  transition: 'background 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background =
-                    'var(--dsw-alias-bg-card, #f8fafc)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
+                  transition: 'all 0.15s ease',
                 }}
               >
                 关闭
