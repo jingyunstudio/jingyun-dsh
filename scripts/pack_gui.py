@@ -502,7 +502,7 @@ HTML_PAGE = """<!DOCTYPE html>
 """
 
 def get_current_config(base_dir):
-    cfg_path = os.path.join(base_dir, "packages/jingyun-dsh/jingyun-config.json")
+    cfg_path = os.path.join(base_dir, "packages/jingyun-dsh/desktop-config.json")
     tauri_conf_path = os.path.join(base_dir, "src-tauri/tauri.conf.json")
     
     config = {
@@ -648,10 +648,10 @@ def run_build_thread(bundle_id, app_version, app_name="Jingyun.Studio", custom_l
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     tauri_conf_path = os.path.join(base_dir, "src-tauri/tauri.conf.json")
     default_cap_path = os.path.join(base_dir, "src-tauri/capabilities/default.json")
-    cfg_path = os.path.join(base_dir, "packages/jingyun-dsh/jingyun-config.json")
+    cfg_path = os.path.join(base_dir, "packages/jingyun-dsh/desktop-config.json")
     vendor_dir = os.path.join(base_dir, "src-tauri/resources/vendor")
 
-    # Update jingyun-config.json for jingyun-dsh plugin (Clean 5 core fields)
+    # Update desktop-config.json for dsh plugin (Clean 5 core fields)
     cfg_data = {
         "api_url": api_url if api_url else "https://api.jingyun.studio",
         "tenant_host": tenant_host if tenant_host else "fbeed38e",

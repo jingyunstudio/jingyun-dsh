@@ -99,7 +99,7 @@ if (fs.existsSync(splashTemplatePath)) {
 } else if (!fs.existsSync(path.join(distTauriTemp, 'index.html'))) {
   fs.writeFileSync(
     path.join(distTauriTemp, 'index.html'),
-    `<!DOCTYPE html><html><head><title>Jingyun.Studio</title></head><body><div id="root">Loading...</div></body></html>`
+    `<!DOCTYPE html><html><head><title>AI.Studio</title></head><body><div id="root">Loading...</div></body></html>`
   );
 }
 

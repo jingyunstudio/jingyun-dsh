@@ -81,16 +81,10 @@ export function initClientBrandingDOM() {
       });
     }
 
-    brandingManager.fetch().then((data: any) => {
-      const hasCustom = !!(data?.site_name || data?.site_logo);
-      if (!hasCustom) {
-        // 如果没有自定义品牌参数，仅保持基础样式，不执行隐藏或观察操作
-        return;
-      }
-
-      if (data?.site_name) {
-        document.title = data.site_name;
-      }
+    brandingManager.fetch().then((raw: unknown) => {
+      const data = raw as { site_name?: string; site_logo?: string } | null;
+      const siteTitle = data?.site_name || 'AI Studio';
+      document.title = siteTitle;
       if (data?.site_logo) {
         let link = document.querySelector(
           'link[rel*="icon"]'

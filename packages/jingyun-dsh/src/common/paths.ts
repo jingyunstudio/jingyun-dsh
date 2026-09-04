@@ -40,26 +40,25 @@ export function getPluginDir(): string {
 }
 
 /**
- * 获取 jingyun-config.json 配置文件路径
- * 正确位置：优先 $DSH_HOME/jingyun-config.json，不存在则读取插件自身根目录 jingyun-config.json
+ * 获取桌面端配置文件路径 ($DSH_HOME/desktop-config.json 或 插件目录/desktop-config.json)
  */
-export function getJingyunConfigPath(): string {
-  const dshConfig = path.join(getDshHome(), 'jingyun-config.json');
-  if (fs.existsSync(dshConfig)) {
-    return dshConfig;
-  }
-  const pluginConfig = path.join(getPluginDir(), 'jingyun-config.json');
-  if (fs.existsSync(pluginConfig)) {
-    return pluginConfig;
-  }
-  return dshConfig;
+export function getDesktopConfigPath(): string {
+  const dshHome = getDshHome();
+  const dshDesktop = path.join(dshHome, 'desktop-config.json');
+  if (fs.existsSync(dshDesktop)) return dshDesktop;
+
+  const pluginDir = getPluginDir();
+  const pluginDesktop = path.join(pluginDir, 'desktop-config.json');
+  if (fs.existsSync(pluginDesktop)) return pluginDesktop;
+
+  return dshDesktop;
 }
 
 /**
- * 安全读取 jingyun-config.json 配置文件
+ * 读取桌面端配置文件
  */
-export function readJingyunConfig(): Record<string, any> {
-  const configPath = getJingyunConfigPath();
+export function readDesktopConfig(): Record<string, any> {
+  const configPath = getDesktopConfigPath();
   if (fs.existsSync(configPath)) {
     try {
       return JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -84,7 +83,7 @@ export function getRemoteBaseUrl(
     } catch {}
   }
 
-  const localData = readJingyunConfig();
+  const localData = readDesktopConfig();
   const host =
     localData.app_host ||
     localData.domain ||

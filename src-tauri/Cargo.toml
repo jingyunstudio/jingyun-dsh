@@ -9,11 +9,19 @@ edition = "2021"
 tauri-build = { version = "2.0.0-rc", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0-rc", features = ["tray-icon", "unstable"] }
+tauri = { version = "2.0.0-rc", features = ["tray-icon", "unstable", "image-ico"] }
 tauri-plugin-opener = "2.0.0-rc"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 zip = "2.2.0"
+
+[target.'cfg(windows)'.dependencies]
+pelite = "0.10.0"
+ico = "0.5.0"
+windows-sys = { version = "0.59", features = [
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_UI_Shell",
+] }
 
 [profile.release]
 panic = "abort"

@@ -147,7 +147,7 @@ jingyun_dsh/
 npm install @jingyun-ai/jingyun-dsh
 ```
 
-然后在本地复制并重命名 `packages/jingyun-dsh/jingyun-config.example.json` 为 `packages/jingyun-dsh/jingyun-config.json`，在其中配置您的井云平台信息即可接入完整的会员体系和商业化能力。
+然后在本地复制并重命名 `packages/jingyun-dsh/desktop-config.example.json` 为 `packages/jingyun-dsh/desktop-config.json`，在其中配置您的井云平台信息即可接入完整的会员体系和商业化能力。
 
 ### 方式二：整仓部署
 
@@ -189,7 +189,7 @@ run_pack.bat
 
 ## 📋 品牌定制
 
-在本地开发或打包前，请**自行复制并重命名** `packages/jingyun-dsh/jingyun-config.example.json` 为 `packages/jingyun-dsh/jingyun-config.json`。通过修改 `packages/jingyun-dsh/jingyun-config.json` 可自定义品牌与平台对接信息：
+在本地开发或打包前，请**自行复制并重命名** `packages/jingyun-dsh/desktop-config.example.json` 为 `packages/jingyun-dsh/desktop-config.json`。通过修改 `packages/jingyun-dsh/desktop-config.json` 可自定义品牌与平台对接信息：
 
 ```json
 {

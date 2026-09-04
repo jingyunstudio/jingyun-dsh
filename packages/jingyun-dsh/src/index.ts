@@ -4,12 +4,12 @@ import path from 'path';
 import type { Context } from '@deepseek-ai/cordis';
 
 import { initSystemPromptHook } from './agent/agent-loader';
-import { getDshHome, readJingyunConfig } from './common/paths';
+import { getDshHome, readDesktopConfig } from './common/paths';
 import { Config } from './config/schema';
 import { registerRoutes } from './routes';
 
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
-const initialData = readJingyunConfig();
+const initialData = readDesktopConfig();
 if (initialData.api_url) {
   process.env.JINGYUN_API_URL = initialData.api_url;
   console.log(
@@ -124,7 +124,7 @@ export function apply(ctx: Context, config: Config) {
   syncBuiltinSkills();
 
   // 3. Pre-load initial configuration from local backup config file before registering settings
-  const localData = readJingyunConfig();
+  const localData = readDesktopConfig();
   if (localData.mode) config.mode = localData.mode;
   if (localData.api_url) config.apiUrl = localData.api_url;
   if (localData.tenant_host) config.tenantHost = localData.tenant_host;

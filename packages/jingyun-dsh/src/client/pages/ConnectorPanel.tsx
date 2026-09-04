@@ -1091,8 +1091,6 @@ const ConnectorDetailModal = ({
                 gap: '6px',
               }}
             >
-              <span>by Jingyun.Studio</span>
-              <span>•</span>
               <span>v1.0.0</span>
               <span>•</span>
               <span style={{ textTransform: 'capitalize' }}>connector</span>

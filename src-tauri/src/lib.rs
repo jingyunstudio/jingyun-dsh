@@ -10,7 +10,11 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
     let dsh_bin = jingyun_dir.join("node_modules/@deepseek-ai/dsh/lib/bin.js");
 
     if node_exe.exists() && dsh_bin.exists() {
-        println!("[Tauri] Spawning DSH Backend: {} {}", node_exe.display(), dsh_bin.display());
+        println!(
+            "[Tauri] Spawning DSH Backend: {} {}",
+            node_exe.display(),
+            dsh_bin.display()
+        );
         let mut cmd = std::process::Command::new(&node_exe);
         cmd.arg(&dsh_bin);
         cmd.arg("--profile");
@@ -39,7 +43,10 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
 
         match cmd.spawn() {
             Ok(child) => {
-                println!("[Tauri] DSH Sidecar process spawned successfully! PID: {}", child.id());
+                println!(
+                    "[Tauri] DSH Sidecar process spawned successfully! PID: {}",
+                    child.id()
+                );
                 #[cfg(target_os = "windows")]
                 {
                     use std::os::windows::io::AsRawHandle;
@@ -49,7 +56,13 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
             Err(e) => eprintln!("[Tauri] Failed to spawn DSH Sidecar: {}", e),
         }
     } else {
-        eprintln!("[Tauri] Sidecar target missing. Node ({:?}): {:?}, Bin ({:?}): {:?}", node_exe, node_exe.exists(), dsh_bin, dsh_bin.exists());
+        eprintln!(
+            "[Tauri] Sidecar target missing. Node ({:?}): {:?}, Bin ({:?}): {:?}",
+            node_exe,
+            node_exe.exists(),
+            dsh_bin,
+            dsh_bin.exists()
+        );
     }
 }
 
@@ -128,7 +141,9 @@ mod win_job {
             );
             if res != 0 {
                 if AssignProcessToJobObject(job, process_handle as HANDLE) != 0 {
-                    println!("[Tauri] Successfully assigned Sidecar process to KillOnClose Job Object");
+                    println!(
+                        "[Tauri] Successfully assigned Sidecar process to KillOnClose Job Object"
+                    );
                 } else {
                     eprintln!("[Tauri] Failed to assign process to Job Object");
                 }
@@ -167,6 +182,156 @@ fn app_close(window: tauri::Window) {
     let _ = window.close();
 }
 
+#[cfg(windows)]
+fn apply_tenant_icon(app: &tauri::App) -> Option<tauri::image::Image<'static>> {
+    use std::os::windows::ffi::OsStrExt;
+    let exe_path = std::env::current_exe().ok()?;
+
+    // 1. 发送 Win32 原生 WM_SETICON 消息给窗口句柄，立即刷新 Windows 任务栏大图标与小图标
+    if let Some(main_win) = app.get_webview_window("main") {
+        if let Ok(hwnd) = main_win.hwnd() {
+            let mut wide_path: Vec<u16> = exe_path.as_os_str().encode_wide().collect();
+            wide_path.push(0);
+            let mut large = std::ptr::null_mut();
+            let mut small = std::ptr::null_mut();
+            unsafe {
+                use windows_sys::Win32::UI::Shell::ExtractIconExW;
+                use windows_sys::Win32::UI::WindowsAndMessaging::*;
+                if ExtractIconExW(wide_path.as_ptr(), 0, &mut large, &mut small, 1) > 0 {
+                    if !large.is_null() {
+                        SendMessageW(hwnd.0 as _, WM_SETICON, ICON_BIG as _, large as _);
+                    }
+                    if !small.is_null() {
+                        SendMessageW(hwnd.0 as _, WM_SETICON, ICON_SMALL as _, small as _);
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. 利用 pelite + ico crate 直接从内存把 exe 图标解码为 RGBA 供给托盘
+    let bytes = std::fs::read(&exe_path).ok()?;
+    let pe = pelite::PeFile::from_bytes(&bytes).ok()?;
+    let mut ico_buf = Vec::new();
+    let has_icon = match pe {
+        pelite::Wrap::T32(p) => {
+            use pelite::pe32::Pe;
+            p.resources()
+                .ok()?
+                .icons()
+                .next()?
+                .ok()?
+                .1
+                .write(&mut ico_buf)
+                .is_ok()
+        }
+        pelite::Wrap::T64(p) => {
+            use pelite::pe64::Pe;
+            p.resources()
+                .ok()?
+                .icons()
+                .next()?
+                .ok()?
+                .1
+                .write(&mut ico_buf)
+                .is_ok()
+        }
+    };
+    if !has_icon || ico_buf.is_empty() {
+        return None;
+    }
+
+    let dir = ico::IconDir::read(std::io::Cursor::new(&ico_buf)).ok()?;
+    let entry = dir
+        .entries()
+        .iter()
+        .filter(|e| e.width() <= 64 && e.height() <= 64)
+        .max_by_key(|e| e.width() * e.height())
+        .or_else(|| dir.entries().first())?;
+
+    let decoded = entry.decode().ok()?;
+    Some(tauri::image::Image::new_owned(
+        decoded.rgba_data().to_vec(),
+        decoded.width(),
+        decoded.height(),
+    ))
+}
+
+fn load_tenant_name(dsh_home: &Path) -> String {
+    // 1. 优先读取 EXE 同级目录下的 desktop-config.json
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let p = exe_dir.join("desktop-config.json");
+            if let Ok(c) = std::fs::read_to_string(&p) {
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&c) {
+                    if let Some(n) = v.get("custom_name").and_then(|v| v.as_str()) {
+                        if !n.trim().is_empty() {
+                            return n.trim().to_string();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // 2. 读取 dsh_home 下的 desktop-config.json
+    let p = dsh_home.join("desktop-config.json");
+    if let Ok(c) = std::fs::read_to_string(&p) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&c) {
+            if let Some(n) = v.get("custom_name").and_then(|v| v.as_str()) {
+                if !n.trim().is_empty() {
+                    return n.trim().to_string();
+                }
+            }
+        }
+    }
+
+    // 3. 从 EXE 的 PE 版本信息中读取被 rcedit 修改后的 ProductName / FileDescription
+    #[cfg(windows)]
+    {
+        if let Ok(exe_path) = std::env::current_exe() {
+            if let Ok(bytes) = std::fs::read(&exe_path) {
+                if let Ok(pe_file) = pelite::PeFile::from_bytes(&bytes) {
+                    let version_info = match pe_file {
+                        pelite::Wrap::T32(pe) => {
+                            use pelite::pe32::Pe;
+                            pe.resources().ok().and_then(|r| r.version_info().ok())
+                        }
+                        pelite::Wrap::T64(pe) => {
+                            use pelite::pe64::Pe;
+                            pe.resources().ok().and_then(|r| r.version_info().ok())
+                        }
+                    };
+                    if let Some(vi) = version_info {
+                        for (_lang, table) in &vi.file_info().strings {
+                            if let Some(prod) = table.get("ProductName") {
+                                let s = prod.trim();
+                                if !s.is_empty()
+                                    && s != "Jingyun.Studio"
+                                    && s != "jingyun-dsh-client"
+                                {
+                                    return s.to_string();
+                                }
+                            }
+                            if let Some(desc) = table.get("FileDescription") {
+                                let s = desc.trim();
+                                if !s.is_empty()
+                                    && s != "Jingyun.Studio"
+                                    && s != "jingyun-dsh-client"
+                                {
+                                    return s.to_string();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    String::new()
+}
+
 fn ensure_profile_bundles(dsh_home: &Path) {
     let profile_dir = dsh_home.join("profiles").join("web");
     let pkg_path = profile_dir.join("package.json");
@@ -178,7 +343,10 @@ fn ensure_profile_bundles(dsh_home: &Path) {
     };
 
     if needs_write {
-        println!("[Tauri] Initializing web profile package.json: {}", pkg_path.display());
+        println!(
+            "[Tauri] Initializing web profile package.json: {}",
+            pkg_path.display()
+        );
         let default_pkg = r#"{
   "name": "dsh-profile-web",
   "private": true,
@@ -253,7 +421,10 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
 fn notify_splash_stage(app_handle: &tauri::AppHandle, text: &str, progress: u32) {
     if let Some(window) = app_handle.get_webview_window("main") {
         let escaped_text = text.replace('\\', "\\\\").replace('\'', "\\'");
-        let script = format!("window.setSplashStatus && window.setSplashStatus('{}', {});", escaped_text, progress);
+        let script = format!(
+            "window.setSplashStatus && window.setSplashStatus('{}', {});",
+            escaped_text, progress
+        );
         let _ = window.eval(&script);
     }
 }
@@ -265,7 +436,10 @@ fn ensure_portable_vendor(app_handle: &tauri::AppHandle, data_dir: &Path, resour
         return;
     }
 
-    println!("[Tauri] Native initializing portable vendor to: {}", vendor_dir.display());
+    println!(
+        "[Tauri] Native initializing portable vendor to: {}",
+        vendor_dir.display()
+    );
     let _ = std::fs::create_dir_all(&vendor_dir);
 
     let res_vendor = resource_dir.join("resources").join("vendor");
@@ -276,14 +450,29 @@ fn ensure_portable_vendor(app_handle: &tauri::AppHandle, data_dir: &Path, resour
     };
 
     // 1. 原生解压 node.zip / python.zip / vendor_deps.zip，分阶段向启动界面同步进度
-    notify_splash_stage(app_handle, "首次启动：正在配置 Node.js 运行环境 (1/4)...", 20);
+    notify_splash_stage(
+        app_handle,
+        "首次启动：正在配置 Node.js 运行环境 (1/4)...",
+        20,
+    );
     let _ = extract_zip(&src_vendor.join("node.zip"), &vendor_dir.join("node"));
 
-    notify_splash_stage(app_handle, "首次启动：正在配置 Python 依赖环境 (2/4)...", 45);
+    notify_splash_stage(
+        app_handle,
+        "首次启动：正在配置 Python 依赖环境 (2/4)...",
+        45,
+    );
     let _ = extract_zip(&src_vendor.join("python.zip"), &vendor_dir.join("python"));
 
-    notify_splash_stage(app_handle, "首次启动：正在准备核心插件与依赖库 (3/4)...", 70);
-    let _ = extract_zip(&src_vendor.join("vendor_deps.zip"), &vendor_dir.join("jingyun"));
+    notify_splash_stage(
+        app_handle,
+        "首次启动：正在准备核心插件与依赖库 (3/4)...",
+        70,
+    );
+    let _ = extract_zip(
+        &src_vendor.join("vendor_deps.zip"),
+        &vendor_dir.join("jingyun"),
+    );
 
     notify_splash_stage(app_handle, "首次启动：正在初始化本地工作空间 (4/4)...", 85);
     // 2. 拷贝 workspace 插件
@@ -293,21 +482,38 @@ fn ensure_portable_vendor(app_handle: &tauri::AppHandle, data_dir: &Path, resour
     }
 
     // 3. 确保 @jingyun-ai 自链接
-    let plugin_src = vendor_dir.join("jingyun").join("packages").join("jingyun-dsh");
+    let plugin_src = vendor_dir
+        .join("jingyun")
+        .join("packages")
+        .join("jingyun-dsh");
     if plugin_src.exists() {
-        let target_sym = vendor_dir.join("jingyun").join("node_modules").join("@jingyun-ai").join("jingyun-dsh");
-        let _ = std::fs::create_dir_all(vendor_dir.join("jingyun").join("node_modules").join("@jingyun-ai"));
+        let target_sym = vendor_dir
+            .join("jingyun")
+            .join("node_modules")
+            .join("@jingyun-ai")
+            .join("jingyun-dsh");
+        let _ = std::fs::create_dir_all(
+            vendor_dir
+                .join("jingyun")
+                .join("node_modules")
+                .join("@jingyun-ai"),
+        );
         let _ = copy_dir_all(&plugin_src, &target_sym);
     }
 }
 fn ensure_portable_config(data_dir: &Path, vendor_dir: &Path) {
-    let target = data_dir.join("jingyun-config.json");
-    if target.exists() {
+    let desktop_target = data_dir.join("desktop-config.json");
+    if desktop_target.exists() {
         return;
     }
-    let plugin_config = vendor_dir.join("jingyun").join("node_modules").join("@jingyun-ai").join("jingyun-dsh").join("jingyun-config.json");
-    if plugin_config.exists() {
-        let _ = std::fs::copy(&plugin_config, &target);
+    let plugin_dir = vendor_dir
+        .join("jingyun")
+        .join("node_modules")
+        .join("@jingyun-ai")
+        .join("jingyun-dsh");
+    let desktop_src = plugin_dir.join("desktop-config.json");
+    if desktop_src.exists() {
+        let _ = std::fs::copy(&desktop_src, &desktop_target);
     }
 }
 
@@ -315,12 +521,30 @@ fn ensure_portable_config(data_dir: &Path, vendor_dir: &Path) {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![app_start_drag, app_minimize, app_toggle_maximize, app_close])
+        .invoke_handler(tauri::generate_handler![
+            app_start_drag,
+            app_minimize,
+            app_toggle_maximize,
+            app_close
+        ])
         .setup(|app| {
+            #[cfg(windows)]
+            let tenant_icon = apply_tenant_icon(app);
+            #[cfg(not(windows))]
+            let tenant_icon: Option<tauri::image::Image<'static>> = None;
+
+            // 解析租户定制名称
+            let (dsh_home, _) = resolve_dsh_home(app);
+            let tenant_name = load_tenant_name(&dsh_home);
+
             // Build Native Windows System Tray Icon & Context Menu
-            if let Some(icon) = app.default_window_icon() {
-                let app_title = app.package_info().name.clone();
-                let tray_tooltip = if app_title.is_empty() { "Jingyun Studio".to_string() } else { app_title };
+            let tray_icon = tenant_icon.or_else(|| app.default_window_icon().cloned());
+            if let Some(icon) = tray_icon {
+                let tray_tooltip = if !tenant_name.is_empty() {
+                    tenant_name.clone()
+                } else {
+                    "AI Studio".to_string()
+                };
                 if let (Ok(show_i), Ok(quit_i)) = (
                     MenuItem::with_id(app, "show", "显示", true, None::<&str>),
                     MenuItem::with_id(app, "quit", "退出", true, None::<&str>),
@@ -360,11 +584,21 @@ pub fn run() {
                     }
                 }
             }
+            if let Some(main_win) = app.get_webview_window("main") {
+                if !tenant_name.is_empty() {
+                    let _ = main_win.set_title(&tenant_name);
+                }
+                let _ = main_win.show();
+            }
 
             let app_handle = app.handle().clone();
             let (dsh_home, is_portable) = resolve_dsh_home(app);
             let _ = std::fs::create_dir_all(&dsh_home);
-            println!("[Tauri] DSH_HOME: {} (Portable: {})", dsh_home.display(), is_portable);
+            println!(
+                "[Tauri] DSH_HOME: {} (Portable: {})",
+                dsh_home.display(),
+                is_portable
+            );
             let resource_dir = app.path().resource_dir().unwrap_or_default();
 
             // 异步后台执行耗时解压和后端启动，确保主线程与 WebView 消息循环绝不卡死
@@ -386,14 +620,6 @@ pub fn run() {
                         }
                     }
                     if !vendor_dir.exists() {
-                        if let Ok(local_app_data) = std::env::var("LOCALAPPDATA") {
-                            let p = PathBuf::from(local_app_data).join("Jingyun-DSH").join("vendor");
-                            if p.join("node").join("node.exe").exists() {
-                                vendor_dir = p;
-                            }
-                        }
-                    }
-                    if !vendor_dir.exists() {
                         let p = resource_dir.join("resources").join("vendor");
                         if p.join("node").join("node.exe").exists() {
                             vendor_dir = p;
@@ -401,8 +627,14 @@ pub fn run() {
                     }
                 }
 
-                let resource_jingyun_dir = resource_dir.join("resources").join("vendor").join("jingyun");
-                let jingyun_dir = if resource_jingyun_dir.join("node_modules/@deepseek-ai/dsh/lib/bin.js").exists() {
+                let resource_jingyun_dir = resource_dir
+                    .join("resources")
+                    .join("vendor")
+                    .join("jingyun");
+                let jingyun_dir = if resource_jingyun_dir
+                    .join("node_modules/@deepseek-ai/dsh/lib/bin.js")
+                    .exists()
+                {
                     resource_jingyun_dir
                 } else {
                     vendor_dir.join("jingyun")

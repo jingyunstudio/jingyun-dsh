@@ -6,9 +6,9 @@ import type { Context } from '@deepseek-ai/cordis';
 
 import { sendJson, sendError } from '../common/http';
 import {
-  getJingyunConfigPath,
+  getDesktopConfigPath,
   getRemoteBaseUrl,
-  readJingyunConfig,
+  readDesktopConfig,
 } from '../common/paths';
 import type { Config } from '../config/schema';
 
@@ -79,7 +79,7 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
               domain: '',
               custom_name: '',
               custom_logo: '',
-              ...readJingyunConfig(),
+              ...readDesktopConfig(),
             };
 
             if (patch.apiUrl) jsonContent.api_url = patch.apiUrl;
@@ -90,7 +90,7 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
             if (patch.customLogo !== undefined)
               jsonContent.custom_logo = patch.customLogo;
 
-            const configPath = getJingyunConfigPath();
+            const configPath = getDesktopConfigPath();
 
             const configDir = path.dirname(configPath);
             if (!fs.existsSync(configDir)) {
@@ -136,7 +136,7 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
     kind: 'exact',
     path: '/api/jingyun/branding/settings',
     handler: async (req, res) => {
-      const jsonContent = readJingyunConfig();
+      const jsonContent = readDesktopConfig();
 
       sendJson(res, {
         mode: 'local',
@@ -161,7 +161,7 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
         siteLogo = '/api/jingyun/branding/logo.png';
       }
 
-      const localData = readJingyunConfig();
+      const localData = readDesktopConfig();
       const apiUrl = localData.api_url || '';
       const tenantHost = localData.tenant_host || '';
       const domain = localData.domain || localData.app_host || '';

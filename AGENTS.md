@@ -127,7 +127,7 @@ Always use path resolution from `src/common/paths.ts` (`getDshHome()`, `getJingy
 | `packages/jingyun-dsh/src/client/index.tsx` | Frontend injection entry point; registers React components into DSH UI slots. |
 | `src-tauri/src/lib.rs` | Tauri v2 desktop entry point; manages sidecar lifecycle and Win32 Job Objects. |
 | `packages/jingyun-dsh/tsdown.config.ts` | Dual-target bundler configuration (Node ESM + Browser CJS module). |
-| `packages/jingyun-dsh/jingyun-config.example.json` | Configuration template for branding, domain, logo, and API endpoints. |
+| `packages/jingyun-dsh/desktop-config.example.json` | Configuration template for branding, domain, logo, and API endpoints. |
 | `src-tauri/tauri.conf.json` | Tauri desktop configuration, window definitions, and NSIS installer bundling rules. |
 | `pnpm-workspace.yaml` | Workspace monorepo root definition (`packages/*`). |
 

@@ -22,6 +22,7 @@ Thumbs.db
 
 # Custom configs
 **/jingyun-config.json
+**/desktop-config.json
 
 # Tauri Sandboxes & Installers
 src-tauri/target/

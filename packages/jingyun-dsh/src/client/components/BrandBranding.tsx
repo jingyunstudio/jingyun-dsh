@@ -1,4 +1,4 @@
-import { FishLogo, BrandWordmark } from '@deepseek-ai/dsh-client-ui-primitives';
+import { FishLogo } from '@deepseek-ai/dsh-client-ui-primitives';
 import React from 'react';
 
 // Single source of truth for front-end branding configuration states
@@ -79,10 +79,7 @@ export function CustomBrandName() {
 
   if (!loaded) return null;
 
-  if (!name) {
-    return <BrandWordmark includeMark={false} />;
-  }
-
+  const displayName = name || 'AI Studio';
   return (
     <span
       style={{
@@ -92,40 +89,31 @@ export function CustomBrandName() {
         whiteSpace: 'nowrap',
       }}
     >
-      {name}
+      {displayName}
     </span>
   );
+
 }
 
-export function HeroSlotAutoHider(props: any) {
+export function HeroSlotAutoHider(_props?: { size?: number; className?: string }) {
   const ref = React.useRef<HTMLSpanElement>(null);
-  const [hasCustom, setHasCustom] = React.useState(true);
   const [loaded, setLoaded] = React.useState(false);
 
   React.useEffect(() => {
-    brandingManager.fetch().then((data) => {
-      const custom = !!(data?.site_logo || data?.site_name);
-      setHasCustom(custom);
+    brandingManager.fetch().then(() => {
       setLoaded(true);
     });
   }, []);
 
   React.useLayoutEffect(() => {
-    if (!loaded || !hasCustom) return;
+    if (!loaded) return;
     if (ref.current) {
-      // 【三保险机制之一：JS DOM树级别主动隐藏】
-      // 宿主（DSH底座）的 EmptyHero 等标语元素是由其客户端内部动态生成的。为了彻底防范
-      // 首屏渲染时序不一致而产生的官方标语“闪现/抖动”现象，此处采用 DOM 遍历强行将父级容器隐藏。
-
-      // 1. 隐藏父级 FishHitbox
       if (ref.current.parentElement) {
         ref.current.parentElement.style.display = 'none';
-        // 2. 隐藏爷爷级 headline 容器
         if (ref.current.parentElement.parentElement) {
           ref.current.parentElement.parentElement.style.display = 'none';
         }
       }
-      // 3. 递归向上匹配带有 headline/EmptyHero 的容器以防嵌套结构变化
       let current: HTMLElement | null = ref.current;
       for (let i = 0; i < 5 && current; i++) {
         const cls = current.className || '';
@@ -136,18 +124,13 @@ export function HeroSlotAutoHider(props: any) {
         current = current.parentElement;
       }
     }
-  }, [loaded, hasCustom]);
+  }, [loaded]);
 
   if (!loaded) return null;
 
-  if (!hasCustom) {
-    // 如果没有自定义配置，回退显示底座默认的鱼标
-    return <FishLogo size={props?.size || 64} className={props?.className} />;
-  }
-
   return React.createElement('span', {
     ref,
-    id: 'jy-hero-hide-anchor',
+    id: 'hero-hide-anchor',
     style: { display: 'none' },
   });
 }

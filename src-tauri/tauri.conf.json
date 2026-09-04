@@ -34,6 +34,7 @@
         "fullscreen": false,
         "maximized": true,
         "decorations": false,
+        "visible": false,
         "url": "index.html"
       }
     ],
@@ -42,7 +43,7 @@
     }
   },
   "build": {
-    "beforeDevCommand": "",
+    "beforeDevCommand": "pnpm run dev",
     "beforeBuildCommand": "",
     "devUrl": "http://localhost:3080",
     "frontendDist": "../dist_tauri_temp"

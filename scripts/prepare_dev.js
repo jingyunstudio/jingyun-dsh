@@ -35,30 +35,30 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-const targetConfig = path.join(dataDir, 'jingyun-config.json');
+const targetConfig = path.join(dataDir, 'desktop-config.json');
 const srcConfig = path.join(
   rootDir,
   'packages',
   'jingyun-dsh',
-  'jingyun-config.json'
+  'desktop-config.json'
 );
 const exampleConfig = path.join(
   rootDir,
   'packages',
   'jingyun-dsh',
-  'jingyun-config.example.json'
+  'desktop-config.example.json'
 );
 
 if (!fs.existsSync(targetConfig)) {
   if (fs.existsSync(srcConfig)) {
     fs.copyFileSync(srcConfig, targetConfig);
     console.log(
-      '[DevPrepare] 📁 Initialized data/jingyun-config.json from packages/jingyun-dsh/jingyun-config.json'
+      '[DevPrepare] 📁 Initialized data/desktop-config.json from packages/jingyun-dsh/desktop-config.json'
     );
   } else if (fs.existsSync(exampleConfig)) {
     fs.copyFileSync(exampleConfig, targetConfig);
     console.log(
-      '[DevPrepare] 📁 Initialized data/jingyun-config.json from example template'
+      '[DevPrepare] 📁 Initialized data/desktop-config.json from example template'
     );
   }
 }
