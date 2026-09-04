@@ -44,7 +44,7 @@
   },
   "build": {
     "beforeDevCommand": "pnpm run dev",
-    "beforeBuildCommand": "",
+    "beforeBuildCommand": "pnpm build && node scripts/prepare_vendor.js",
     "devUrl": "http://localhost:3080",
     "frontendDist": "../dist_tauri_temp"
   }

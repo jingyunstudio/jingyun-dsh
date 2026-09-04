@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { ensureRuntimes } from './download_runtimes.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const baseDir = path.join(__dirname, '..');
 const targetVendorDir = path.join(baseDir, 'src-tauri', 'resources', 'vendor');
@@ -10,12 +12,21 @@ const targetWorkspace = path.join(targetVendorDir, 'workspace');
 
 console.log('[VendorPrepare] 🚀 Preparing workspace uncompressed resources...');
 
-// 1. Verify vendor_deps.zip exists
+// 1. Verify vendor_deps.zip and runtimes exist
 if (!fs.existsSync(targetVendorDeps)) {
   console.warn(
     '[VendorPrepare] ⚠️ vendor_deps.zip missing in resources/vendor! Running build_deps.js automatically...'
   );
   await import('./build_deps.js');
+}
+
+const nodeZip = path.join(targetVendorDir, 'node.zip');
+const pythonZip = path.join(targetVendorDir, 'python.zip');
+if (!fs.existsSync(nodeZip) || !fs.existsSync(pythonZip)) {
+  console.log(
+    '[VendorPrepare] ⚠️ node.zip or python.zip missing in resources/vendor! Ensuring runtimes...'
+  );
+  await ensureRuntimes();
 }
 
 // 2. Safely clear old workspace folder
