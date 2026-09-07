@@ -220,10 +220,9 @@ jobs:
           ARCH_ALIAS: ${{ matrix.arch == 'x86_64' && 'x64' || matrix.arch }}
         run: |
           cp "src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_${{ env.ARCH_ALIAS }}.dmg" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.dmg"
-          cd src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos
+          cd "src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos"
           if [ -d "${{ env.PRODUCT_NAME }}.app" ]; then
-            zip -r -y "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.zip" "${{ env.PRODUCT_NAME }}.app"
-            mv "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.zip" ../../../../../artifacts/
+            zip -r -y "$GITHUB_WORKSPACE/artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.zip" "${{ env.PRODUCT_NAME }}.app"
           fi
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
