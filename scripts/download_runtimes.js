@@ -324,6 +324,56 @@ async function processNodeRuntime(config, force = false) {
   console.log(`[RuntimeDownload] 🎉 ${config.name} 准备完成: ${finalDest}`);
 }
 
+/**
+ * 递归遍历目录，将所有符号链接实体化为真实物理文件，并删除失效链接
+ * 解决 Tauri 在打包 bundle.resources 时 walkdir 遇到相对符号链接判定不存在导致构建失败的问题
+ */
+function resolveAllSymlinks(dir) {
+  if (!fs.existsSync(dir)) return;
+  let entries = [];
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    try {
+      const lstat = fs.lstatSync(fullPath);
+      if (lstat.isSymbolicLink()) {
+        try {
+          const realPath = fs.realpathSync(fullPath);
+          if (fs.existsSync(realPath)) {
+            const realStat = fs.statSync(realPath);
+            fs.unlinkSync(fullPath);
+            if (realStat.isDirectory()) {
+              fs.cpSync(realPath, fullPath, { recursive: true });
+              resolveAllSymlinks(fullPath);
+            } else {
+              fs.copyFileSync(realPath, fullPath);
+              if (process.platform !== 'win32') {
+                try {
+                  fs.chmodSync(fullPath, realStat.mode);
+                } catch {}
+              }
+            }
+          } else {
+            // 目标不存在，直接移除失效的死链接
+            fs.unlinkSync(fullPath);
+          }
+        } catch {
+          try {
+            fs.unlinkSync(fullPath);
+          } catch {}
+        }
+      } else if (lstat.isDirectory()) {
+        resolveAllSymlinks(fullPath);
+      }
+    } catch {}
+  }
+}
+
 async function processPythonRuntime(config, force = false) {
   const targetExpected = path.join(config.targetDir, config.expectedFile);
 
@@ -372,7 +422,32 @@ async function processPythonRuntime(config, force = false) {
   fs.mkdirSync(config.targetDir, { recursive: true });
   fs.cpSync(contentDir, config.targetDir, { recursive: true });
 
-  // 5. Windows 启用 site-packages 支持 (解除 python*._pth 中 import site 注释)
+  // 5. 清理 bin 目录下无用的辅助工具（2to3, idle3, pydoc 等）
+  const binDir = path.join(config.targetDir, 'bin');
+  if (fs.existsSync(binDir)) {
+    try {
+      for (const name of fs.readdirSync(binDir)) {
+        if (
+          name.startsWith('2to3') ||
+          name.startsWith('idle') ||
+          name.startsWith('pydoc')
+        ) {
+          try {
+            fs.rmSync(path.join(binDir, name), {
+              force: true,
+              recursive: true,
+            });
+          } catch {}
+        }
+      }
+    } catch {}
+  }
+
+  // 6. 递归解除所有符号链接，将其转化为实体物理文件，消除 Tauri 打包报错
+  console.log(`[RuntimeDownload] 🔗 正在实体化符号链接并清理死链...`);
+  resolveAllSymlinks(config.targetDir);
+
+  // 7. Windows 启用 site-packages 支持 (解除 python*._pth 中 import site 注释)
   const pthFiles = fs
     .readdirSync(config.targetDir)
     .filter((f) => f.endsWith('._pth'));
@@ -388,9 +463,8 @@ async function processPythonRuntime(config, force = false) {
     }
   }
 
-  // 6. Unix 下赋予可执行权限
+  // 8. Unix 下赋予可执行权限
   if (process.platform !== 'win32') {
-    const binDir = path.join(config.targetDir, 'bin');
     if (fs.existsSync(binDir)) {
       try {
         for (const entry of fs.readdirSync(binDir)) {
@@ -402,7 +476,7 @@ async function processPythonRuntime(config, force = false) {
     }
   }
 
-  // 7. 清理临时文件
+  // 9. 清理临时文件
   fs.rmSync(rawArchivePath, { force: true });
   fs.rmSync(extractTempDir, { recursive: true, force: true });
   console.log(
