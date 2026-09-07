@@ -80,8 +80,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
+      - name: remove patches for release
+        shell: bash
+        run: |
+          rm -rf patches
+          python -c "p='pnpm-workspace.yaml'; open(p,'w',encoding='utf-8').write(open(p,encoding='utf-8').read().split('patchedDependencies:')[0])"
+
       - name: install frontend dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - uses: Swatinem/rust-cache@v2
         with:
