@@ -1,6 +1,6 @@
 [package]
 name = "jingyun-dsh-client"
-version = "0.1.0"
+version = "0.1.1"
 description = "Jingyun DSH Desktop Client"
 authors = ["Jingyun Team"]
 edition = "2021"
