@@ -177,10 +177,10 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: bash
         run: |
-          cp src-tauri/target/release/bundle/nsis/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_x64-setup.exe artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-setup.exe
+          cp "src-tauri/target/release/bundle/nsis/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_x64-setup.exe" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-setup.exe"
           cd src-tauri/target/release
           if [ -f "jingyun-dsh-client.exe" ] && [ ! -f "${{ env.PRODUCT_NAME }}.exe" ]; then
-            cp jingyun-dsh-client.exe "${{ env.PRODUCT_NAME }}.exe"
+            cp "jingyun-dsh-client.exe" "${{ env.PRODUCT_NAME }}.exe"
           fi
           if [ ! -d "resources" ] && [ -d "../../resources" ]; then
             cp -r ../../resources resources
@@ -190,16 +190,16 @@ jobs:
           rm -f "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip"
           7z a "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip" "${{ env.PRODUCT_NAME }}.exe" resources data
           cd -
-          cp src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip
+          cp "src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip"
 
       - name: Copy linux to release assets
         if: matrix.platform == 'ubuntu-22.04'
         run: |
-          cp src-tauri/target/release/bundle/deb/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_amd64.deb artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.deb
-          cp src-tauri/target/release/bundle/rpm/${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-1.x86_64.rpm artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.rpm
+          cp "src-tauri/target/release/bundle/deb/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_amd64.deb" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.deb" || true
+          cp "src-tauri/target/release/bundle/rpm/${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-1.x86_64.rpm" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.rpm" || true
           cd src-tauri/target/release
           if [ -f "jingyun-dsh-client" ] && [ ! -f "${{ env.PRODUCT_NAME }}" ]; then
-            cp jingyun-dsh-client "${{ env.PRODUCT_NAME }}"
+            cp "jingyun-dsh-client" "${{ env.PRODUCT_NAME }}"
           fi
           if [ ! -d "resources" ] && [ -d "../../resources" ]; then
             cp -r ../../resources resources
@@ -210,22 +210,21 @@ jobs:
           if [ -d "resources" ]; then
             EXTRA_ITEMS="resources data"
           fi
-          tar -czf ${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz ${{ env.PRODUCT_NAME }} $EXTRA_ITEMS
+          tar -czf "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz" "${{ env.PRODUCT_NAME }}" $EXTRA_ITEMS
           cd -
-          cp src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz
+          cp "src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz"
 
       - name: Copy macos to release assets
         if: matrix.platform == 'macos-latest'
         env:
           ARCH_ALIAS: ${{ matrix.arch == 'x86_64' && 'x64' || matrix.arch }}
         run: |
-          cp src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_${{ env.ARCH_ALIAS }}.dmg artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.dmg
+          cp "src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_${{ env.ARCH_ALIAS }}.dmg" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.dmg"
           cd src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos
           if [ -d "${{ env.PRODUCT_NAME }}.app" ]; then
             zip -r -y "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.zip" "${{ env.PRODUCT_NAME }}.app"
             mv "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.zip" ../../../../../artifacts/
           fi
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
