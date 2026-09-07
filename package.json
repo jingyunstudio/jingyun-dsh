@@ -1,6 +1,6 @@
 {
   "name": "jingyun-dsh",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,7 +16,7 @@
     "fmt": "oxfmt --write",
     "typecheck": "tsc -b --noEmit",
     "cargo": "cd src-tauri && cargo",
-    "release": "bumpp package.json packages/jingyun-dsh/package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml --all"
+    "release": "bumpp package.json packages/jingyun-dsh/package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml -x \"cargo update -p jingyun-dsh-client --manifest-path src-tauri/Cargo.toml\" --all"
   },
   "dependencies": {
     "@deepseek-ai/dsh": "0.1.0-rc.8",
