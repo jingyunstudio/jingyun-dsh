@@ -2,6 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+import { checkRuntimesExist, ensureRuntimes } from './download_runtimes.js';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const baseDir = path.join(__dirname, '..');
 const targetVendorDir = path.join(baseDir, 'src-tauri', 'resources', 'vendor');
@@ -14,15 +16,12 @@ const dshBin = path.join(
   'lib',
   'bin.js'
 );
-const nodeExe = path.join(targetVendorDir, 'node', 'node.exe');
-const pythonExe = path.join(targetVendorDir, 'python', 'python.exe');
 
 // 1. Ensure node and python runtimes exist
-if (!fs.existsSync(nodeExe) || !fs.existsSync(pythonExe)) {
+if (!checkRuntimesExist()) {
   console.log(
     '[VendorPrepare] ⚠️ Missing node or python runtime! Ensuring runtimes...'
   );
-  const { ensureRuntimes } = await import('./download_runtimes.js');
   await ensureRuntimes();
 }
 

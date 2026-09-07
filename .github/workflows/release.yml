@@ -1,9 +1,9 @@
-name: "publish"
+name: 'publish'
 
 on:
   push:
     tags:
-      - "v*"
+      - 'v*'
 
 jobs:
   get-version:
@@ -43,16 +43,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-latest"
-            arch: "aarch64"
-            args: "--target aarch64-apple-darwin"
-          - platform: "macos-latest"
-            arch: "x86_64"
-            args: "--target x86_64-apple-darwin"
-          - platform: "ubuntu-22.04"
-            args: ""
-          - platform: "windows-latest"
-            args: ""
+          - platform: 'macos-latest'
+            arch: 'aarch64'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            arch: 'x86_64'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+          - platform: 'windows-latest'
+            args: ''
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -67,7 +67,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable

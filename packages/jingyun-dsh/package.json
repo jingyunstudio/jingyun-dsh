@@ -1,6 +1,6 @@
 {
   "name": "@jingyun-ai/jingyun-dsh",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Branding customization plugin for DSH client",
   "keywords": [
     "ai-agent",

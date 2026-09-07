@@ -1,36 +1,160 @@
-import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 import { finished } from 'stream/promises';
 import { fileURLToPath } from 'url';
 
+import decompress from 'decompress';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const baseDir = path.join(__dirname, '..');
 const targetVendorDir = path.join(baseDir, 'src-tauri', 'resources', 'vendor');
 const tempDir = path.join(baseDir, 'temp_runtimes_download');
 
-// 运行时版本与多源下载地址
-const RUNTIMES = {
-  node: {
-    name: 'Node.js (v24.20.0 win-x64)',
-    targetDir: path.join(targetVendorDir, 'node'),
-    expectedFile: 'node.exe',
-    urls: [
-      'https://registry.npmmirror.com/-/binary/node/v24.20.0/node-v24.20.0-win-x64.zip',
-      'https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip',
-    ],
-  },
-  python: {
-    name: 'Python (3.11.9 embed-amd64)',
-    targetDir: path.join(targetVendorDir, 'python'),
-    expectedFile: 'python.exe',
-    urls: [
-      'https://npmmirror.com/mirrors/python/3.11.9/python-3.11.9-embed-amd64.zip',
-      'https://www.python.org/ftp/python/3.11.9/python-3.11.9-embed-amd64.zip',
-    ],
-  },
-};
+export function resolveTargetPlatformAndArch() {
+  const rawPlatform = process.env.TARGET_PLATFORM || process.platform;
+  const rawArch = process.env.TARGET_ARCH || process.arch;
+
+  let platform = 'win32';
+  if (
+    rawPlatform.includes('darwin') ||
+    rawPlatform.includes('mac') ||
+    rawPlatform.includes('apple')
+  ) {
+    platform = 'darwin';
+  } else if (rawPlatform.includes('linux')) {
+    platform = 'linux';
+  } else if (rawPlatform.includes('win')) {
+    platform = 'win32';
+  }
+
+  let arch = 'x64';
+  if (rawArch === 'arm64' || rawArch === 'aarch64') {
+    arch = 'arm64';
+  } else {
+    arch = 'x64';
+  }
+
+  return { platform, arch };
+}
+
+export function getRuntimeConfig(platform, arch) {
+  if (!platform || !arch) {
+    const resolved = resolveTargetPlatformAndArch();
+    platform = resolved.platform;
+    arch = resolved.arch;
+  }
+
+  const isWin = platform === 'win32';
+  const isMac = platform === 'darwin';
+
+  // 1. Node.js 配置 (v24.20.0)
+  const nodeVersion = 'v24.20.0';
+  let nodeConfig;
+  if (isWin) {
+    nodeConfig = {
+      name: `Node.js (${nodeVersion} win-${arch})`,
+      targetDir: path.join(targetVendorDir, 'node'),
+      expectedFile: 'node.exe',
+      urls: [
+        `https://registry.npmmirror.com/-/binary/node/${nodeVersion}/node-${nodeVersion}-win-${arch}.zip`,
+        `https://nodejs.org/dist/${nodeVersion}/node-${nodeVersion}-win-${arch}.zip`,
+      ],
+    };
+  } else if (isMac) {
+    nodeConfig = {
+      name: `Node.js (${nodeVersion} darwin-${arch})`,
+      targetDir: path.join(targetVendorDir, 'node'),
+      expectedFile: path.join('bin', 'node'),
+      urls: [
+        `https://registry.npmmirror.com/-/binary/node/${nodeVersion}/node-${nodeVersion}-darwin-${arch}.tar.gz`,
+        `https://nodejs.org/dist/${nodeVersion}/node-${nodeVersion}-darwin-${arch}.tar.gz`,
+      ],
+    };
+  } else {
+    // Linux
+    nodeConfig = {
+      name: `Node.js (${nodeVersion} linux-${arch})`,
+      targetDir: path.join(targetVendorDir, 'node'),
+      expectedFile: path.join('bin', 'node'),
+      urls: [
+        `https://registry.npmmirror.com/-/binary/node/${nodeVersion}/node-${nodeVersion}-linux-${arch}.tar.gz`,
+        `https://nodejs.org/dist/${nodeVersion}/node-${nodeVersion}-linux-${arch}.tar.gz`,
+      ],
+    };
+  }
+
+  // 2. Python 配置 (3.11.9)
+  const pyVersion = '3.11.9';
+  let pythonConfig;
+  if (isWin) {
+    pythonConfig = {
+      name: `Python (${pyVersion} embed-amd64)`,
+      targetDir: path.join(targetVendorDir, 'python'),
+      expectedFile: 'python.exe',
+      urls: [
+        `https://npmmirror.com/mirrors/python/${pyVersion}/python-${pyVersion}-embed-amd64.zip`,
+        `https://www.python.org/ftp/python/${pyVersion}/python-${pyVersion}-embed-amd64.zip`,
+      ],
+    };
+  } else if (isMac) {
+    const targetTriple =
+      arch === 'arm64' ? 'aarch64-apple-darwin' : 'x86_64-apple-darwin';
+    const filename = `cpython-${pyVersion}+20240415-${targetTriple}-install_only.tar.gz`;
+    pythonConfig = {
+      name: `Python (${pyVersion} standalone-${arch}-darwin)`,
+      targetDir: path.join(targetVendorDir, 'python'),
+      expectedFile: path.join('bin', 'python3'),
+      urls: [
+        `https://github.com/astral-sh/python-build-standalone/releases/download/20240415/${filename}`,
+        `https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download/20240415/${filename}`,
+      ],
+    };
+  } else {
+    // Linux
+    const targetTriple =
+      arch === 'arm64'
+        ? 'aarch64-unknown-linux-gnu'
+        : 'x86_64-unknown-linux-gnu';
+    const filename = `cpython-${pyVersion}+20240415-${targetTriple}-install_only.tar.gz`;
+    pythonConfig = {
+      name: `Python (${pyVersion} standalone-${arch}-linux)`,
+      targetDir: path.join(targetVendorDir, 'python'),
+      expectedFile: path.join('bin', 'python3'),
+      urls: [
+        `https://github.com/astral-sh/python-build-standalone/releases/download/20240415/${filename}`,
+        `https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download/20240415/${filename}`,
+      ],
+    };
+  }
+
+  return { node: nodeConfig, python: pythonConfig, platform, arch };
+}
+
+export function checkRuntimesExist(platform, arch) {
+  const configs = getRuntimeConfig(platform, arch);
+  const nodeExpected = path.join(
+    configs.node.targetDir,
+    configs.node.expectedFile
+  );
+  const pythonExpected = path.join(
+    configs.python.targetDir,
+    configs.python.expectedFile
+  );
+
+  const nodeOk =
+    fs.existsSync(nodeExpected) ||
+    fs.existsSync(path.join(configs.node.targetDir, 'node')) ||
+    fs.existsSync(path.join(configs.node.targetDir, 'node.exe'));
+
+  const pythonOk =
+    fs.existsSync(pythonExpected) ||
+    fs.existsSync(path.join(configs.python.targetDir, 'python')) ||
+    fs.existsSync(path.join(configs.python.targetDir, 'python.exe')) ||
+    fs.existsSync(path.join(configs.python.targetDir, 'python3'));
+
+  return nodeOk && pythonOk;
+}
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -38,16 +162,6 @@ function formatBytes(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
-}
-
-function extractZip(zipPath, targetDir) {
-  fs.mkdirSync(targetDir, { recursive: true });
-  try {
-    execSync(`tar -xf "${zipPath}" -C "${targetDir}"`, { stdio: 'pipe' });
-  } catch {
-    const psCmd = `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::ExtractToDirectory('${zipPath}', '${targetDir}')`;
-    execSync(`powershell -NoProfile -Command "${psCmd}"`, { stdio: 'pipe' });
-  }
 }
 
 async function downloadWithFallback(urls, destPath) {
@@ -107,11 +221,10 @@ async function downloadWithFallback(urls, destPath) {
   throw new Error(`所有可用下载源均失败! 最后一个错误: ${lastError?.message}`);
 }
 
-async function processNodeRuntime(force = false) {
-  const config = RUNTIMES.node;
-  const targetExe = path.join(config.targetDir, config.expectedFile);
+async function processNodeRuntime(config, force = false) {
+  const targetExpected = path.join(config.targetDir, config.expectedFile);
 
-  if (!force && fs.existsSync(targetExe)) {
+  if (!force && fs.existsSync(targetExpected)) {
     console.log(
       `[RuntimeDownload] 💡 ${config.name} (${config.expectedFile}) 已存在，跳过处理。`
     );
@@ -119,34 +232,33 @@ async function processNodeRuntime(force = false) {
   }
 
   console.log(`[RuntimeDownload] 🚀 开始准备 ${config.name}...`);
-  const rawZipPath = path.join(tempDir, 'raw_node.zip');
+  const rawArchivePath = path.join(tempDir, `raw_node_archive`);
   const extractTempDir = path.join(tempDir, 'extracted_node');
 
-  // 1. 下载原始 zip
-  await downloadWithFallback(config.urls, rawZipPath);
+  // 1. 下载原始包
+  await downloadWithFallback(config.urls, rawArchivePath);
 
-  // 2. 解压到临时目录
-  console.log(`[RuntimeDownload] 📦 正在解包原始 Node.js 压缩包...`);
+  // 2. 一行代码使用 decompress 解压 (支持 .zip 与 .tar.gz)
+  console.log(`[RuntimeDownload] 📦 正在解压 Node.js 运行时...`);
   if (fs.existsSync(extractTempDir)) {
     fs.rmSync(extractTempDir, { recursive: true, force: true });
   }
-  extractZip(rawZipPath, extractTempDir);
+  await decompress(rawArchivePath, extractTempDir);
 
-  // 3. 寻找包含 node.exe 的实际根目录 (node-vXX.XX.X-win-x64)
+  // 3. 寻找包含目标执行文件的实际目录 (node-vXX.XX.X-*)
   let contentDir = extractTempDir;
   for (const entry of fs.readdirSync(extractTempDir)) {
     const full = path.join(extractTempDir, entry);
-    if (
-      fs.statSync(full).isDirectory() &&
-      fs.existsSync(path.join(full, 'node.exe'))
-    ) {
-      contentDir = full;
-      break;
+    if (fs.statSync(full).isDirectory()) {
+      if (
+        fs.existsSync(path.join(full, 'node.exe')) ||
+        fs.existsSync(path.join(full, 'bin', 'node')) ||
+        fs.existsSync(path.join(full, 'node'))
+      ) {
+        contentDir = full;
+        break;
+      }
     }
-  }
-
-  if (!fs.existsSync(path.join(contentDir, 'node.exe'))) {
-    throw new Error('解压的 Node.js 压缩包中未找到 node.exe，文件结构异常！');
   }
 
   // 4. 平铺放置到目标目录
@@ -156,19 +268,38 @@ async function processNodeRuntime(force = false) {
   fs.mkdirSync(config.targetDir, { recursive: true });
   fs.cpSync(contentDir, config.targetDir, { recursive: true });
 
-  // 5. 清理临时文件
-  fs.rmSync(rawZipPath, { force: true });
+  // 5. Unix 下赋予可执行权限并创建便利链接
+  if (process.platform !== 'win32') {
+    const binNode = path.join(config.targetDir, 'bin', 'node');
+    const rootNode = path.join(config.targetDir, 'node');
+    if (fs.existsSync(binNode)) {
+      try {
+        fs.chmodSync(binNode, 0o755);
+      } catch {}
+      if (!fs.existsSync(rootNode)) {
+        try {
+          fs.symlinkSync(path.join('bin', 'node'), rootNode);
+        } catch {}
+      }
+    } else if (fs.existsSync(rootNode)) {
+      try {
+        fs.chmodSync(rootNode, 0o755);
+      } catch {}
+    }
+  }
+
+  // 6. 清理临时文件
+  fs.rmSync(rawArchivePath, { force: true });
   fs.rmSync(extractTempDir, { recursive: true, force: true });
   console.log(
     `[RuntimeDownload] 🎉 ${config.name} 准备完成: ${config.targetDir}`
   );
 }
 
-async function processPythonRuntime(force = false) {
-  const config = RUNTIMES.python;
-  const targetExe = path.join(config.targetDir, config.expectedFile);
+async function processPythonRuntime(config, force = false) {
+  const targetExpected = path.join(config.targetDir, config.expectedFile);
 
-  if (!force && fs.existsSync(targetExe)) {
+  if (!force && fs.existsSync(targetExpected)) {
     console.log(
       `[RuntimeDownload] 💡 ${config.name} (${config.expectedFile}) 已存在，跳过处理。`
     );
@@ -176,23 +307,44 @@ async function processPythonRuntime(force = false) {
   }
 
   console.log(`[RuntimeDownload] 🚀 开始准备 ${config.name}...`);
-  const rawZipPath = path.join(tempDir, 'raw_python.zip');
+  const rawArchivePath = path.join(tempDir, `raw_python_archive`);
+  const extractTempDir = path.join(tempDir, 'extracted_python');
 
-  // 1. 下载原始 zip
-  await downloadWithFallback(config.urls, rawZipPath);
+  // 1. 下载原始包
+  await downloadWithFallback(config.urls, rawArchivePath);
 
-  // 2. 直接解包到目标目录（Python embed 是平铺结构）
-  console.log(`[RuntimeDownload] 📦 正在解包 Python 嵌入式环境...`);
+  // 2. 一行代码使用 decompress 解压
+  console.log(`[RuntimeDownload] 📦 正在解压 Python 运行时环境...`);
+  if (fs.existsSync(extractTempDir)) {
+    fs.rmSync(extractTempDir, { recursive: true, force: true });
+  }
+  await decompress(rawArchivePath, extractTempDir);
+
+  // 3. 寻找实际目录（Windows embed 是平铺的，standalone 通常有一层 python/）
+  let contentDir = extractTempDir;
+  const subEntries = fs.readdirSync(extractTempDir);
+  for (const entry of subEntries) {
+    const full = path.join(extractTempDir, entry);
+    if (fs.statSync(full).isDirectory()) {
+      if (
+        fs.existsSync(path.join(full, 'python.exe')) ||
+        fs.existsSync(path.join(full, 'bin', 'python3')) ||
+        fs.existsSync(path.join(full, 'bin', 'python'))
+      ) {
+        contentDir = full;
+        break;
+      }
+    }
+  }
+
+  // 4. 平铺放置到目标目录
   if (fs.existsSync(config.targetDir)) {
     fs.rmSync(config.targetDir, { recursive: true, force: true });
   }
-  extractZip(rawZipPath, config.targetDir);
+  fs.mkdirSync(config.targetDir, { recursive: true });
+  fs.cpSync(contentDir, config.targetDir, { recursive: true });
 
-  if (!fs.existsSync(path.join(config.targetDir, 'python.exe'))) {
-    throw new Error('解压的 Python 压缩包中未找到 python.exe！');
-  }
-
-  // 3. 启用 site-packages 支持 (解除 python*._pth 中 import site 注释)
+  // 5. Windows 启用 site-packages 支持 (解除 python*._pth 中 import site 注释)
   const pthFiles = fs
     .readdirSync(config.targetDir)
     .filter((f) => f.endsWith('._pth'));
@@ -208,20 +360,49 @@ async function processPythonRuntime(force = false) {
     }
   }
 
-  // 4. 清理临时文件
-  fs.rmSync(rawZipPath, { force: true });
+  // 6. Unix 下赋予可执行权限并创建便利链接
+  if (process.platform !== 'win32') {
+    const binPy3 = path.join(config.targetDir, 'bin', 'python3');
+    const rootPy = path.join(config.targetDir, 'python');
+    const rootPy3 = path.join(config.targetDir, 'python3');
+    if (fs.existsSync(binPy3)) {
+      try {
+        fs.chmodSync(binPy3, 0o755);
+      } catch {}
+      if (!fs.existsSync(rootPy3)) {
+        try {
+          fs.symlinkSync(path.join('bin', 'python3'), rootPy3);
+        } catch {}
+      }
+      if (!fs.existsSync(rootPy)) {
+        try {
+          fs.symlinkSync(path.join('bin', 'python3'), rootPy);
+        } catch {}
+      }
+    }
+  }
+
+  // 7. 清理临时文件
+  fs.rmSync(rawArchivePath, { force: true });
+  fs.rmSync(extractTempDir, { recursive: true, force: true });
   console.log(
     `[RuntimeDownload] 🎉 ${config.name} 准备完成: ${config.targetDir}`
   );
 }
 
-export async function ensureRuntimes(force = false) {
+export async function ensureRuntimes(
+  force = false,
+  targetPlatform,
+  targetArch
+) {
   fs.mkdirSync(targetVendorDir, { recursive: true });
   fs.mkdirSync(tempDir, { recursive: true });
 
+  const runtimes = getRuntimeConfig(targetPlatform, targetArch);
+
   try {
-    await processNodeRuntime(force);
-    await processPythonRuntime(force);
+    await processNodeRuntime(runtimes.node, force);
+    await processPythonRuntime(runtimes.python, force);
     console.log('[RuntimeDownload] ✨ 所有运行时环境准备完毕！');
   } finally {
     if (fs.existsSync(tempDir)) {
