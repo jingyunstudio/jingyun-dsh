@@ -27,6 +27,9 @@ Thumbs.db
 # Tauri Sandboxes & Installers
 src-tauri/target/
 src-tauri/gen/
+src-tauri/resources/vendor/node/
+src-tauri/resources/vendor/python/
+src-tauri/resources/vendor/jingyun/
 src-tauri/resources/vendor/*.zip
 src-tauri/resources/vendor/workspace/
 dist_tauri_temp/

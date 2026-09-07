@@ -5,7 +5,19 @@ use tauri::{
     Manager,
 };
 
+fn strip_unc(p: &Path) -> PathBuf {
+    let s = p.to_string_lossy();
+    if let Some(stripped) = s.strip_prefix(r"\\?\") {
+        PathBuf::from(stripped)
+    } else {
+        p.to_path_buf()
+    }
+}
+
 fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is_portable: bool) {
+    let vendor_dir = strip_unc(vendor_dir);
+    let jingyun_dir = strip_unc(jingyun_dir);
+    let dsh_home = strip_unc(dsh_home);
     let node_exe = vendor_dir.join("node").join("node.exe");
     let dsh_bin = jingyun_dir.join("node_modules/@deepseek-ai/dsh/lib/bin.js");
 
@@ -39,6 +51,14 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
         {
             use std::os::windows::process::CommandExt;
             cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+
+        let log_path = dsh_home.join("dsh_sidecar.log");
+        if let Ok(log_file) = std::fs::File::create(&log_path) {
+            if let Ok(err_file) = log_file.try_clone() {
+                cmd.stdout(log_file);
+                cmd.stderr(err_file);
+            }
         }
 
         match cmd.spawn() {
@@ -379,128 +399,6 @@ fn resolve_dsh_home(app: &tauri::App) -> (PathBuf, bool) {
     }
 }
 
-fn extract_zip(zip_path: &Path, target_dir: &Path) -> std::io::Result<()> {
-    let file = std::fs::File::open(zip_path)?;
-    let mut archive = zip::ZipArchive::new(file)?;
-    for i in 0..archive.len() {
-        let mut file = archive.by_index(i)?;
-        let outpath = match file.enclosed_name() {
-            Some(path) => target_dir.join(path),
-            None => continue,
-        };
-        if file.name().ends_with('/') {
-            std::fs::create_dir_all(&outpath)?;
-        } else {
-            if let Some(p) = outpath.parent() {
-                if !p.exists() {
-                    std::fs::create_dir_all(p)?;
-                }
-            }
-            let mut outfile = std::fs::File::create(&outpath)?;
-            std::io::copy(&mut file, &mut outfile)?;
-        }
-    }
-    Ok(())
-}
-
-fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
-    std::fs::create_dir_all(dst)?;
-    for entry in std::fs::read_dir(src)? {
-        let entry = entry?;
-        let ty = entry.file_type()?;
-        let dst_path = dst.join(entry.file_name());
-        if ty.is_dir() {
-            copy_dir_all(&entry.path(), &dst_path)?;
-        } else {
-            std::fs::copy(entry.path(), dst_path)?;
-        }
-    }
-    Ok(())
-}
-
-fn notify_splash_stage(app_handle: &tauri::AppHandle, text: &str, progress: u32) {
-    if let Some(window) = app_handle.get_webview_window("main") {
-        let escaped_text = text.replace('\\', "\\\\").replace('\'', "\\'");
-        let script = format!(
-            "window.setSplashStatus && window.setSplashStatus('{}', {});",
-            escaped_text, progress
-        );
-        let _ = window.eval(&script);
-    }
-}
-
-fn ensure_portable_vendor(app_handle: &tauri::AppHandle, data_dir: &Path, resource_dir: &Path) {
-    let vendor_dir = data_dir.join("vendor");
-    let node_exe = vendor_dir.join("node").join("node.exe");
-    if node_exe.exists() {
-        return;
-    }
-
-    println!(
-        "[Tauri] Native initializing portable vendor to: {}",
-        vendor_dir.display()
-    );
-    let _ = std::fs::create_dir_all(&vendor_dir);
-
-    let res_vendor = resource_dir.join("resources").join("vendor");
-    let src_vendor = if res_vendor.exists() {
-        res_vendor
-    } else {
-        resource_dir.join("vendor")
-    };
-
-    // 1. 原生解压 node.zip / python.zip / vendor_deps.zip，分阶段向启动界面同步进度
-    notify_splash_stage(
-        app_handle,
-        "首次启动：正在配置 Node.js 运行环境 (1/4)...",
-        20,
-    );
-    let _ = extract_zip(&src_vendor.join("node.zip"), &vendor_dir.join("node"));
-
-    notify_splash_stage(
-        app_handle,
-        "首次启动：正在配置 Python 依赖环境 (2/4)...",
-        45,
-    );
-    let _ = extract_zip(&src_vendor.join("python.zip"), &vendor_dir.join("python"));
-
-    notify_splash_stage(
-        app_handle,
-        "首次启动：正在准备核心插件与依赖库 (3/4)...",
-        70,
-    );
-    let _ = extract_zip(
-        &src_vendor.join("vendor_deps.zip"),
-        &vendor_dir.join("jingyun"),
-    );
-
-    notify_splash_stage(app_handle, "首次启动：正在初始化本地工作空间 (4/4)...", 85);
-    // 2. 拷贝 workspace 插件
-    let workspace_src = src_vendor.join("workspace");
-    if workspace_src.exists() {
-        let _ = copy_dir_all(&workspace_src, &vendor_dir.join("jingyun"));
-    }
-
-    // 3. 确保 @jingyun-ai 自链接
-    let plugin_src = vendor_dir
-        .join("jingyun")
-        .join("packages")
-        .join("jingyun-dsh");
-    if plugin_src.exists() {
-        let target_sym = vendor_dir
-            .join("jingyun")
-            .join("node_modules")
-            .join("@jingyun-ai")
-            .join("jingyun-dsh");
-        let _ = std::fs::create_dir_all(
-            vendor_dir
-                .join("jingyun")
-                .join("node_modules")
-                .join("@jingyun-ai"),
-        );
-        let _ = copy_dir_all(&plugin_src, &target_sym);
-    }
-}
 fn ensure_portable_config(data_dir: &Path, vendor_dir: &Path) {
     let desktop_target = data_dir.join("desktop-config.json");
     if desktop_target.exists() {
@@ -591,7 +489,6 @@ pub fn run() {
                 let _ = main_win.show();
             }
 
-            let app_handle = app.handle().clone();
             let (dsh_home, is_portable) = resolve_dsh_home(app);
             let _ = std::fs::create_dir_all(&dsh_home);
             println!(
@@ -601,50 +498,18 @@ pub fn run() {
             );
             let resource_dir = app.path().resource_dir().unwrap_or_default();
 
-            // 异步后台执行耗时解压和后端启动，确保主线程与 WebView 消息循环绝不卡死
             std::thread::spawn(move || {
-                let mut vendor_dir = PathBuf::new();
-                if is_portable {
-                    // 便携模式：原生后台解压至 data/vendor，实时推送各阶段状态与进度
-                    ensure_portable_vendor(&app_handle, &dsh_home, &resource_dir);
-                    let p = dsh_home.join("vendor");
-                    if p.join("node").join("node.exe").exists() {
-                        vendor_dir = p;
-                    }
+                let res_vendor = resource_dir.join("resources").join("vendor");
+                let vendor_dir = if res_vendor.exists() {
+                    res_vendor
                 } else {
-                    // 安装模式：读取标准 AppData
-                    if let Ok(local_data) = app_handle.path().app_local_data_dir() {
-                        let p = local_data.join("vendor");
-                        if p.join("node").join("node.exe").exists() {
-                            vendor_dir = p;
-                        }
-                    }
-                    if !vendor_dir.exists() {
-                        let p = resource_dir.join("resources").join("vendor");
-                        if p.join("node").join("node.exe").exists() {
-                            vendor_dir = p;
-                        }
-                    }
-                }
-
-                let resource_jingyun_dir = resource_dir
-                    .join("resources")
-                    .join("vendor")
-                    .join("jingyun");
-                let jingyun_dir = if resource_jingyun_dir
-                    .join("node_modules/@deepseek-ai/dsh/lib/bin.js")
-                    .exists()
-                {
-                    resource_jingyun_dir
-                } else {
-                    vendor_dir.join("jingyun")
+                    resource_dir.join("vendor")
                 };
+                let jingyun_dir = vendor_dir.join("jingyun");
 
                 ensure_profile_bundles(&dsh_home);
                 ensure_portable_config(&dsh_home, &vendor_dir);
 
-                notify_splash_stage(&app_handle, "正在启动智能核心服务进程...", 90);
-                // Launch backend
                 launch_dsh_backend(&vendor_dir, &jingyun_dir, &dsh_home, is_portable);
             });
 

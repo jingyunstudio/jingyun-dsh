@@ -13,7 +13,6 @@ tauri = { version = "2.0.0-rc", features = ["tray-icon", "unstable", "image-ico"
 tauri-plugin-opener = "2.0.0-rc"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-zip = "2.2.0"
 
 [target.'cfg(windows)'.dependencies]
 pelite = "0.10.0"

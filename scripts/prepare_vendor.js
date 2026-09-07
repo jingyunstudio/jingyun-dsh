@@ -2,102 +2,59 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-import { ensureRuntimes } from './download_runtimes.js';
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const baseDir = path.join(__dirname, '..');
 const targetVendorDir = path.join(baseDir, 'src-tauri', 'resources', 'vendor');
-const targetVendorDeps = path.join(targetVendorDir, 'vendor_deps.zip');
-const targetWorkspace = path.join(targetVendorDir, 'workspace');
+const targetJingyun = path.join(targetVendorDir, 'jingyun');
+const dshBin = path.join(
+  targetJingyun,
+  'node_modules',
+  '@deepseek-ai',
+  'dsh',
+  'lib',
+  'bin.js'
+);
+const nodeExe = path.join(targetVendorDir, 'node', 'node.exe');
+const pythonExe = path.join(targetVendorDir, 'python', 'python.exe');
 
-console.log('[VendorPrepare] 🚀 Preparing workspace uncompressed resources...');
+// 1. Ensure node and python runtimes exist
+if (!fs.existsSync(nodeExe) || !fs.existsSync(pythonExe)) {
+  console.log(
+    '[VendorPrepare] ⚠️ Missing node or python runtime! Ensuring runtimes...'
+  );
+  const { ensureRuntimes } = await import('./download_runtimes.js');
+  await ensureRuntimes();
+}
 
-// 1. Verify vendor_deps.zip and runtimes exist
-if (!fs.existsSync(targetVendorDeps)) {
-  console.warn(
-    '[VendorPrepare] ⚠️ vendor_deps.zip missing in resources/vendor! Running build_deps.js automatically...'
+// 2. Ensure production dependencies are collected
+if (!fs.existsSync(dshBin)) {
+  console.log(
+    '[VendorPrepare] ⚠️ Dependencies missing in resources! Collecting dependencies...'
   );
   await import('./build_deps.js');
 }
 
-const nodeZip = path.join(targetVendorDir, 'node.zip');
-const pythonZip = path.join(targetVendorDir, 'python.zip');
-if (!fs.existsSync(nodeZip) || !fs.existsSync(pythonZip)) {
-  console.log(
-    '[VendorPrepare] ⚠️ node.zip or python.zip missing in resources/vendor! Ensuring runtimes...'
-  );
-  await ensureRuntimes();
+// 2. Sync packages/jingyun-dsh and @jingyun-ai alias
+const srcPlugin = path.join(baseDir, 'packages', 'jingyun-dsh');
+const dstPlugin = path.join(targetJingyun, 'packages', 'jingyun-dsh');
+const dstAlias = path.join(
+  targetJingyun,
+  'node_modules',
+  '@jingyun-ai',
+  'jingyun-dsh'
+);
+if (fs.existsSync(srcPlugin)) {
+  const filter = (src) =>
+    !src.includes('node_modules') && !src.includes('.git');
+  fs.mkdirSync(path.dirname(dstPlugin), { recursive: true });
+  fs.cpSync(srcPlugin, dstPlugin, { recursive: true, filter });
+  fs.mkdirSync(path.dirname(dstAlias), { recursive: true });
+  fs.cpSync(srcPlugin, dstAlias, { recursive: true, filter });
 }
 
-// 2. Safely clear old workspace folder
-if (fs.existsSync(targetWorkspace)) {
-  try {
-    fs.rmSync(targetWorkspace, { recursive: true, force: true });
-  } catch {}
-}
-fs.mkdirSync(targetWorkspace, { recursive: true });
-
-// Copy directory recursively resolving symlinks
-function copyRealDir(src, dst) {
-  if (!fs.existsSync(src)) return;
-  let realSrc = src;
-  try {
-    realSrc = fs.realpathSync(src);
-  } catch {
-    return;
-  }
-  fs.mkdirSync(dst, { recursive: true });
-  const entries = fs.readdirSync(realSrc, { withFileTypes: true });
-  for (const entry of entries) {
-    if (entry.name === 'node_modules' || entry.name === '.git') continue;
-    const srcPath = path.join(realSrc, entry.name);
-    const dstPath = path.join(dst, entry.name);
-    if (entry.isDirectory()) {
-      copyRealDir(srcPath, dstPath);
-    } else if (entry.isFile()) {
-      try {
-        fs.copyFileSync(srcPath, dstPath);
-      } catch {}
-    } else if (entry.isSymbolicLink()) {
-      try {
-        const target = fs.realpathSync(srcPath);
-        if (fs.statSync(target).isDirectory()) {
-          copyRealDir(target, dstPath);
-        } else {
-          fs.copyFileSync(target, dstPath);
-        }
-      } catch {}
-    }
-  }
-}
-
-// 3. Inject packages/ (custom plugins)
-const srcPackages = path.join(baseDir, 'packages');
-const dstPackages = path.join(targetWorkspace, 'packages');
-if (fs.existsSync(srcPackages)) {
-  console.log('[VendorPrepare] ⚡ Copying workspace plugins (packages/)...');
-  copyRealDir(srcPackages, dstPackages);
-}
-
-// 4. Inject package.json
-const srcPkgJson = path.join(baseDir, 'package.json');
-const dstPkgJson = path.join(targetWorkspace, 'package.json');
-if (fs.existsSync(srcPkgJson)) {
-  fs.copyFileSync(srcPkgJson, dstPkgJson);
-}
-
-// 5. Inject pnpm-workspace.yaml
-const srcWsYaml = path.join(baseDir, 'pnpm-workspace.yaml');
-const dstWsYaml = path.join(targetWorkspace, 'pnpm-workspace.yaml');
-if (fs.existsSync(srcWsYaml)) {
-  fs.copyFileSync(srcWsYaml, dstWsYaml);
-}
-
-// 6. Ensure frontendDist directory exists for Tauri WebView with proper splash template
+// 3. Ensure frontendDist directory exists for Tauri splash template
 const distTauriTemp = path.join(baseDir, 'dist_tauri_temp');
-if (!fs.existsSync(distTauriTemp)) {
-  fs.mkdirSync(distTauriTemp, { recursive: true });
-}
+fs.mkdirSync(distTauriTemp, { recursive: true });
 const splashTemplatePath = path.join(
   baseDir,
   'src-tauri',
@@ -107,13 +64,6 @@ const splashTemplatePath = path.join(
 );
 if (fs.existsSync(splashTemplatePath)) {
   fs.copyFileSync(splashTemplatePath, path.join(distTauriTemp, 'index.html'));
-} else if (!fs.existsSync(path.join(distTauriTemp, 'index.html'))) {
-  fs.writeFileSync(
-    path.join(distTauriTemp, 'index.html'),
-    `<!DOCTYPE html><html><head><title>AI.Studio</title></head><body><div id="root">Loading...</div></body></html>`
-  );
 }
 
-console.log(
-  '[VendorPrepare] 🎉 Workspace uncompressed resources prepared in 0.05 seconds!'
-);
+console.log('[VendorPrepare] 🎉 Resources ready in 0.02s!');

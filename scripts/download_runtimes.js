@@ -10,11 +10,11 @@ const baseDir = path.join(__dirname, '..');
 const targetVendorDir = path.join(baseDir, 'src-tauri', 'resources', 'vendor');
 const tempDir = path.join(baseDir, 'temp_runtimes_download');
 
-// 运行时版本与源定义
+// 运行时版本与多源下载地址
 const RUNTIMES = {
   node: {
     name: 'Node.js (v22.23.2 win-x64)',
-    targetZipName: 'node.zip',
+    targetDir: path.join(targetVendorDir, 'node'),
     expectedFile: 'node.exe',
     urls: [
       'https://registry.npmmirror.com/-/binary/node/v22.23.2/node-v22.23.2-win-x64.zip',
@@ -23,7 +23,7 @@ const RUNTIMES = {
   },
   python: {
     name: 'Python (3.11.9 embed-amd64)',
-    targetZipName: 'python.zip',
+    targetDir: path.join(targetVendorDir, 'python'),
     expectedFile: 'python.exe',
     urls: [
       'https://npmmirror.com/mirrors/python/3.11.9/python-3.11.9-embed-amd64.zip',
@@ -32,7 +32,6 @@ const RUNTIMES = {
   },
 };
 
-// 格式化字节大小
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
   const k = 1024;
@@ -41,7 +40,6 @@ function formatBytes(bytes) {
   return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
 }
 
-// 跨平台/Windows 解压缩工具
 function extractZip(zipPath, targetDir) {
   fs.mkdirSync(targetDir, { recursive: true });
   try {
@@ -52,22 +50,6 @@ function extractZip(zipPath, targetDir) {
   }
 }
 
-// 跨平台/Windows 目录压缩成 zip
-function createZipFromDir(sourceDir, zipPath) {
-  const dir = path.dirname(zipPath);
-  fs.mkdirSync(dir, { recursive: true });
-  if (fs.existsSync(zipPath)) {
-    fs.rmSync(zipPath, { force: true });
-  }
-  try {
-    execSync(`tar -acf "${zipPath}" -C "${sourceDir}" .`, { stdio: 'pipe' });
-  } catch {
-    const psCmd = `Add-Type -AssemblyName System.IO.Compression.FileSystem; [System.IO.Compression.ZipFile]::CreateFromDirectory('${sourceDir}', '${zipPath}')`;
-    execSync(`powershell -NoProfile -Command "${psCmd}"`, { stdio: 'pipe' });
-  }
-}
-
-// 下载工具：支持多源 fallback 和进度打印
 async function downloadWithFallback(urls, destPath) {
   fs.mkdirSync(path.dirname(destPath), { recursive: true });
   let lastError = null;
@@ -125,14 +107,13 @@ async function downloadWithFallback(urls, destPath) {
   throw new Error(`所有可用下载源均失败! 最后一个错误: ${lastError?.message}`);
 }
 
-// 确保 Node 运行时 node.zip 存在且符合平铺结构
 async function processNodeRuntime(force = false) {
   const config = RUNTIMES.node;
-  const targetZip = path.join(targetVendorDir, config.targetZipName);
+  const targetExe = path.join(config.targetDir, config.expectedFile);
 
-  if (!force && fs.existsSync(targetZip)) {
+  if (!force && fs.existsSync(targetExe)) {
     console.log(
-      `[RuntimeDownload] 💡 ${config.name} (${config.targetZipName}) 已存在，跳过处理。`
+      `[RuntimeDownload] 💡 ${config.name} (${config.expectedFile}) 已存在，跳过处理。`
     );
     return;
   }
@@ -146,14 +127,14 @@ async function processNodeRuntime(force = false) {
 
   // 2. 解压到临时目录
   console.log(`[RuntimeDownload] 📦 正在解包原始 Node.js 压缩包...`);
-  if (fs.existsSync(extractTempDir))
+  if (fs.existsSync(extractTempDir)) {
     fs.rmSync(extractTempDir, { recursive: true, force: true });
+  }
   extractZip(rawZipPath, extractTempDir);
 
-  // 3. 寻找包含 node.exe 的实际根目录 (通常为 node-v20.x.x-win-x64)
+  // 3. 寻找包含 node.exe 的实际根目录 (node-vXX.XX.X-win-x64)
   let contentDir = extractTempDir;
-  const entries = fs.readdirSync(extractTempDir);
-  for (const entry of entries) {
+  for (const entry of fs.readdirSync(extractTempDir)) {
     const full = path.join(extractTempDir, entry);
     if (
       fs.statSync(full).isDirectory() &&
@@ -168,55 +149,55 @@ async function processNodeRuntime(force = false) {
     throw new Error('解压的 Node.js 压缩包中未找到 node.exe，文件结构异常！');
   }
 
-  // 4. 平铺重打包为符合 lib.rs 规范的 node.zip
-  console.log(
-    `[RuntimeDownload] 🗜️ 正在生成结构平铺的 ${config.targetZipName}...`
-  );
-  createZipFromDir(contentDir, targetZip);
+  // 4. 平铺放置到目标目录
+  if (fs.existsSync(config.targetDir)) {
+    fs.rmSync(config.targetDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(config.targetDir, { recursive: true });
+  fs.cpSync(contentDir, config.targetDir, { recursive: true });
 
-  // 清理临时文件
+  // 5. 清理临时文件
   fs.rmSync(rawZipPath, { force: true });
   fs.rmSync(extractTempDir, { recursive: true, force: true });
   console.log(
-    `[RuntimeDownload] 🎉 ${config.targetZipName} 制作完成并已存放至: ${targetZip}`
+    `[RuntimeDownload] 🎉 ${config.name} 准备完成: ${config.targetDir}`
   );
 }
 
-// 确保 Python 运行时 python.zip 存在并开启 site 支持
 async function processPythonRuntime(force = false) {
   const config = RUNTIMES.python;
-  const targetZip = path.join(targetVendorDir, config.targetZipName);
+  const targetExe = path.join(config.targetDir, config.expectedFile);
 
-  if (!force && fs.existsSync(targetZip)) {
+  if (!force && fs.existsSync(targetExe)) {
     console.log(
-      `[RuntimeDownload] 💡 ${config.name} (${config.targetZipName}) 已存在，跳过处理。`
+      `[RuntimeDownload] 💡 ${config.name} (${config.expectedFile}) 已存在，跳过处理。`
     );
     return;
   }
 
   console.log(`[RuntimeDownload] 🚀 开始准备 ${config.name}...`);
   const rawZipPath = path.join(tempDir, 'raw_python.zip');
-  const extractTempDir = path.join(tempDir, 'extracted_python');
 
   // 1. 下载原始 zip
   await downloadWithFallback(config.urls, rawZipPath);
 
-  // 2. 解压到临时目录
+  // 2. 直接解包到目标目录（Python embed 是平铺结构）
   console.log(`[RuntimeDownload] 📦 正在解包 Python 嵌入式环境...`);
-  if (fs.existsSync(extractTempDir))
-    fs.rmSync(extractTempDir, { recursive: true, force: true });
-  extractZip(rawZipPath, extractTempDir);
+  if (fs.existsSync(config.targetDir)) {
+    fs.rmSync(config.targetDir, { recursive: true, force: true });
+  }
+  extractZip(rawZipPath, config.targetDir);
 
-  if (!fs.existsSync(path.join(extractTempDir, 'python.exe'))) {
+  if (!fs.existsSync(path.join(config.targetDir, 'python.exe'))) {
     throw new Error('解压的 Python 压缩包中未找到 python.exe！');
   }
 
-  // 3. 启用 site-packages 支持 (修改 python*._pth，解除 import site 注释)
+  // 3. 启用 site-packages 支持 (解除 python*._pth 中 import site 注释)
   const pthFiles = fs
-    .readdirSync(extractTempDir)
+    .readdirSync(config.targetDir)
     .filter((f) => f.endsWith('._pth'));
   for (const pthFile of pthFiles) {
-    const pthPath = path.join(extractTempDir, pthFile);
+    const pthPath = path.join(config.targetDir, pthFile);
     let pthContent = fs.readFileSync(pthPath, 'utf8');
     if (pthContent.includes('#import site')) {
       pthContent = pthContent.replace('#import site', 'import site');
@@ -227,19 +208,13 @@ async function processPythonRuntime(force = false) {
     }
   }
 
-  // 4. 重压缩为 python.zip
-  console.log(`[RuntimeDownload] 🗜️ 正在生成最终的 ${config.targetZipName}...`);
-  createZipFromDir(extractTempDir, targetZip);
-
-  // 清理临时文件
+  // 4. 清理临时文件
   fs.rmSync(rawZipPath, { force: true });
-  fs.rmSync(extractTempDir, { recursive: true, force: true });
   console.log(
-    `[RuntimeDownload] 🎉 ${config.targetZipName} 制作完成并已存放至: ${targetZip}`
+    `[RuntimeDownload] 🎉 ${config.name} 准备完成: ${config.targetDir}`
   );
 }
 
-// 主入口函数
 export async function ensureRuntimes(force = false) {
   fs.mkdirSync(targetVendorDir, { recursive: true });
   fs.mkdirSync(tempDir, { recursive: true });
@@ -257,14 +232,13 @@ export async function ensureRuntimes(force = false) {
   }
 }
 
-// 命令行直接调用
 const isMain =
   process.argv[1] &&
   fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
 if (isMain) {
   const force = process.argv.includes('--force');
   ensureRuntimes(force).catch((err) => {
-    console.error('[RuntimeDownload] ❌ 运行时下载与打包失败:', err);
+    console.error('[RuntimeDownload] ❌ 运行时下载与准备失败:', err);
     process.exit(1);
   });
 }

@@ -12,7 +12,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": ["resources/vendor/*.zip", "resources/vendor/workspace"],
+    "resources": ["resources/vendor"],
     "windows": {
       "nsis": {
         "languages": ["SimpChinese"],

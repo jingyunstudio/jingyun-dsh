@@ -299,26 +299,24 @@
           }
         }, 200);
 
-        // 后台毫秒级探测后端 3080 端口是否就绪
-        let checkCount = 0;
+        // 后台精准探测后端服务，统一使用 127.0.0.1 避免 Windows 下 localhost 的 IPv6 (::1) 解析拒绝闪烁
+        let successHits = 0;
         async function checkBackend() {
           if (isReady) return;
-          checkCount++;
           try {
-            const endpoints = [
-              'http://127.0.0.1:3080/api/jingyun/branding',
-              'http://localhost:3080/api/jingyun/branding',
-              'http://127.0.0.1:3080/',
-              'http://localhost:3080/',
-            ];
-
-            const ep = endpoints[checkCount % endpoints.length];
-            await fetch(ep, { cache: 'no-store', mode: 'no-cors' });
-
-            onBackendReady();
+            await fetch('http://127.0.0.1:3080/api/jingyun/branding', {
+              cache: 'no-store',
+              mode: 'no-cors',
+            });
+            successHits++;
+            if (successHits >= 2) {
+              onBackendReady();
+              return;
+            }
           } catch (err) {
-            setTimeout(checkBackend, 250);
+            successHits = 0;
           }
+          setTimeout(checkBackend, 250);
         }
 
         function onBackendReady() {
@@ -330,8 +328,8 @@
           statusText.textContent = '初始化完成，正在进入工作台...';
 
           setTimeout(() => {
-            window.location.replace('http://localhost:3080');
-          }, 300);
+            window.location.replace('http://127.0.0.1:3080');
+          }, 400);
         }
 
         // 立即启动探测
