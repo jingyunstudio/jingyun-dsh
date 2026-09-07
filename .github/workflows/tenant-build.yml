@@ -150,8 +150,18 @@ jobs:
             fs.writeFileSync(p, JSON.stringify(cfg, null, 2), "utf-8");
           '
 
+      - name: Cache runtimes (node & python)
+        uses: actions/cache@v4
+        with:
+          path: |
+            src-tauri/resources/vendor/node
+            src-tauri/resources/vendor/python
+          key: runtimes-${{ matrix.platform }}-${{ matrix.arch || 'default' }}-${{ hashFiles('scripts/download_runtimes.js') }}
+
       - uses: Swatinem/rust-cache@v2
         with:
+          prefix-key: ${{ matrix.platform }}-${{ matrix.arch || 'default' }}
+          cache-all-targets: 'true'
           workspaces: |
             src-tauri -> target
 
