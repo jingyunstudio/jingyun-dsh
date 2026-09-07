@@ -1,10 +1,10 @@
 {
   "productName": "Jingyun.Studio",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "identifier": "com.jingyun.dstudio",
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": ["nsis", "dmg", "deb", "rpm", "app"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
