@@ -18,7 +18,19 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
     let vendor_dir = strip_unc(vendor_dir);
     let jingyun_dir = strip_unc(jingyun_dir);
     let dsh_home = strip_unc(dsh_home);
+    #[cfg(target_os = "windows")]
     let node_exe = vendor_dir.join("node").join("node.exe");
+
+    #[cfg(not(target_os = "windows"))]
+    let node_exe = {
+        let unix_node = vendor_dir.join("node").join("bin").join("node");
+        if unix_node.exists() {
+            unix_node
+        } else {
+            vendor_dir.join("node").join("node")
+        }
+    };
+
     let dsh_bin = jingyun_dir.join("node_modules/@deepseek-ai/dsh/lib/bin.js");
 
     if node_exe.exists() && dsh_bin.exists() {
@@ -35,6 +47,8 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
         cmd.current_dir(jingyun_dir);
 
         let current_path = std::env::var("PATH").unwrap_or_default();
+
+        #[cfg(target_os = "windows")]
         let new_path = format!(
             "{};{};{};{}",
             vendor_dir.join("node").to_string_lossy(),
@@ -42,6 +56,16 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
             vendor_dir.join("git/PortableGit/cmd").to_string_lossy(),
             current_path
         );
+
+        #[cfg(not(target_os = "windows"))]
+        let new_path = format!(
+            "{}:{}:{}:{}",
+            vendor_dir.join("node").join("bin").to_string_lossy(),
+            vendor_dir.join("python").join("bin").to_string_lossy(),
+            vendor_dir.join("node").to_string_lossy(),
+            current_path
+        );
+
         cmd.env("PATH", &new_path);
         cmd.env("DSH_HOME", dsh_home.to_string_lossy().as_ref());
         cmd.env("DSH_CONFIG_DIR", dsh_home.to_string_lossy().as_ref());

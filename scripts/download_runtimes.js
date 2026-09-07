@@ -12,8 +12,25 @@ const targetVendorDir = path.join(baseDir, 'src-tauri', 'resources', 'vendor');
 const tempDir = path.join(baseDir, 'temp_runtimes_download');
 
 export function resolveTargetPlatformAndArch() {
-  const rawPlatform = process.env.TARGET_PLATFORM || process.platform;
-  const rawArch = process.env.TARGET_ARCH || process.arch;
+  const targetTriple =
+    process.env.TAURI_ENV_TARGET_TRIPLE || process.env.TARGET || '';
+  const rawPlatform =
+    process.env.TARGET_PLATFORM ||
+    (targetTriple.includes('darwin') || targetTriple.includes('apple')
+      ? 'darwin'
+      : targetTriple.includes('linux')
+        ? 'linux'
+        : targetTriple.includes('windows')
+          ? 'win32'
+          : process.platform);
+  const rawArch =
+    process.env.TARGET_ARCH ||
+    process.env.TAURI_ENV_ARCH ||
+    (targetTriple.includes('aarch64') || targetTriple.includes('arm64')
+      ? 'arm64'
+      : targetTriple.includes('x86_64')
+        ? 'x64'
+        : process.arch);
 
   let platform = 'win32';
   if (
@@ -268,20 +285,20 @@ async function processNodeRuntime(config, force = false) {
   fs.mkdirSync(config.targetDir, { recursive: true });
   fs.cpSync(contentDir, config.targetDir, { recursive: true });
 
-  // 5. Unix 下赋予可执行权限并创建便利链接
+  // 5. Unix 下赋予可执行权限
   if (process.platform !== 'win32') {
-    const binNode = path.join(config.targetDir, 'bin', 'node');
-    const rootNode = path.join(config.targetDir, 'node');
-    if (fs.existsSync(binNode)) {
+    const binDir = path.join(config.targetDir, 'bin');
+    if (fs.existsSync(binDir)) {
       try {
-        fs.chmodSync(binNode, 0o755);
+        for (const entry of fs.readdirSync(binDir)) {
+          try {
+            fs.chmodSync(path.join(binDir, entry), 0o755);
+          } catch {}
+        }
       } catch {}
-      if (!fs.existsSync(rootNode)) {
-        try {
-          fs.symlinkSync(path.join('bin', 'node'), rootNode);
-        } catch {}
-      }
-    } else if (fs.existsSync(rootNode)) {
+    }
+    const rootNode = path.join(config.targetDir, 'node');
+    if (fs.existsSync(rootNode)) {
       try {
         fs.chmodSync(rootNode, 0o755);
       } catch {}
@@ -360,25 +377,17 @@ async function processPythonRuntime(config, force = false) {
     }
   }
 
-  // 6. Unix 下赋予可执行权限并创建便利链接
+  // 6. Unix 下赋予可执行权限
   if (process.platform !== 'win32') {
-    const binPy3 = path.join(config.targetDir, 'bin', 'python3');
-    const rootPy = path.join(config.targetDir, 'python');
-    const rootPy3 = path.join(config.targetDir, 'python3');
-    if (fs.existsSync(binPy3)) {
+    const binDir = path.join(config.targetDir, 'bin');
+    if (fs.existsSync(binDir)) {
       try {
-        fs.chmodSync(binPy3, 0o755);
+        for (const entry of fs.readdirSync(binDir)) {
+          try {
+            fs.chmodSync(path.join(binDir, entry), 0o755);
+          } catch {}
+        }
       } catch {}
-      if (!fs.existsSync(rootPy3)) {
-        try {
-          fs.symlinkSync(path.join('bin', 'python3'), rootPy3);
-        } catch {}
-      }
-      if (!fs.existsSync(rootPy)) {
-        try {
-          fs.symlinkSync(path.join('bin', 'python3'), rootPy);
-        } catch {}
-      }
     }
   }
 

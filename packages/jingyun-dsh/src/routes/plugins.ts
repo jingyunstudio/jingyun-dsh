@@ -92,28 +92,45 @@ function setProfileAllowBuilds(profile: string, packages: string[]) {
   }
 }
 
-// 辅助函数：清理 Windows 下 pnpm store 锁
+// 辅助函数：清理跨平台 pnpm store 临时锁
 function cleanPnpmStoreTmp() {
   try {
-    const storeTmp = path.resolve(
-      os.homedir(),
-      'AppData',
-      'Local',
-      'pnpm',
-      'store',
-      'v10',
-      'tmp'
-    );
-    if (fs.existsSync(storeTmp)) {
-      const list = fs.readdirSync(storeTmp);
-      for (const item of list) {
-        if (item.startsWith('_tmp_')) {
-          try {
-            fs.rmSync(path.join(storeTmp, item), {
-              recursive: true,
-              force: true,
-            });
-          } catch {}
+    const candidateStoreDirs = [
+      // Windows
+      path.resolve(
+        os.homedir(),
+        'AppData',
+        'Local',
+        'pnpm',
+        'store',
+        'v10',
+        'tmp'
+      ),
+      // macOS
+      path.resolve(os.homedir(), 'Library', 'pnpm', 'store', 'v10', 'tmp'),
+      // Linux
+      path.resolve(
+        os.homedir(),
+        '.local',
+        'share',
+        'pnpm',
+        'store',
+        'v10',
+        'tmp'
+      ),
+    ];
+    for (const storeTmp of candidateStoreDirs) {
+      if (fs.existsSync(storeTmp)) {
+        const list = fs.readdirSync(storeTmp);
+        for (const item of list) {
+          if (item.startsWith('_tmp_')) {
+            try {
+              fs.rmSync(path.join(storeTmp, item), {
+                recursive: true,
+                force: true,
+              });
+            } catch {}
+          }
         }
       }
     }
@@ -175,25 +192,51 @@ async function resolveNpmPackageForGithubRepo(
 
 // 辅助函数：获取绿色运行环境与 DSH CLI 路径
 function getDshRuntimeEnv() {
-  const localAppData = process.env.LOCALAPPDATA || '';
+  const isWin = process.platform === 'win32';
+  const isMac = process.platform === 'darwin';
+
+  const appDataDir = isWin
+    ? process.env.LOCALAPPDATA || path.resolve(os.homedir(), 'AppData', 'Local')
+    : isMac
+      ? path.resolve(os.homedir(), 'Library', 'Application Support')
+      : process.env.XDG_DATA_HOME ||
+        path.resolve(os.homedir(), '.local', 'share');
+
   const dshHome = getDshHome();
   const candidateVendorDirs = [
     path.resolve(dshHome, 'vendor'),
-    path.resolve(localAppData, 'com.jingyun.dstudio', 'vendor'),
+    path.resolve(appDataDir, 'com.jingyun.dstudio', 'vendor'),
     path.resolve(process.cwd(), 'resources', 'vendor'),
     path.resolve(process.cwd(), 'vendor'),
     path.resolve(dshHome, '..', 'resources', 'vendor'),
     path.resolve(dshHome, '..', 'vendor'),
   ];
+
   let vendorDir = candidateVendorDirs[0];
   for (const v of candidateVendorDirs) {
-    if (fs.existsSync(path.resolve(v, 'node', 'node.exe'))) {
+    const hasNode =
+      fs.existsSync(path.resolve(v, 'node', 'node.exe')) ||
+      fs.existsSync(path.resolve(v, 'node', 'bin', 'node')) ||
+      fs.existsSync(path.resolve(v, 'node', 'node'));
+    if (hasNode) {
       vendorDir = v;
       break;
     }
   }
 
-  const vendorNode = path.resolve(vendorDir, 'node', 'node.exe');
+  const vendorNodeWin = path.resolve(vendorDir, 'node', 'node.exe');
+  const vendorNodeUnixBin = path.resolve(vendorDir, 'node', 'bin', 'node');
+  const vendorNodeUnixRoot = path.resolve(vendorDir, 'node', 'node');
+
+  let vendorNode = vendorNodeWin;
+  if (isWin) {
+    vendorNode = vendorNodeWin;
+  } else if (fs.existsSync(vendorNodeUnixBin)) {
+    vendorNode = vendorNodeUnixBin;
+  } else if (fs.existsSync(vendorNodeUnixRoot)) {
+    vendorNode = vendorNodeUnixRoot;
+  }
+
   const vendorGit = path.resolve(vendorDir, 'git', 'PortableGit', 'cmd');
 
   let nodeExec = process.execPath || 'node';
@@ -249,6 +292,7 @@ function getDshRuntimeEnv() {
   const injectedPath = [
     path.dirname(nodeExec),
     vendorGit,
+    path.resolve(vendorDir, 'python', 'bin'),
     path.resolve(vendorDir, 'python'),
     currentPath,
   ]
