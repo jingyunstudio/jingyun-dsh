@@ -257,60 +257,71 @@ async function processNodeRuntime(config, force = false) {
 
   // 2. 一行代码使用 decompress 解压 (支持 .zip 与 .tar.gz)
   console.log(`[RuntimeDownload] 📦 正在解压 Node.js 运行时...`);
+  // 2. 仅从压缩包中解压 node 单一可执行文件 (跳过所有无关的 npm/include/share 等数千个小文件及符号链接)
+  console.log(`[RuntimeDownload] 📦 正在从压缩包提取 Node.js 可执行文件...`);
   if (fs.existsSync(extractTempDir)) {
     fs.rmSync(extractTempDir, { recursive: true, force: true });
   }
-  await decompress(rawArchivePath, extractTempDir);
 
-  // 3. 寻找包含目标执行文件的实际目录 (node-vXX.XX.X-*)
-  let contentDir = extractTempDir;
-  for (const entry of fs.readdirSync(extractTempDir)) {
-    const full = path.join(extractTempDir, entry);
-    if (fs.statSync(full).isDirectory()) {
-      if (
-        fs.existsSync(path.join(full, 'node.exe')) ||
-        fs.existsSync(path.join(full, 'bin', 'node')) ||
-        fs.existsSync(path.join(full, 'node'))
-      ) {
-        contentDir = full;
-        break;
+  const isNodeBinary = (file) => {
+    const p = file.path.replace(/\\/g, '/');
+    return (
+      file.type === 'file' &&
+      (p.endsWith('/node.exe') ||
+        p === 'node.exe' ||
+        p.endsWith('/bin/node') ||
+        p === 'bin/node' ||
+        p.endsWith('/node') ||
+        p === 'node')
+    );
+  };
+
+  await decompress(rawArchivePath, extractTempDir, {
+    filter: isNodeBinary,
+  });
+
+  // 3. 递归寻找解压出的 node / node.exe 可执行文件
+  let foundBinary = null;
+  function findBinary(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir)) {
+      const full = path.join(dir, entry);
+      const stat = fs.statSync(full);
+      if (stat.isFile() && (entry === 'node.exe' || entry === 'node')) {
+        foundBinary = full;
+        return;
+      }
+      if (stat.isDirectory()) {
+        findBinary(full);
+        if (foundBinary) return;
       }
     }
+  }
+  findBinary(extractTempDir);
+
+  if (!foundBinary) {
+    throw new Error(`未能在解压产物中找到 node 可执行文件!`);
   }
 
   // 4. 平铺放置到目标目录
   if (fs.existsSync(config.targetDir)) {
     fs.rmSync(config.targetDir, { recursive: true, force: true });
   }
-  fs.mkdirSync(config.targetDir, { recursive: true });
-  fs.cpSync(contentDir, config.targetDir, { recursive: true });
+  const finalDest = path.join(config.targetDir, config.expectedFile);
+  fs.mkdirSync(path.dirname(finalDest), { recursive: true });
+  fs.copyFileSync(foundBinary, finalDest);
 
   // 5. Unix 下赋予可执行权限
   if (process.platform !== 'win32') {
-    const binDir = path.join(config.targetDir, 'bin');
-    if (fs.existsSync(binDir)) {
-      try {
-        for (const entry of fs.readdirSync(binDir)) {
-          try {
-            fs.chmodSync(path.join(binDir, entry), 0o755);
-          } catch {}
-        }
-      } catch {}
-    }
-    const rootNode = path.join(config.targetDir, 'node');
-    if (fs.existsSync(rootNode)) {
-      try {
-        fs.chmodSync(rootNode, 0o755);
-      } catch {}
-    }
+    try {
+      fs.chmodSync(finalDest, 0o755);
+    } catch {}
   }
 
   // 6. 清理临时文件
   fs.rmSync(rawArchivePath, { force: true });
   fs.rmSync(extractTempDir, { recursive: true, force: true });
-  console.log(
-    `[RuntimeDownload] 🎉 ${config.name} 准备完成: ${config.targetDir}`
-  );
+  console.log(`[RuntimeDownload] 🎉 ${config.name} 准备完成: ${finalDest}`);
 }
 
 async function processPythonRuntime(config, force = false) {
