@@ -1,0 +1,169 @@
+name: "publish"
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  get-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get version number
+        id: get_version
+        run: |
+          version=$(jq -r '.version' src-tauri/tauri.conf.json)
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+  get-product-name:
+    runs-on: ubuntu-latest
+    outputs:
+      product_name: ${{ steps.get_product_name.outputs.product_name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get product name
+        id: get_product_name
+        run: |
+          product_name=$(jq -r '.productName' src-tauri/tauri.conf.json)
+          echo "product_name=$product_name" >> $GITHUB_OUTPUT
+
+  publish-tauri:
+    needs: [get-version, get-product-name]
+    env:
+      VERSION: ${{ needs.get-version.outputs.version }}
+      PRODUCT_NAME: ${{ needs.get-product-name.outputs.product_name }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            arch: "aarch64"
+            args: "--target aarch64-apple-darwin"
+          - platform: "macos-latest"
+            arch: "x86_64"
+            args: "--target x86_64-apple-darwin"
+          - platform: "ubuntu-22.04"
+            args: ""
+          - platform: "windows-latest"
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: install frontend dependencies
+        run: bun install
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+
+      - name: build
+        uses: tauri-apps/tauri-action@v0
+        with:
+          args: ${{ matrix.args }}
+
+      - name: Create artifacts directory
+        run: mkdir -p artifacts
+
+      - name: Copy windows to release assets
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          cp src-tauri/target/release/bundle/nsis/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_x64-setup.exe artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-setup.exe
+          cd src-tauri/target/release
+          if [ -f "jingyun-dsh-client.exe" ] && [ ! -f "${{ env.PRODUCT_NAME }}.exe" ]; then
+            cp jingyun-dsh-client.exe "${{ env.PRODUCT_NAME }}.exe"
+          fi
+          if [ ! -d "resources" ] && [ -d "../../resources" ]; then
+            cp -r ../../resources resources
+          fi
+          rm -rf data
+          mkdir -p data
+          rm -f "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-portable.zip"
+          7z a "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-portable.zip" "${{ env.PRODUCT_NAME }}.exe" resources data
+          cd -
+          cp src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-portable.zip artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-portable.zip
+
+      - name: Copy linux to release assets
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          cp src-tauri/target/release/bundle/deb/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_amd64.deb artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.deb
+          cp src-tauri/target/release/bundle/rpm/${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-1.x86_64.rpm artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.rpm
+          cd src-tauri/target/release
+          if [ -f "jingyun-dsh-client" ] && [ ! -f "${{ env.PRODUCT_NAME }}" ]; then
+            cp jingyun-dsh-client "${{ env.PRODUCT_NAME }}"
+          fi
+          if [ ! -d "resources" ] && [ -d "../../resources" ]; then
+            cp -r ../../resources resources
+          fi
+          rm -rf data
+          mkdir -p data
+          EXTRA_ITEMS="data"
+          if [ -d "resources" ]; then
+            EXTRA_ITEMS="resources data"
+          fi
+          tar -czf ${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz ${{ env.PRODUCT_NAME }} $EXTRA_ITEMS
+          cd -
+          cp src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz
+
+      - name: Copy macos to release assets
+        if: matrix.platform == 'macos-latest'
+        env:
+          ARCH_ALIAS: ${{ matrix.arch == 'x86_64' && 'x64' || matrix.arch }}
+        run: |
+          cp src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_${{ env.ARCH_ALIAS }}.dmg artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.dmg
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ matrix.platform }}-${{ matrix.arch || 'default' }}
+          path: artifacts/*
+
+  create-release:
+    needs: [publish-tauri, get-version]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: Release v${{ needs.get-version.outputs.version }}
+          files: |
+            artifacts/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
