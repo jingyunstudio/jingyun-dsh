@@ -13,12 +13,12 @@ const tempDir = path.join(baseDir, 'temp_runtimes_download');
 // 运行时版本与多源下载地址
 const RUNTIMES = {
   node: {
-    name: 'Node.js (v22.23.2 win-x64)',
+    name: 'Node.js (v24.20.0 win-x64)',
     targetDir: path.join(targetVendorDir, 'node'),
     expectedFile: 'node.exe',
     urls: [
-      'https://registry.npmmirror.com/-/binary/node/v22.23.2/node-v22.23.2-win-x64.zip',
-      'https://nodejs.org/dist/v22.23.2/node-v22.23.2-win-x64.zip',
+      'https://registry.npmmirror.com/-/binary/node/v24.20.0/node-v24.20.0-win-x64.zip',
+      'https://nodejs.org/dist/v24.20.0/node-v24.20.0-win-x64.zip',
     ],
   },
   python: {
