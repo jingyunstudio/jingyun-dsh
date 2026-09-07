@@ -1,0 +1,271 @@
+name: 'Tenant Build'
+
+on:
+  workflow_dispatch:
+    inputs:
+      tenant_id:
+        description: '租户唯一ID'
+        required: true
+        default: ''
+      product_name:
+        description: '租户客户端名称'
+        required: true
+        default: 'AI Studio'
+      logo_url:
+        description: '租户Logo下载地址'
+        required: true
+        default: ''
+      domain:
+        description: '租户后台或API域名'
+        required: false
+        default: ''
+      api_url:
+        description: '租户API基础URL'
+        required: false
+        default: ''
+
+  repository_dispatch:
+    types: [tenant-build]
+
+jobs:
+  prepare-tenant-context:
+    runs-on: ubuntu-latest
+    outputs:
+      tenant_id: ${{ steps.resolve.outputs.tenant_id }}
+      product_name: ${{ steps.resolve.outputs.product_name }}
+      logo_url: ${{ steps.resolve.outputs.logo_url }}
+      domain: ${{ steps.resolve.outputs.domain }}
+      api_url: ${{ steps.resolve.outputs.api_url }}
+      version: ${{ steps.resolve.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve Parameters
+        id: resolve
+        run: |
+          TENANT_ID="${{ github.event.client_payload.tenant_id || github.event.inputs.tenant_id }}"
+          PRODUCT_NAME="${{ github.event.client_payload.product_name || github.event.inputs.product_name }}"
+          LOGO_URL="${{ github.event.client_payload.logo_url || github.event.inputs.logo_url }}"
+          DOMAIN="${{ github.event.client_payload.domain || github.event.inputs.domain }}"
+          API_URL="${{ github.event.client_payload.api_url || github.event.inputs.api_url }}"
+          VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
+
+          echo "tenant_id=$TENANT_ID" >> $GITHUB_OUTPUT
+          echo "product_name=$PRODUCT_NAME" >> $GITHUB_OUTPUT
+          echo "logo_url=$LOGO_URL" >> $GITHUB_OUTPUT
+          echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
+          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  build-tenant-clients:
+    needs: [prepare-tenant-context]
+    env:
+      TENANT_ID: ${{ needs.prepare-tenant-context.outputs.tenant_id }}
+      PRODUCT_NAME: ${{ needs.prepare-tenant-context.outputs.product_name }}
+      LOGO_URL: ${{ needs.prepare-tenant-context.outputs.logo_url }}
+      DOMAIN: ${{ needs.prepare-tenant-context.outputs.domain }}
+      API_URL: ${{ needs.prepare-tenant-context.outputs.api_url }}
+      VERSION: ${{ needs.prepare-tenant-context.outputs.version }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            arch: 'aarch64'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            arch: 'x86_64'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            arch: 'x86_64'
+            args: ''
+          - platform: 'windows-latest'
+            arch: 'x64'
+            args: ''
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
+
+      - name: install dependencies (ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: remove patches for release
+        shell: bash
+        run: |
+          rm -rf patches
+          python -c "p='pnpm-workspace.yaml'; open(p,'w',encoding='utf-8').write(open(p,encoding='utf-8').read().split('patchedDependencies:')[0])"
+
+      - name: install frontend dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      # 动态配置租户品牌、图标及专属信息
+      - name: apply tenant branding
+        shell: bash
+        run: |
+          # 1. 下载租户 Logo 并自动生成全尺寸图标
+          curl -sSL "${{ env.LOGO_URL }}" -o tenant_logo.png
+          pnpm tauri icon tenant_logo.png
+
+          # 2. 写入 desktop-config.json
+          cat <<EOF > packages/jingyun-dsh/desktop-config.json
+          {
+            "custom_name": "${{ env.PRODUCT_NAME }}",
+            "custom_logo": "${{ env.LOGO_URL }}",
+            "domain": "${{ env.DOMAIN }}",
+            "api_url": "${{ env.API_URL }}"
+          }
+          EOF
+
+          # 3. 动态调整 tauri.conf.json
+          node -e '
+            const fs = require("fs");
+            const p = "src-tauri/tauri.conf.json";
+            const cfg = JSON.parse(fs.readFileSync(p, "utf-8"));
+            cfg.productName = process.env.PRODUCT_NAME;
+            if (cfg.app && cfg.app.windows && cfg.app.windows[0]) {
+              cfg.app.windows[0].title = process.env.PRODUCT_NAME;
+            }
+            cfg.identifier = "com.tenant." + process.env.TENANT_ID.replace(/[^a-zA-Z0-9]/g, "");
+            fs.writeFileSync(p, JSON.stringify(cfg, null, 2), "utf-8");
+          '
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            src-tauri -> target
+
+      - name: build
+        uses: tauri-apps/tauri-action@v0
+        with:
+          args: ${{ matrix.args }}
+
+      - name: Create artifacts directory
+        run: mkdir -p artifacts
+
+      - name: Copy windows to release assets
+        if: matrix.platform == 'windows-latest'
+        shell: bash
+        run: |
+          cp src-tauri/target/release/bundle/nsis/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_x64-setup.exe artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-setup.exe
+          cd src-tauri/target/release
+          if [ -f "jingyun-dsh-client.exe" ] && [ ! -f "${{ env.PRODUCT_NAME }}.exe" ]; then
+            cp jingyun-dsh-client.exe "${{ env.PRODUCT_NAME }}.exe"
+          fi
+          if [ ! -d "resources" ] && [ -d "../../resources" ]; then
+            cp -r ../../resources resources
+          fi
+          rm -rf data
+          mkdir -p data
+          rm -f "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip"
+          7z a "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip" "${{ env.PRODUCT_NAME }}.exe" resources data
+          cd -
+          cp src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip
+
+      - name: Copy linux to release assets
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          cp src-tauri/target/release/bundle/deb/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_amd64.deb artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.deb
+          cp src-tauri/target/release/bundle/rpm/${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-1.x86_64.rpm artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.rpm
+          cd src-tauri/target/release
+          if [ -f "jingyun-dsh-client" ] && [ ! -f "${{ env.PRODUCT_NAME }}" ]; then
+            cp jingyun-dsh-client "${{ env.PRODUCT_NAME }}"
+          fi
+          if [ ! -d "resources" ] && [ -d "../../resources" ]; then
+            cp -r ../../resources resources
+          fi
+          rm -rf data
+          mkdir -p data
+          EXTRA_ITEMS="data"
+          if [ -d "resources" ]; then
+            EXTRA_ITEMS="resources data"
+          fi
+          tar -czf ${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz ${{ env.PRODUCT_NAME }} $EXTRA_ITEMS
+          cd -
+          cp src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.tar.gz
+
+      - name: Copy macos to release assets
+        if: matrix.platform == 'macos-latest'
+        env:
+          ARCH_ALIAS: ${{ matrix.arch == 'x86_64' && 'x64' || matrix.arch }}
+        run: |
+          cp src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_${{ env.ARCH_ALIAS }}.dmg artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.dmg
+          cd src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos
+          if [ -d "${{ env.PRODUCT_NAME }}.app" ]; then
+            zip -r -y "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.zip" "${{ env.PRODUCT_NAME }}.app"
+            mv "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.zip" ../../../../../artifacts/
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tenant-${{ env.TENANT_ID }}-${{ matrix.platform }}-${{ matrix.arch }}
+          path: artifacts/*
+
+  upload-to-oss:
+    needs: [build-tenant-clients, prepare-tenant-context]
+    runs-on: ubuntu-latest
+    env:
+      TENANT_ID: ${{ needs.prepare-tenant-context.outputs.tenant_id }}
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Setup ossutil
+        if: env.OSS_ACCESS_KEY_ID != ''
+        uses: manyuanrong/setup-ossutil@v2.0
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+        with:
+          endpoint: ${{ secrets.OSS_ENDPOINT }}
+          access-key-id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          access-key-secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+
+      - name: Upload to Aliyun OSS
+        if: env.OSS_ACCESS_KEY_ID != ''
+        env:
+          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+        run: |
+          ossutil cp -r -f dist/ oss://${OSS_BUCKET}/tenants/${TENANT_ID}/
+          echo "Files uploaded to oss://${OSS_BUCKET}/tenants/${TENANT_ID}/"
+
+      - name: Notify Backend via Webhook
+        if: env.BACKEND_WEBHOOK_URL != ''
+        env:
+          BACKEND_WEBHOOK_URL: ${{ secrets.BACKEND_WEBHOOK_URL }}
+          BACKEND_WEBHOOK_SECRET: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
+          OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+          OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+        run: |
+          curl -X POST "${BACKEND_WEBHOOK_URL}" \
+            -H "Content-Type: application/json" \
+            -H "X-Webhook-Secret: ${BACKEND_WEBHOOK_SECRET}" \
+            -d "{
+              \"tenant_id\": \"${TENANT_ID}\",
+              \"status\": \"success\",
+              \"base_url\": \"https://${OSS_BUCKET}.${OSS_ENDPOINT}/tenants/${TENANT_ID}/\"
+            }"

@@ -116,10 +116,10 @@ jobs:
           fi
           rm -rf data
           mkdir -p data
-          rm -f "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-portable.zip"
-          7z a "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-portable.zip" "${{ env.PRODUCT_NAME }}.exe" resources data
+          rm -f "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip"
+          7z a "${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip" "${{ env.PRODUCT_NAME }}.exe" resources data
           cd -
-          cp src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-portable.zip artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64-portable.zip
+          cp src-tauri/target/release/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_windows_x64.zip
 
       - name: Copy linux to release assets
         if: matrix.platform == 'ubuntu-22.04'
