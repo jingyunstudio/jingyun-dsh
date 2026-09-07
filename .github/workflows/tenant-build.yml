@@ -23,6 +23,10 @@ on:
         description: '租户API基础URL'
         required: false
         default: ''
+      tag:
+        description: '构建指定的Git Tag版本(留空则自动选取最新tag)'
+        required: false
+        default: ''
 
   repository_dispatch:
     types: [tenant-build]
@@ -37,9 +41,12 @@ jobs:
       domain: ${{ steps.resolve.outputs.domain }}
       api_url: ${{ steps.resolve.outputs.api_url }}
       version: ${{ steps.resolve.outputs.version }}
+      target_tag: ${{ steps.resolve.outputs.target_tag }}
     steps:
       - uses: actions/checkout@v4
-      - name: Resolve Parameters
+        with:
+          fetch-depth: 0
+      - name: Resolve Tag and Parameters
         id: resolve
         run: |
           TENANT_ID="${{ github.event.client_payload.tenant_id || github.event.inputs.tenant_id }}"
@@ -47,6 +54,19 @@ jobs:
           LOGO_URL="${{ github.event.client_payload.logo_url || github.event.inputs.logo_url }}"
           DOMAIN="${{ github.event.client_payload.domain || github.event.inputs.domain }}"
           API_URL="${{ github.event.client_payload.api_url || github.event.inputs.api_url }}"
+          CUSTOM_TAG="${{ github.event.client_payload.tag || github.event.inputs.tag }}"
+
+          if [ -n "$CUSTOM_TAG" ]; then
+            TARGET_TAG="$CUSTOM_TAG"
+          else
+            TARGET_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          fi
+
+          if [ -n "$TARGET_TAG" ]; then
+            echo "Building on tag: $TARGET_TAG"
+            git checkout "$TARGET_TAG"
+          fi
+
           VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
 
           echo "tenant_id=$TENANT_ID" >> $GITHUB_OUTPUT
@@ -55,11 +75,14 @@ jobs:
           echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
           echo "api_url=$API_URL" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "target_tag=$TARGET_TAG" >> $GITHUB_OUTPUT
 
   build-tenant-clients:
     needs: [prepare-tenant-context]
     env:
       TENANT_ID: ${{ needs.prepare-tenant-context.outputs.tenant_id }}
+      VERSION: ${{ needs.prepare-tenant-context.outputs.version }}
+      TARGET_TAG: ${{ needs.prepare-tenant-context.outputs.target_tag }}
       PRODUCT_NAME: ${{ needs.prepare-tenant-context.outputs.product_name }}
       LOGO_URL: ${{ needs.prepare-tenant-context.outputs.logo_url }}
       DOMAIN: ${{ needs.prepare-tenant-context.outputs.domain }}
@@ -87,6 +110,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare-tenant-context.outputs.target_tag }}
 
       - name: setup pnpm
         uses: pnpm/action-setup@v4
@@ -235,6 +260,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TENANT_ID: ${{ needs.prepare-tenant-context.outputs.tenant_id }}
+      VERSION: ${{ needs.prepare-tenant-context.outputs.version }}
+      TARGET_TAG: ${{ needs.prepare-tenant-context.outputs.target_tag }}
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
@@ -269,11 +296,43 @@ jobs:
           OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
           OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
         run: |
+          node -e '
+            const fs = require("fs");
+            const tenantId = process.env.TENANT_ID;
+            const bucket = process.env.OSS_BUCKET;
+            const endpoint = process.env.OSS_ENDPOINT;
+            const baseUrl = `https://${bucket}.${endpoint}/tenants/${tenantId}`;
+            
+            const files = fs.existsSync("dist") ? fs.readdirSync("dist") : [];
+            const downloads = {};
+            const fileList = [];
+            
+            for (const f of files) {
+              const fullUrl = `${baseUrl}/${encodeURIComponent(f)}`;
+              fileList.push({ name: f, url: fullUrl });
+              if (f.endsWith("-setup.exe")) downloads.windows_setup = fullUrl;
+              else if (f.endsWith("_windows_x64.zip")) downloads.windows_zip = fullUrl;
+              else if (f.endsWith("_macos_aarch64.dmg")) downloads.macos_dmg_arm64 = fullUrl;
+              else if (f.endsWith("_macos_aarch64.zip")) downloads.macos_zip_arm64 = fullUrl;
+              else if (f.endsWith("_macos_x86_64.dmg")) downloads.macos_dmg_x64 = fullUrl;
+              else if (f.endsWith("_macos_x86_64.zip")) downloads.macos_zip_x64 = fullUrl;
+              else if (f.endsWith(".deb")) downloads.linux_deb = fullUrl;
+              else if (f.endsWith(".rpm")) downloads.linux_rpm = fullUrl;
+              else if (f.endsWith(".tar.gz")) downloads.linux_tar_gz = fullUrl;
+            }
+            
+            const payload = {
+              tenant_id: tenantId,
+              version: process.env.VERSION || "",
+              tag: process.env.TARGET_TAG || "",
+              status: "success",
+              base_url: `${baseUrl}/`,
+              downloads: downloads,
+              files: fileList
+            };
+            fs.writeFileSync("webhook_payload.json", JSON.stringify(payload, null, 2));
+          '
           curl -X POST "${BACKEND_WEBHOOK_URL}" \
             -H "Content-Type: application/json" \
             -H "X-Webhook-Secret: ${BACKEND_WEBHOOK_SECRET}" \
-            -d "{
-              \"tenant_id\": \"${TENANT_ID}\",
-              \"status\": \"success\",
-              \"base_url\": \"https://${OSS_BUCKET}.${OSS_ENDPOINT}/tenants/${TENANT_ID}/\"
-            }"
+            -d @webhook_payload.json
