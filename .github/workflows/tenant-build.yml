@@ -329,18 +329,17 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
+            const https = require("https");
             const tenantId = process.env.TENANT_ID;
             const bucket = process.env.OSS_BUCKET;
             const endpoint = process.env.OSS_ENDPOINT;
             const baseUrl = `https://${bucket}.${endpoint}/tenants/${tenantId}`;
             
-            const files = fs.existsSync("dist") ? fs.readdirSync("dist") : [];
+            const files = fs.readdirSync("dist");
             const downloads = {};
-            const fileList = [];
             
             for (const f of files) {
               const fullUrl = `${baseUrl}/${encodeURIComponent(f)}`;
-              fileList.push({ name: f, url: fullUrl });
               if (f.endsWith("-setup.exe")) downloads.windows_setup = fullUrl;
               else if (f.endsWith("_windows_x64.zip")) downloads.windows_zip = fullUrl;
               else if (f.endsWith("_macos_aarch64.dmg")) downloads.macos_dmg_arm64 = fullUrl;
@@ -355,19 +354,38 @@ jobs:
             const payload = {
               tenant_id: tenantId,
               run_id: "${{ github.run_id }}",
-              version: process.env.VERSION || "",
-              tag: process.env.TARGET_TAG || "",
+              version: process.env.VERSION,
+              tag: process.env.TARGET_TAG,
               status: "success",
               base_url: `${baseUrl}/`,
               downloads: downloads,
-              files: fileList
+              files: files
             };
-            fs.writeFileSync("webhook_payload.json", JSON.stringify(payload, null, 2));
+
+            const data = JSON.stringify(payload);
+            const req = https.request(new URL(process.env.BACKEND_WEBHOOK_URL), {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(data),
+                "X-Webhook-Secret": process.env.BACKEND_WEBHOOK_SECRET
+              }
+            }, (res) => {
+              if (res.statusCode !== 200) {
+                console.error("Webhook returned error status:", res.statusCode);
+                process.exit(1);
+              }
+              res.pipe(process.stdout);
+            });
+
+            req.on("error", (e) => {
+              console.error("Webhook request failed:", e);
+              process.exit(1);
+            });
+
+            req.write(data);
+            req.end();
           '
-          curl -X POST "${BACKEND_WEBHOOK_URL}" \
-            -H "Content-Type: application/json" \
-            -H "X-Webhook-Secret: ${BACKEND_WEBHOOK_SECRET}" \
-            -d @webhook_payload.json
 
   notify-failure:
     needs: [build-tenant-clients, prepare-tenant-context]
