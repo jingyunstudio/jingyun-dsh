@@ -13,7 +13,7 @@ on:
         default: 'AI Studio'
       logo_url:
         description: '租户Logo下载地址'
-        required: true
+        required: false
         default: ''
       domain:
         description: '租户后台或API域名'
@@ -172,9 +172,11 @@ jobs:
       - name: apply tenant branding
         shell: bash
         run: |
-          # 1. 下载租户 Logo 并自动生成全尺寸图标
-          curl -sSL "${{ env.LOGO_URL }}" -o tenant_logo.png
-          pnpm tauri icon tenant_logo.png
+          # 1. 若提供 Logo，下载租户 Logo 并自动生成全尺寸图标
+          if [ -n "${{ env.LOGO_URL }}" ]; then
+            curl -sSL "${{ env.LOGO_URL }}" -o tenant_logo.png
+            pnpm tauri icon tenant_logo.png
+          fi
 
           # 2. 写入 desktop-config.json
           cat <<EOF > packages/jingyun-dsh/desktop-config.json
