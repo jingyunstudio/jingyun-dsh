@@ -27,7 +27,13 @@ on:
         description: '构建指定的Git Tag版本(留空则自动选取最新tag)'
         required: false
         default: ''
-
+      webhook_url:
+        description: '构建完成通知后端的Webhook完整地址'
+        required: true
+      webhook_secret:
+        description: 'Webhook通信密钥'
+        required: false
+        default: ''
   repository_dispatch:
     types: [tenant-build]
 
@@ -42,6 +48,8 @@ jobs:
       api_url: ${{ steps.resolve.outputs.api_url }}
       version: ${{ steps.resolve.outputs.version }}
       target_tag: ${{ steps.resolve.outputs.target_tag }}
+      webhook_url: ${{ steps.resolve.outputs.webhook_url }}
+      webhook_secret: ${{ steps.resolve.outputs.webhook_secret }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -68,7 +76,15 @@ jobs:
           fi
 
           VERSION=$(jq -r '.version' src-tauri/tauri.conf.json)
-
+          WEBHOOK_URL="${{ github.event.client_payload.webhook_url || github.event.inputs.webhook_url }}"
+          if [ -z "$WEBHOOK_URL" ]; then
+            echo "Error: webhook_url is required but not provided."
+            exit 1
+          fi
+          WEBHOOK_SECRET="${{ github.event.client_payload.webhook_secret || github.event.inputs.webhook_secret }}"
+          if [ -n "$WEBHOOK_SECRET" ]; then
+            echo "::add-mask::$WEBHOOK_SECRET"
+          fi
           echo "tenant_id=$TENANT_ID" >> $GITHUB_OUTPUT
           echo "product_name=$PRODUCT_NAME" >> $GITHUB_OUTPUT
           echo "logo_url=$LOGO_URL" >> $GITHUB_OUTPUT
@@ -76,6 +92,8 @@ jobs:
           echo "api_url=$API_URL" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "target_tag=$TARGET_TAG" >> $GITHUB_OUTPUT
+          echo "webhook_url=$WEBHOOK_URL" >> $GITHUB_OUTPUT
+          echo "webhook_secret=$WEBHOOK_SECRET" >> $GITHUB_OUTPUT
 
   build-tenant-clients:
     needs: [prepare-tenant-context]
@@ -289,10 +307,9 @@ jobs:
           echo "Files uploaded to oss://${OSS_BUCKET}/tenants/${TENANT_ID}/"
 
       - name: Notify Backend via Webhook
-        if: env.BACKEND_WEBHOOK_URL != ''
         env:
-          BACKEND_WEBHOOK_URL: ${{ secrets.BACKEND_WEBHOOK_URL }}
-          BACKEND_WEBHOOK_SECRET: ${{ secrets.BACKEND_WEBHOOK_SECRET }}
+          BACKEND_WEBHOOK_URL: ${{ needs.prepare-tenant-context.outputs.webhook_url }}
+          BACKEND_WEBHOOK_SECRET: ${{ needs.prepare-tenant-context.outputs.webhook_secret }}
           OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
           OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
         run: |
