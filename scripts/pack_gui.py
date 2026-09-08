@@ -329,18 +329,6 @@ HTML_PAGE = """<!DOCTYPE html>
       </div>
 
       <div class="form-group">
-        <label for="apiUrl">SaaS 服务地址 (API URL)</label>
-        <input type="text" id="apiUrl" name="apiUrl" value="https://api.jingyun.studio" required>
-        <div class="helper-text">后端 API 服务接口地址。</div>
-      </div>
-
-      <div class="form-group">
-        <label for="tenantHost">租户 Key (Tenant Host)</label>
-        <input type="text" id="tenantHost" name="tenantHost" placeholder="如: default" required>
-        <div class="helper-text">分配的租户唯一 Key 标识。</div>
-      </div>
-
-      <div class="form-group">
         <label for="domain">客户端加载域名 (Domain URL)</label>
         <input type="text" id="domain" name="domain" placeholder="如: https://yourdomain.com" required>
         <div class="helper-text">桌面客户端窗口启动后默认加载的 Web 页面地址。</div>
@@ -386,8 +374,6 @@ HTML_PAGE = """<!DOCTYPE html>
           if (data.bundleId) document.getElementById('bundleId').value = data.bundleId;
           if (data.appVersion) document.getElementById('appVersion').value = data.appVersion;
           if (data.customLogo !== undefined) document.getElementById('customLogo').value = data.customLogo;
-          if (data.apiUrl) document.getElementById('apiUrl').value = data.apiUrl;
-          if (data.tenantHost) document.getElementById('tenantHost').value = data.tenantHost;
           if (data.domain) document.getElementById('domain').value = data.domain;
         })
         .catch(err => console.error("加载本地 JSON 配置失败:", err));
@@ -400,8 +386,6 @@ HTML_PAGE = """<!DOCTYPE html>
       const bundleId = document.getElementById('bundleId').value;
       const appVersion = document.getElementById('appVersion').value;
       const customLogo = document.getElementById('customLogo').value;
-      const apiUrl = document.getElementById('apiUrl').value;
-      const tenantHost = document.getElementById('tenantHost').value;
       const domain = document.getElementById('domain').value;
 
       document.getElementById('btnSubmit').disabled = true;
@@ -417,7 +401,7 @@ HTML_PAGE = """<!DOCTYPE html>
       fetch('/api/build', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `appName=${encodeURIComponent(appName)}&bundleId=${encodeURIComponent(bundleId)}&appVersion=${encodeURIComponent(appVersion)}&customLogo=${encodeURIComponent(customLogo)}&apiUrl=${encodeURIComponent(apiUrl)}&tenantHost=${encodeURIComponent(tenantHost)}&domain=${encodeURIComponent(domain)}`
+        body: `appName=${encodeURIComponent(appName)}&bundleId=${encodeURIComponent(bundleId)}&appVersion=${encodeURIComponent(appVersion)}&customLogo=${encodeURIComponent(customLogo)}&domain=${encodeURIComponent(domain)}`
       })
       .then(res => res.json())
       .then(data => {
@@ -510,8 +494,6 @@ def get_current_config(base_dir):
         "bundleId": "com.jingyun.dstudio",
         "appVersion": "0.1.0",
         "customLogo": "",
-        "apiUrl": "",
-        "tenantHost": "",
         "domain": ""
     }
 
@@ -529,8 +511,6 @@ def get_current_config(base_dir):
         try:
             with open(cfg_path, 'r', encoding='utf-8') as f:
                 j_cfg = json.load(f)
-                if j_cfg.get("api_url"): config["apiUrl"] = j_cfg["api_url"]
-                if j_cfg.get("tenant_host"): config["tenantHost"] = j_cfg["tenant_host"]
                 if j_cfg.get("domain"): config["domain"] = j_cfg["domain"]
                 if j_cfg.get("custom_name"): config["appName"] = j_cfg["custom_name"]
                 if j_cfg.get("custom_logo") is not None: config["customLogo"] = j_cfg["custom_logo"]
@@ -582,8 +562,6 @@ class PackServer(SimpleHTTPRequestHandler):
             app_version = params.get('appVersion', ['0.1.0'])[0]
             app_name = params.get('appName', ['Jingyun.Studio'])[0]
             custom_logo = params.get('customLogo', [''])[0]
-            api_url = params.get('apiUrl', [''])[0]
-            tenant_host = params.get('tenantHost', [''])[0]
             domain = params.get('domain', [''])[0]
 
             self.send_response(200)
@@ -591,7 +569,7 @@ class PackServer(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps({"result": "queued"}).encode("utf-8"))
 
-            threading.Thread(target=run_build_thread, args=(bundle_id, app_version, app_name, custom_logo, api_url, tenant_host, domain)).start()
+            threading.Thread(target=run_build_thread, args=(bundle_id, app_version, app_name, custom_logo, domain)).start()
         elif url_parsed.path == "/api/upload-logo":
             content_length = int(self.headers.get('Content-Length', 0))
             raw_body = self.rfile.read(content_length)
@@ -636,13 +614,12 @@ class PackServer(SimpleHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
 
-def run_build_thread(bundle_id, app_version, app_name="Jingyun.Studio", custom_logo="", api_url="https://api.jingyun.studio", tenant_host="fbeed38e", domain="https://fbeed38e.jingyun.online"):
+def run_build_thread(bundle_id, app_version, app_name="Jingyun.Studio", custom_logo="", domain="https://fbeed38e.jingyun.online"):
     global build_status, build_logs
     build_status = "building"
     build_logs = ["[System] 正在初始化客户端打包流程..."]
 
     logo_path = custom_logo.strip()
-    api_url = api_url.strip()
     domain = domain.strip()
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -653,8 +630,6 @@ def run_build_thread(bundle_id, app_version, app_name="Jingyun.Studio", custom_l
 
     # Update desktop-config.json for dsh plugin (Clean 5 core fields)
     cfg_data = {
-        "api_url": api_url if api_url else "https://api.jingyun.studio",
-        "tenant_host": tenant_host if tenant_host else "fbeed38e",
         "domain": domain if domain else "https://fbeed38e.jingyun.online",
         "custom_name": app_name if app_name else "Jingyun.Studio",
         "custom_logo": logo_path if logo_path else ""
@@ -753,13 +728,8 @@ def run_build_thread(bundle_id, app_version, app_name="Jingyun.Studio", custom_l
             host = parsed_domain.netloc.split(":")[0] or "localhost"
             scheme = parsed_domain.scheme or "http"
 
-            parsed_api = urlparse(api_url)
-            api_host = parsed_api.netloc.split(":")[0] or "localhost"
-            api_scheme = parsed_api.scheme or "http"
-            
             allowed_urls = [
                 f"{scheme}://{host}/*",
-                f"{api_scheme}://{api_host}/*",
                 "http://localhost:3080/*",
                 "http://localhost:3003/*"
             ]

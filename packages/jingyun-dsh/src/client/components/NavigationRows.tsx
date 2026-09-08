@@ -36,7 +36,7 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
     }
 
     brandingManager.fetch().then((data) => {
-      const configured = !!(data?.apiUrl || data?.appHost);
+      const configured = !!data?.appHost;
       if (!configured) {
         showToast('线上域名未配置，请先配置');
       } else {

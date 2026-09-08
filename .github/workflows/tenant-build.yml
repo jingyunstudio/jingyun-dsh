@@ -19,10 +19,6 @@ on:
         description: '租户后台或API域名'
         required: false
         default: ''
-      api_url:
-        description: '租户API基础URL'
-        required: false
-        default: ''
       tag:
         description: '构建指定的Git Tag版本(留空则自动选取最新tag)'
         required: false
@@ -46,7 +42,6 @@ jobs:
       product_name: ${{ steps.resolve.outputs.product_name }}
       logo_url: ${{ steps.resolve.outputs.logo_url }}
       domain: ${{ steps.resolve.outputs.domain }}
-      api_url: ${{ steps.resolve.outputs.api_url }}
       version: ${{ steps.resolve.outputs.version }}
       target_tag: ${{ steps.resolve.outputs.target_tag }}
       webhook_url: ${{ steps.resolve.outputs.webhook_url }}
@@ -62,7 +57,6 @@ jobs:
           PRODUCT_NAME="${{ github.event.client_payload.product_name || github.event.inputs.product_name }}"
           LOGO_URL="${{ github.event.client_payload.logo_url || github.event.inputs.logo_url }}"
           DOMAIN="${{ github.event.client_payload.domain || github.event.inputs.domain }}"
-          API_URL="${{ github.event.client_payload.api_url || github.event.inputs.api_url }}"
           CUSTOM_TAG="${{ github.event.client_payload.tag || github.event.inputs.tag }}"
 
           if [ -n "$CUSTOM_TAG" ]; then
@@ -90,7 +84,6 @@ jobs:
           echo "product_name=$PRODUCT_NAME" >> $GITHUB_OUTPUT
           echo "logo_url=$LOGO_URL" >> $GITHUB_OUTPUT
           echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
-          echo "api_url=$API_URL" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "target_tag=$TARGET_TAG" >> $GITHUB_OUTPUT
           echo "webhook_url=$WEBHOOK_URL" >> $GITHUB_OUTPUT
@@ -102,7 +95,7 @@ jobs:
           TENANT_ID="${{ steps.resolve.outputs.tenant_id }}"
           VERSION="${{ steps.resolve.outputs.version }}"
           RUN_ID="${{ github.run_id }}"
-          
+
           if [ -n "$WEBHOOK_URL" ]; then
             curl -s -X POST "$WEBHOOK_URL" \
               -H "Content-Type: application/json" \
@@ -119,7 +112,6 @@ jobs:
       PRODUCT_NAME: ${{ needs.prepare-tenant-context.outputs.product_name }}
       LOGO_URL: ${{ needs.prepare-tenant-context.outputs.logo_url }}
       DOMAIN: ${{ needs.prepare-tenant-context.outputs.domain }}
-      API_URL: ${{ needs.prepare-tenant-context.outputs.api_url }}
     permissions:
       contents: write
     strategy:
@@ -189,8 +181,7 @@ jobs:
           {
             "custom_name": "${{ env.PRODUCT_NAME }}",
             "custom_logo": "${{ env.LOGO_URL }}",
-            "domain": "${{ env.DOMAIN }}",
-            "api_url": "${{ env.API_URL }}"
+            "domain": "${{ env.DOMAIN }}"
           }
           EOF
 

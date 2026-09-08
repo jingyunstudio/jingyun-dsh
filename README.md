@@ -193,17 +193,15 @@ run_pack.bat
 
 ```json
 {
-  "api_url": "http://your-api-endpoint/",
-  "tenant_host": "your-tenant-id",
   "domain": "http://your-domain/",
   "custom_name": "Your App Name",
   "custom_logo": "https://your-logo-url.png"
 }
 ```
 
-> 💡 **在线免费开通**：访问 [jingyun.studio](https://jingyun.studio/zh) 注册账号，即可免费获取 `tenant_host` 和 `api_url`，无需自行搭建后端。
+> 💡 **在线免费开通**：访问 [jingyun.studio](https://jingyun.studio/zh) 注册账号，获取专属 `domain`，无需自行搭建后端。
 
-打包时还可通过 GUI 打包控制台 (`run_pack.bat`) 交互式配置应用名称、域名和租户 ID。
+打包时还可通过 GUI 打包控制台 (`run_pack.bat`) 交互式配置应用名称和域名。
 
 ---
 

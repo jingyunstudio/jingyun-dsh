@@ -13,18 +13,6 @@ import { registerRoutes } from './routes';
 
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
 const initialData = readDesktopConfig();
-if (initialData.api_url) {
-  process.env.JINGYUN_API_URL = initialData.api_url;
-  console.log(
-    `[UIBranding] Top-level pre-injected JINGYUN_API_URL: ${initialData.api_url}`
-  );
-}
-if (initialData.tenant_host) {
-  process.env.JINGYUN_TENANT_HOST = initialData.tenant_host;
-  console.log(
-    `[UIBranding] Top-level pre-injected JINGYUN_TENANT_HOST: ${initialData.tenant_host}`
-  );
-}
 if (initialData.app_host) {
   process.env.JINGYUN_APP_HOST = initialData.app_host;
   console.log(
@@ -129,8 +117,6 @@ export function apply(ctx: Context, config: Config) {
   // 3. Pre-load initial configuration from local backup config file before registering settings
   const localData = readDesktopConfig();
   if (localData.mode) config.mode = localData.mode;
-  if (localData.api_url) config.apiUrl = localData.api_url;
-  if (localData.tenant_host) config.tenantHost = localData.tenant_host;
   if (localData.app_host) config.appHost = localData.app_host;
   if (localData.custom_name !== undefined)
     config.customName = localData.custom_name;

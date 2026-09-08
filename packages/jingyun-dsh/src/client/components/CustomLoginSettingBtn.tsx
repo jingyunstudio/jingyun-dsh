@@ -101,7 +101,7 @@ export function CustomLoginSettingBtn(props: any) {
         const baseUrl = appHost.endsWith('/') ? appHost.slice(0, -1) : appHost;
         if (active) {
           setTenantDomain(baseUrl);
-          setConfigured(!!(branding?.apiUrl || branding?.appHost));
+          setConfigured(!!branding?.appHost);
         }
 
         // 如果未配置云端域名，不发起任何网络请求，不要有兜底
@@ -168,7 +168,7 @@ export function CustomLoginSettingBtn(props: any) {
           setUser(null);
         }
         brandingManager.fetch().then((data) => {
-          const isConf = !!(data?.apiUrl || data?.appHost);
+          const isConf = !!data?.appHost;
           setConfigured(isConf);
           if (t) {
             const appHost = (data && data.appHost) || '';
@@ -397,7 +397,7 @@ export function CustomLoginSettingBtn(props: any) {
         onClick={(e) => {
           e.stopPropagation();
           brandingManager.fetch().then((data) => {
-            const configured = !!(data?.apiUrl || data?.appHost);
+            const configured = !!data?.appHost;
             if (!configured) {
               showToast('线上域名未配置，请先配置');
               return;
@@ -1339,15 +1339,11 @@ function ConfigItemCard({ descriptor, onSaveConfig }: SingleCardProps) {
 
   // Form states initialized from descriptors
   const [mode, setMode] = React.useState<'cloud' | 'local'>('cloud');
-  const [apiUrl, setApiUrl] = React.useState('');
-  const [tenantHost, setTenantHost] = React.useState('');
   const [customName, setCustomName] = React.useState('');
   const [customLogo, setCustomLogo] = React.useState('');
 
   // Database backups
   const [dbMode, setDbMode] = React.useState<'cloud' | 'local'>('cloud');
-  const [dbApiUrl, setDbApiUrl] = React.useState('');
-  const [dbTenantHost, setDbTenantHost] = React.useState('');
   const [dbCustomName, setDbCustomName] = React.useState('');
   const [dbCustomLogo, setDbCustomLogo] = React.useState('');
   const [appHost, setAppHost] = React.useState('');
@@ -1368,14 +1364,6 @@ function ConfigItemCard({ descriptor, onSaveConfig }: SingleCardProps) {
       const activeMode = descriptor.value.mode || 'cloud';
       setMode(activeMode);
       setDbMode(activeMode);
-
-      const apiVal = descriptor.value.apiUrl || '';
-      setApiUrl(apiVal);
-      setDbApiUrl(apiVal);
-
-      const tenantVal = descriptor.value.tenantHost || '';
-      setTenantHost(tenantVal);
-      setDbTenantHost(tenantVal);
 
       const nameVal = descriptor.value.customName || '';
       setCustomName(nameVal);
@@ -1406,8 +1394,6 @@ function ConfigItemCard({ descriptor, onSaveConfig }: SingleCardProps) {
   // Determine dirty state
   const isDirty = isBranding
     ? mode !== dbMode ||
-      apiUrl !== dbApiUrl ||
-      tenantHost !== dbTenantHost ||
       appHost !== dbAppHost ||
       customName !== dbCustomName ||
       customLogo !== dbCustomLogo
@@ -1421,15 +1407,12 @@ function ConfigItemCard({ descriptor, onSaveConfig }: SingleCardProps) {
       if (isBranding) {
         await onSaveConfig(descriptor.ns, {
           mode,
-          apiUrl,
-          tenantHost,
+          domain: appHost,
           appHost,
           customName,
           customLogo,
         });
         setDbMode(mode);
-        setDbApiUrl(apiUrl);
-        setDbTenantHost(tenantHost);
         setDbAppHost(appHost);
         setDbCustomName(customName);
         setDbCustomLogo(customLogo);
@@ -1582,60 +1565,6 @@ function ConfigItemCard({ descriptor, onSaveConfig }: SingleCardProps) {
               {/* Conditional cloud inputs */}
               {mode === 'cloud' ? (
                 <>
-                  <div
-                    className="jy-field"
-                    style={{
-                      borderTop:
-                        '1px solid var(--dsw-alias-border-l2, #e4e4e7)',
-                    }}
-                  >
-                    <div className="jy-field-head">
-                      <label
-                        className="jy-field-label"
-                        htmlFor="jy-settings-api-url"
-                      >
-                        服务地址
-                      </label>
-                    </div>
-                    <input
-                      id="jy-settings-api-url"
-                      className="jy-field-input"
-                      type="text"
-                      value={apiUrl}
-                      onChange={(e) => setApiUrl(e.target.value)}
-                    />
-                    <p className="jy-field-hint">
-                      SaaS 接口请求地址。留空默认需手动配置。
-                    </p>
-                  </div>
-
-                  <div
-                    className="jy-field"
-                    style={{
-                      borderTop:
-                        '1px solid var(--dsw-alias-border-l2, #e4e4e7)',
-                    }}
-                  >
-                    <div className="jy-field-head">
-                      <label
-                        className="jy-field-label"
-                        htmlFor="jy-settings-tenant-host"
-                      >
-                        租户标识
-                      </label>
-                    </div>
-                    <input
-                      id="jy-settings-tenant-host"
-                      className="jy-field-input"
-                      type="text"
-                      value={tenantHost}
-                      onChange={(e) => setTenantHost(e.target.value)}
-                    />
-                    <p className="jy-field-hint">
-                      租户唯一标识，用于鉴权与同步线上资源。留空默认需手动配置。
-                    </p>
-                  </div>
-
                   <div
                     className="jy-field"
                     style={{

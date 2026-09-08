@@ -70,7 +70,7 @@ export function readDesktopConfig(): Record<string, any> {
  * 统一解析远端服务 Host（优先级：请求 query -> 磁盘配置 -> 内存配置，不设兜底）
  */
 export function getRemoteBaseUrl(
-  config?: { appHost?: string; tenantHost?: string; apiUrl?: string },
+  config?: { appHost?: string },
   reqUrl?: string
 ): string {
   if (reqUrl) {
@@ -84,15 +84,7 @@ export function getRemoteBaseUrl(
   }
 
   const localData = readDesktopConfig();
-  const host =
-    localData.app_host ||
-    localData.domain ||
-    localData.tenant_host ||
-    localData.api_url ||
-    config?.appHost ||
-    config?.tenantHost ||
-    config?.apiUrl ||
-    '';
+  const host = localData.app_host || localData.domain || config?.appHost || '';
 
   return host ? host.replace(/\/+$/, '') : '';
 }

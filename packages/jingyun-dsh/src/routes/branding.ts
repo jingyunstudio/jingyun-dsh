@@ -31,8 +31,6 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
                 ...desc,
                 value: {
                   mode: config.mode || 'cloud',
-                  apiUrl: config.apiUrl || '',
-                  tenantHost: config.tenantHost || '',
                   appHost: config.appHost || '',
                   customName: config.customName || '',
                   customLogo: config.customLogo || '',
@@ -74,16 +72,12 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
 
           if (ns === 'jingyun-dsh') {
             const jsonContent = {
-              api_url: '',
-              tenant_host: '',
               domain: '',
               custom_name: '',
               custom_logo: '',
               ...readDesktopConfig(),
             };
 
-            if (patch.apiUrl) jsonContent.api_url = patch.apiUrl;
-            if (patch.tenantHost) jsonContent.tenant_host = patch.tenantHost;
             if (patch.domain) jsonContent.domain = patch.domain;
             if (patch.customName !== undefined)
               jsonContent.custom_name = patch.customName;
@@ -107,8 +101,6 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
 
             // 同步回内存 config 引用
             if (patch.mode) config.mode = patch.mode;
-            if (patch.apiUrl) config.apiUrl = patch.apiUrl;
-            if (patch.tenantHost) config.tenantHost = patch.tenantHost;
             if (patch.domain) config.appHost = patch.domain;
             if (patch.customName !== undefined)
               config.customName = patch.customName;
@@ -140,8 +132,6 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
 
       sendJson(res, {
         mode: 'local',
-        apiUrl: jsonContent.api_url || '',
-        tenantHost: jsonContent.tenant_host || '',
         domain: jsonContent.domain || '',
         appHost: jsonContent.domain || jsonContent.app_host || '',
         customName: jsonContent.custom_name || '',
@@ -162,8 +152,6 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
       }
 
       const localData = readDesktopConfig();
-      const apiUrl = localData.api_url || '';
-      const tenantHost = localData.tenant_host || '';
       const domain = localData.domain || localData.app_host || '';
       const siteName = localData.custom_name || '';
       if (localData.custom_logo) {
@@ -172,8 +160,6 @@ export function registerBrandingRoutes(ctx: Context, config: Config) {
 
       sendJson(res, {
         mode: 'local',
-        api_url: apiUrl,
-        tenant_host: tenantHost,
         domain: domain,
         appHost: domain,
         site_logo: siteLogo,
