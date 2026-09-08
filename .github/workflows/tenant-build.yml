@@ -95,6 +95,20 @@ jobs:
           echo "target_tag=$TARGET_TAG" >> $GITHUB_OUTPUT
           echo "webhook_url=$WEBHOOK_URL" >> $GITHUB_OUTPUT
           echo "webhook_secret=$WEBHOOK_SECRET" >> $GITHUB_OUTPUT
+      - name: Notify Backend Build Started
+        run: |
+          WEBHOOK_URL="${{ steps.resolve.outputs.webhook_url }}"
+          WEBHOOK_SECRET="${{ steps.resolve.outputs.webhook_secret }}"
+          TENANT_ID="${{ steps.resolve.outputs.tenant_id }}"
+          VERSION="${{ steps.resolve.outputs.version }}"
+          RUN_ID="${{ github.run_id }}"
+          
+          if [ -n "$WEBHOOK_URL" ]; then
+            curl -s -X POST "$WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -H "X-Webhook-Secret: $WEBHOOK_SECRET" \
+              -d "{\"tenant_id\":\"$TENANT_ID\",\"run_id\":\"$RUN_ID\",\"version\":\"$VERSION\",\"status\":\"building\"}" || true
+          fi
 
   build-tenant-clients:
     needs: [prepare-tenant-context]
@@ -340,6 +354,7 @@ jobs:
             
             const payload = {
               tenant_id: tenantId,
+              run_id: "${{ github.run_id }}",
               version: process.env.VERSION || "",
               tag: process.env.TARGET_TAG || "",
               status: "success",
@@ -353,3 +368,22 @@ jobs:
             -H "Content-Type: application/json" \
             -H "X-Webhook-Secret: ${BACKEND_WEBHOOK_SECRET}" \
             -d @webhook_payload.json
+
+  notify-failure:
+    needs: [build-tenant-clients, prepare-tenant-context]
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Backend On Build Failure
+        env:
+          BACKEND_WEBHOOK_URL: ${{ needs.prepare-tenant-context.outputs.webhook_url }}
+          BACKEND_WEBHOOK_SECRET: ${{ needs.prepare-tenant-context.outputs.webhook_secret }}
+          TENANT_ID: ${{ needs.prepare-tenant-context.outputs.tenant_id }}
+          VERSION: ${{ needs.prepare-tenant-context.outputs.version }}
+        run: |
+          if [ -n "$BACKEND_WEBHOOK_URL" ]; then
+            curl -s -X POST "${BACKEND_WEBHOOK_URL}" \
+              -H "Content-Type: application/json" \
+              -H "X-Webhook-Secret: ${BACKEND_WEBHOOK_SECRET}" \
+              -d "{\"tenant_id\":\"${TENANT_ID}\",\"run_id\":\"${{ github.run_id }}\",\"version\":\"${VERSION}\",\"status\":\"failure\",\"error\":\"GitHub Actions 客户端打包失败\"}" || true
+          fi
