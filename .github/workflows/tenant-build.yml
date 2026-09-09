@@ -210,10 +210,8 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: ${{ matrix.platform }}-${{ matrix.arch || 'default' }}
-          cache-all-targets: 'true'
-          workspaces: |
-            src-tauri -> target
+          workspaces: "src-tauri -> target"
+          cache-all-targets: "true"
 
       - name: build
         uses: tauri-apps/tauri-action@v0
