@@ -182,10 +182,17 @@ jobs:
 
   create-release:
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [publish-tauri, get-version]
+    needs: [publish-tauri, get-version, get-product-name]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      PRODUCT_NAME: ${{ needs.get-product-name.outputs.product_name }}
+      VERSION: ${{ needs.get-version.outputs.version }}
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+      OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -204,3 +211,38 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
+
+      # 准备不含版本号的固定安装包并同步至 OSS
+      - name: Prepare unversioned files for OSS
+        if: env.OSS_ACCESS_KEY_ID != ''
+        run: |
+          mkdir -p oss_uploads
+          # 1. 提取唯一的 Windows 安装包 -> Jingyun-DSH-Windows.exe
+          for f in artifacts/*windows*setup.exe artifacts/*-setup.exe; do
+            [ -f "$f" ] || continue
+            cp "$f" "oss_uploads/Jingyun-DSH-Windows.exe"
+            echo "Prepared Windows: Jingyun-DSH-Windows.exe"
+            break
+          done
+          # 2. 提取唯一的 macOS 安装包 -> Jingyun-DSH-Mac.dmg (优先 Apple Silicon aarch64，兼顾主流 Mac)
+          for f in artifacts/*macos*aarch64*.dmg artifacts/*macos*.dmg artifacts/*.dmg; do
+            [ -f "$f" ] || continue
+            cp "$f" "oss_uploads/Jingyun-DSH-Mac.dmg"
+            echo "Prepared macOS: Jingyun-DSH-Mac.dmg"
+            break
+          done
+          ls -lh oss_uploads/
+
+      - name: Setup ossutil
+        if: env.OSS_ACCESS_KEY_ID != ''
+        uses: manyuanrong/setup-ossutil@v2.0
+        with:
+          endpoint: ${{ secrets.OSS_ENDPOINT }}
+          access-key-id: ${{ secrets.OSS_ACCESS_KEY_ID }}
+          access-key-secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+
+      - name: Upload to Aliyun OSS (uploads/)
+        if: env.OSS_ACCESS_KEY_ID != ''
+        run: |
+          ossutil cp -r -f oss_uploads/ "oss://${OSS_BUCKET}/uploads/"
+          echo "Successfully uploaded unversioned assets to oss://${OSS_BUCKET}/uploads/"
