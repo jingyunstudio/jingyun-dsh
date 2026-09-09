@@ -1,4 +1,4 @@
-import { exec, execFile } from 'child_process';
+import { execFile } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -10,7 +10,6 @@ import type { Context } from '@deepseek-ai/cordis';
 import { sendJson, sendError } from '../common/http';
 import { getDshHome } from '../common/paths';
 
-const execAsync = promisify(exec);
 const execFileAsync = promisify(execFile);
 
 // 全局安装互斥锁，防止并发调用导致 pnpm store 冲突

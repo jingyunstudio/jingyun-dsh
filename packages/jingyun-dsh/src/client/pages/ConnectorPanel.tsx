@@ -151,7 +151,7 @@ export const ConnectorPanel = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showWecomModal, setShowWecomModal] = useState(false);
   const [showWecomDetailModal, setShowWecomDetailModal] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
+  const [toastMsg] = useState('');
 
   const handleNewChatWithPrompt = (promptText: string) => {
     try {
@@ -292,7 +292,7 @@ export const ConnectorPanel = () => {
 
   const isWecomConnected =
     wecomStatus?.hasConfig === true || wecomStatus?.status === 'connected';
-  const wecomBotName = wecomStatus?.botName || '企业微信智能机器人';
+
   const wecomBotId = wecomStatus?.botId || wecomStatus?.config?.botId || '';
 
   return (

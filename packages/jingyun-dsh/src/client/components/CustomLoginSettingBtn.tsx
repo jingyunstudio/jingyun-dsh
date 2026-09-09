@@ -1389,7 +1389,7 @@ function ConfigItemCard({ descriptor, onSaveConfig }: SingleCardProps) {
       setDynamicValues(initVals);
       setDbDynamicValues({ ...initVals });
     }
-  }, [descriptor]);
+  }, [descriptor, isBranding]);
 
   // Determine dirty state
   const isDirty = isBranding

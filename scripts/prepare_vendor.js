@@ -8,14 +8,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const baseDir = path.join(__dirname, '..');
 const targetVendorDir = path.join(baseDir, 'src-tauri', 'resources', 'vendor');
 const targetJingyun = path.join(targetVendorDir, 'jingyun');
-const dshBin = path.join(
-  targetJingyun,
-  'node_modules',
-  '@deepseek-ai',
-  'dsh',
-  'lib',
-  'bin.js'
-);
 
 // 1. Ensure node and python runtimes exist
 if (!checkRuntimesExist()) {

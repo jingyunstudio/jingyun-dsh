@@ -182,7 +182,7 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
     }
   });
   const [popoverOpen, setPopoverOpen] = React.useState<boolean>(false);
-  const [pinned, setPinned] = React.useState<boolean>(false);
+  const [pinned] = React.useState<boolean>(false);
   const [fullscreen, setFullscreen] = React.useState<boolean>(false);
   const [artifactsExpanded, setArtifactsExpanded] =
     React.useState<boolean>(true);
@@ -602,7 +602,7 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
       document.removeEventListener('click', handleGlobalClick, true);
       document.body.classList.remove('jy-artifact-split-open');
     };
-  }, []);
+  }, [ctx.sessions.list]);
 
   // 智能扫描 DOM 中的产物节点 (解决历史会话切换及产物库空白的交互 Bug)
   const scanDOMArtifacts = React.useCallback(() => {

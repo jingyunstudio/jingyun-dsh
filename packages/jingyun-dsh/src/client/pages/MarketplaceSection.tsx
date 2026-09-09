@@ -275,7 +275,7 @@ export const MarketplaceSkillsTab = () => {
     if (skills.length === 0) {
       loadSkills('', '', false);
     }
-  }, []);
+  }, [skills.length]);
 
   const handleLoadMoreSkills = () => {
     if (isLoadingMore || !hasMore || !nextMarker) return;
@@ -588,13 +588,13 @@ export const MarketplaceCommunityPluginsTab = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [installingRepo, setInstallingRepo] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'stars' | 'updated'>('stars');
+  const [sortBy] = useState<'stars' | 'updated'>('stars');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [installedPlugins, setInstalledPlugins] = useState<Set<string>>(
     new Set()
   );
   const [page, setPage] = useState(1);
-  const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [, setTotalCount] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(true);
   const [plugins, setPlugins] = useState<
     Array<{

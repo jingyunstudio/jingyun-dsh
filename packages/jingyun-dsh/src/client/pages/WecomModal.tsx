@@ -8,15 +8,9 @@ export interface WecomConfigData {
 }
 
 // 腾讯企业微信授权常数
-const AUTH_ORIGIN = 'https://work.weixin.qq.com';
+
 const DEFAULT_GATEWAY_URL = 'wss://openws.work.weixin.qq.com';
 
-const MESSAGE_TYPE = {
-  QR_CODE_READY: 'QR_CODE_READY',
-  AUTH_SUCCESS: 'AUTH_SUCCESS',
-  AUTH_ERROR: 'AUTH_ERROR',
-  AUTH_CANCEL: 'AUTH_CANCEL',
-};
 import { QRCodeSVG } from 'qrcode.react';
 
 // 企业微信扫码连接弹窗 (纯净原生 SVG 二维码模式)

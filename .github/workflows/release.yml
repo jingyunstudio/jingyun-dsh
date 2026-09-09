@@ -111,8 +111,8 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          workspaces: "src-tauri -> target"
-          cache-all-targets: "true"
+          workspaces: 'src-tauri -> target'
+          cache-all-targets: 'true'
 
       - name: build
         uses: tauri-apps/tauri-action@v0
