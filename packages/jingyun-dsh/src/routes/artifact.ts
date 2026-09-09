@@ -1,6 +1,18 @@
 import { spawn } from 'child_process';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
+
+function cleanAndNormalizeFilePath(rawPath: string): string {
+  let cleaned = rawPath.trim();
+  if (/^file:\/\//i.test(cleaned)) {
+    cleaned = decodeURIComponent(cleaned.replace(/^file:\/\/\/?/i, ''));
+  }
+  if (process.platform === 'win32' && /^\/[a-zA-Z]:[/\\]/.test(cleaned)) {
+    cleaned = cleaned.slice(1);
+  }
+  return path.normalize(cleaned);
+}
 
 import type { Context } from '@deepseek-ai/cordis';
 
@@ -18,7 +30,7 @@ export function registerArtifactRoutes(ctx: Context) {
           req.url || '',
           `http://${req.headers.host || 'localhost'}`
         );
-        const fileName = reqUrl.searchParams.get('file') || '';
+        const fileName = reqUrl.searchParams.get('file') || reqUrl.searchParams.get('path') || '';
         const rawSessionId = reqUrl.searchParams.get('sessionId') || '';
 
         if (!fileName) {
@@ -26,77 +38,91 @@ export function registerArtifactRoutes(ctx: Context) {
           return;
         }
 
-        const workspaceJsonPath = path.resolve(
-          getDshHome(),
-          'storages',
-          'workspace.json'
-        );
-        let resolvedWorkspacePath = '';
-
-        if (fs.existsSync(workspaceJsonPath)) {
+        const directNormalized = cleanAndNormalizeFilePath(fileName);
+        if (
+          (path.isAbsolute(directNormalized) ||
+            (process.platform === 'win32' && /^[a-zA-Z]:[/\\]/.test(directNormalized))) &&
+          fs.existsSync(directNormalized)
+        ) {
           try {
-            const rawConfig = fs.readFileSync(workspaceJsonPath, 'utf8');
-            const configObj = JSON.parse(rawConfig);
-            const workspacesTable = configObj?.tables?.workspaces || {};
-
-            if (rawSessionId) {
-              const cleanSessionId = rawSessionId
-                .replace(/^session-/, '')
-                .trim();
-
-              for (const key of Object.keys(workspacesTable)) {
-                const entry = workspacesTable[key];
-                const sessionIds: string[] = entry.sessionIds || [];
-
-                const isMatched = sessionIds.some((id) => {
-                  const cleanId = id.replace(/^session-/, '').trim();
-                  return cleanId === cleanSessionId || id === rawSessionId;
-                });
-
-                if (isMatched && entry.path) {
-                  resolvedWorkspacePath = entry.path;
-                  break;
-                }
-              }
+            if (fs.statSync(directNormalized).isFile()) {
+              const fileContent = fs.readFileSync(directNormalized, 'utf8');
+              sendJson(res, {
+                success: true,
+                fileName: path.basename(directNormalized),
+                path: directNormalized,
+                content: fileContent,
+              });
+              return;
             }
-
-            if (!resolvedWorkspacePath) {
-              const entries = Object.values(workspacesTable) as any[];
-              if (entries.length > 0) {
-                entries.sort((a, b) => {
-                  const tA = new Date(
-                    a.updatedAt || a.createdAt || 0
-                  ).getTime();
-                  const tB = new Date(
-                    b.updatedAt || b.createdAt || 0
-                  ).getTime();
-                  return tB - tA;
-                });
-                const latest = entries.find(
-                  (e) => e.path && fs.existsSync(e.path)
-                );
-                if (latest) {
-                  resolvedWorkspacePath = latest.path;
-                }
-              }
-            }
-          } catch (e: any) {
-            console.error(
-              '[UIBranding] Failed to parse workspace relationship mapping:',
-              e.message
-            );
+          } catch (err: any) {
+            console.warn('[UIBranding] Direct read failed:', err.message);
           }
         }
 
-        if (!resolvedWorkspacePath) {
-          sendError(
-            res,
-            'Failed to resolve physical workspace for current session',
-            404
-          );
-          return;
+        const candidateHomes = new Set<string>();
+        const envHome =
+          process.env.DSH_HOME?.trim() || process.env.DSH_CONFIG_DIR?.trim();
+        if (envHome) candidateHomes.add(path.resolve(envHome));
+        candidateHomes.add(path.resolve(os.homedir(), '.dsh'));
+        candidateHomes.add(path.resolve(os.homedir(), '.deepseek-harness'));
+        try {
+          candidateHomes.add(getDshHome());
+        } catch {}
+        candidateHomes.add(path.resolve(process.cwd(), 'data'));
+        candidateHomes.add(process.cwd());
+
+        let resolvedWorkspacePath = '';
+        const allWorkspaces: string[] = [];
+        const cleanSessionId = rawSessionId.replace(/^session-/, '').trim();
+
+        for (const homeDir of candidateHomes) {
+          if (!fs.existsSync(homeDir)) continue;
+
+          const projCacheFile = path.resolve(homeDir, 'storages', 'session_projcache.json');
+          if (fs.existsSync(projCacheFile)) {
+            try {
+              const cacheData = JSON.parse(fs.readFileSync(projCacheFile, 'utf8'));
+              const sessionRows = cacheData?.tables?.sessions || {};
+              for (const [sId, item] of Object.entries<any>(sessionRows)) {
+                const cwd = item?.identity?.cwd;
+                if (cwd && fs.existsSync(cwd)) {
+                  if (!allWorkspaces.includes(cwd)) allWorkspaces.push(cwd);
+                  if (
+                    !resolvedWorkspacePath &&
+                    cleanSessionId &&
+                    (sId.includes(cleanSessionId) || cleanSessionId.includes(sId.replace(/^session-/, '')))
+                  ) {
+                    resolvedWorkspacePath = cwd;
+                  }
+                }
+              }
+            } catch {}
+          }
+
+          const wsFile = path.resolve(homeDir, 'storages', 'workspace.json');
+          if (fs.existsSync(wsFile)) {
+            try {
+              const wsData = JSON.parse(fs.readFileSync(wsFile, 'utf8'));
+              const wsRows = wsData?.tables?.workspaces || {};
+              for (const [, entry] of Object.entries<any>(wsRows)) {
+                const p = entry?.path;
+                if (p && fs.existsSync(p)) {
+                  if (!allWorkspaces.includes(p)) allWorkspaces.push(p);
+                  if (!resolvedWorkspacePath && cleanSessionId && Array.isArray(entry.sessionIds)) {
+                    if (entry.sessionIds.some((id: string) => id.includes(cleanSessionId))) {
+                      resolvedWorkspacePath = p;
+                    }
+                  }
+                }
+              }
+            } catch {}
+          }
         }
 
+        if (!resolvedWorkspacePath && allWorkspaces.length > 0) {
+          resolvedWorkspacePath = allWorkspaces[0];
+        }
         const cleanFileName = fileName.replace(/^\.?\/+/, '').trim();
         let targetFilePath = path.resolve(resolvedWorkspacePath, cleanFileName);
 
@@ -160,10 +186,18 @@ export function registerArtifactRoutes(ctx: Context) {
             return null;
           };
 
-          const fallbackFound = findFileRecursively(
-            resolvedWorkspacePath,
-            path.basename(cleanFileName)
-          );
+          let fallbackFound: string | null = null;
+          const baseName = path.basename(cleanFileName);
+          if (resolvedWorkspacePath) {
+            fallbackFound = findFileRecursively(resolvedWorkspacePath, baseName);
+          }
+          if (!fallbackFound) {
+            for (const ws of allWorkspaces) {
+              if (ws === resolvedWorkspacePath) continue;
+              fallbackFound = findFileRecursively(ws, baseName);
+              if (fallbackFound) break;
+            }
+          }
           if (fallbackFound) {
             targetFilePath = fallbackFound;
           }
@@ -215,10 +249,8 @@ export function registerArtifactRoutes(ctx: Context) {
           req.url || '',
           `http://${req.headers.host || 'localhost'}`
         );
-        let filePath = reqUrl.searchParams.get('path') || '';
-        if (filePath.startsWith('file:///')) {
-          filePath = decodeURIComponent(filePath.replace(/^file:\/\/\/?/, ''));
-        }
+        const rawPath = reqUrl.searchParams.get('path') || '';
+        const filePath = cleanAndNormalizeFilePath(rawPath);
         if (filePath && fs.existsSync(filePath)) {
           if (process.platform === 'win32') {
             spawn('explorer.exe', [`/select,${filePath}`], {
@@ -256,10 +288,8 @@ export function registerArtifactRoutes(ctx: Context) {
           req.url || '',
           `http://${req.headers.host || 'localhost'}`
         );
-        let filePath = reqUrl.searchParams.get('path') || '';
-        if (filePath.startsWith('file:///')) {
-          filePath = decodeURIComponent(filePath.replace(/^file:\/\/\/?/, ''));
-        }
+        const rawPath = reqUrl.searchParams.get('path') || '';
+        const filePath = cleanAndNormalizeFilePath(rawPath);
         if (filePath && fs.existsSync(filePath)) {
           if (process.platform === 'win32') {
             spawn('cmd.exe', ['/c', 'start', '', filePath], {

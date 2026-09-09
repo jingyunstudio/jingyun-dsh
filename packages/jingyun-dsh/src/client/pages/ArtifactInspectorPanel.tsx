@@ -357,10 +357,9 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
 
   const activeTabItem =
     openTabs.find((t) => t.id === activeTabId) || openTabs[0];
-
-  React.useEffect(() => {
-    // 从后端 API 读取真实物理文件 (Single Source of Truth)
-    const fetchPhysicalArtifact = async (fileName: string) => {
+  // 从后端 API 读取真实物理文件 (Single Source of Truth)
+  const fetchPhysicalArtifact = React.useCallback(
+    async (fileName: string) => {
       try {
         let sessionId = '';
         try {
@@ -370,24 +369,28 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
         } catch (e) {
           console.warn('[ArtifactPanel] Failed to read current session ID:', e);
         }
+        if (!sessionId && typeof window !== 'undefined') {
+          const urlMatch = window.location.pathname.match(/session\/([a-zA-Z0-9_-]+)/);
+          if (urlMatch) sessionId = urlMatch[1];
+        }
 
         const res = await fetch(
           `/api/jingyun/artifact/read?file=${encodeURIComponent(fileName)}&sessionId=${encodeURIComponent(sessionId)}`
         );
         if (!res.ok) return null;
         const data = await res.json();
-        if (data.success && data.content) {
-          return data;
+        if (data && data.success && typeof data.content === 'string') {
+          return data as { success: boolean; content: string; path?: string; fileName?: string };
         }
       } catch (e) {
-        console.warn(
-          '[ArtifactPanel] Failed to fetch physical file from API:',
-          e
-        );
+        console.warn('[ArtifactPanel] Failed to fetch physical file from API:', e);
       }
       return null;
-    };
+    },
+    [ctx?.sessions?.list]
+  );
 
+  React.useEffect(() => {
     // 基于磁盘真实文件的产物打开与数据填充函数（直接解析真实物理路径，绝不使用假占位）
     const openArtifactFile = async (
       fileName: string,
@@ -749,27 +752,24 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
     if (!activeTabItem) return;
     setIsRefreshing(true);
     try {
-      const res = await fetch(
-        `/api/jingyun/artifact/read?file=${encodeURIComponent(activeTabItem.path || activeTabItem.name)}`
+      const diskData = await fetchPhysicalArtifact(
+        activeTabItem.path || activeTabItem.name
       );
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.content) {
-          setOpenTabs((prev) =>
-            prev.map((t) =>
-              t.id === activeTabItem.id
-                ? { ...t, content: data.content, path: data.path || t.path }
-                : t
-            )
-          );
-          setArtifactList((prev) =>
-            prev.map((t) =>
-              t.id === activeTabItem.id
-                ? { ...t, content: data.content, path: data.path || t.path }
-                : t
-            )
-          );
-        }
+      if (diskData && typeof diskData.content === 'string') {
+        setOpenTabs((prev) =>
+          prev.map((t) =>
+            t.id === activeTabItem.id
+              ? { ...t, content: diskData.content, path: diskData.path || t.path }
+              : t
+          )
+        );
+        setArtifactList((prev) =>
+          prev.map((t) =>
+            t.id === activeTabItem.id
+              ? { ...t, content: diskData.content, path: diskData.path || t.path }
+              : t
+          )
+        );
       }
     } catch (e) {
       console.warn('[ArtifactPanel] Refresh failed:', e);
@@ -777,6 +777,42 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
       setTimeout(() => setIsRefreshing(false), 400);
     }
   };
+
+  // 当激活的 Tab 内容为空时，自动向后端拉取真实物理文件内容
+  React.useEffect(() => {
+    if (!activeTabItem || activeTabItem.content) return;
+    let isMounted = true;
+    (async () => {
+      const targetName = activeTabItem.path || activeTabItem.name;
+      if (!targetName) return;
+      const diskData = await fetchPhysicalArtifact(targetName);
+      if (isMounted && diskData && typeof diskData.content === 'string') {
+        setOpenTabs((prev) =>
+          prev.map((t) =>
+            t.id === activeTabItem.id
+              ? { ...t, content: diskData.content, path: diskData.path || t.path }
+              : t
+          )
+        );
+        setArtifactList((prev) =>
+          prev.map((t) =>
+            t.id === activeTabItem.id
+              ? { ...t, content: diskData.content, path: diskData.path || t.path }
+              : t
+          )
+        );
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [
+    activeTabItem?.id,
+    activeTabItem?.content,
+    activeTabItem?.path,
+    activeTabItem?.name,
+    fetchPhysicalArtifact,
+  ]);
 
   const handleRevealFolder = async () => {
     if (!activeTabItem?.path) return;
