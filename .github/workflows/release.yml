@@ -87,7 +87,19 @@ jobs:
           python -c "p='pnpm-workspace.yaml'; open(p,'w',encoding='utf-8').write(open(p,encoding='utf-8').read().split('patchedDependencies:')[0])"
 
       - name: install frontend dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: |
+          pnpm install --no-frozen-lockfile
+
+      - name: configure desktop app
+        shell: bash
+        run: |
+          cat << 'EOF' > packages/jingyun-dsh/desktop-config.json
+          {
+            "domain": "https://demo.jingyun.online/",
+            "custom_name": "Jingyun.Studio",
+            "custom_logo": ""
+          }
+          EOF
 
       - name: Cache runtimes (node & python)
         uses: actions/cache@v4
