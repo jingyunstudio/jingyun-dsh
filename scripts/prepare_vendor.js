@@ -25,13 +25,11 @@ if (!checkRuntimesExist()) {
   await ensureRuntimes();
 }
 
-// 2. Ensure production dependencies are collected
-if (!fs.existsSync(dshBin)) {
-  console.log(
-    '[VendorPrepare] ⚠️ Dependencies missing in resources! Collecting dependencies...'
-  );
-  await import('./build_deps.js');
-}
+// 2. Ensure production dependencies are synchronized and pruned
+console.log(
+  '[VendorPrepare] 🔄 Synchronizing production dependencies in resources...'
+);
+await import('./build_deps.js');
 
 // 2. Sync packages/jingyun-dsh and @jingyun-ai alias
 const srcPlugin = path.join(baseDir, 'packages', 'jingyun-dsh');

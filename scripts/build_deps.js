@@ -91,21 +91,100 @@ for (const dir of Array.from(visited.values())) {
   } catch {}
 }
 
-// 2. Direct copy to resources/vendor/jingyun
-console.log(
-  `[BuildDeps] 📦 Copying ${visited.size} packages directly to resources/vendor/jingyun...`
-);
+// 2. Direct copy to resources/vendor/jingyun with standard exclusions (aligned with electron-builder)
+const EXCLUDED_EXTS = new Set([
+  '.d.ts',
+  '.d.mts',
+  '.d.cts',
+  '.map',
+  '.md',
+  '.markdown',
+  '.o',
+  '.obj',
+  '.a',
+]);
+const EXCLUDED_DIRS = new Set([
+  '.git',
+  '.github',
+  '__tests__',
+  'test',
+  'tests',
+  'docs',
+  'example',
+  'examples',
+]);
+
+const isForceClean = process.argv.includes('--clean');
 fs.mkdirSync(dstNodeMod, { recursive: true });
+
+// 2.1 Smart Diff Prune: Remove packages that are no longer needed
+if (isForceClean) {
+  console.log(
+    '[BuildDeps] 🧹 Force clean requested, removing old dependencies...'
+  );
+  fs.rmSync(dstNodeMod, { recursive: true, force: true });
+  fs.mkdirSync(dstNodeMod, { recursive: true });
+} else {
+  function getInstalledPkgs(dir, prefix = '') {
+    const pkgs = [];
+    if (!fs.existsSync(dir)) return pkgs;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith('.')) continue;
+      if (entry.isDirectory()) {
+        if (entry.name.startsWith('@')) {
+          pkgs.push(
+            ...getInstalledPkgs(path.join(dir, entry.name), entry.name + '/')
+          );
+        } else {
+          pkgs.push(prefix + entry.name);
+        }
+      }
+    }
+    return pkgs;
+  }
+
+  const existingPkgs = getInstalledPkgs(dstNodeMod);
+  let prunedCount = 0;
+  for (const existingPkg of existingPkgs) {
+    if (!visited.has(existingPkg) && !existingPkg.startsWith('@jingyun-ai/')) {
+      const removePath = path.join(dstNodeMod, existingPkg);
+      fs.rmSync(removePath, { recursive: true, force: true });
+      prunedCount++;
+    }
+  }
+  if (prunedCount > 0) {
+    console.log(
+      `[BuildDeps] 🧹 Pruned ${prunedCount} obsolete packages from vendor.`
+    );
+  }
+}
+
+// 2.2 Copy missing or updated packages
+console.log(
+  `[BuildDeps] 📦 Synchronizing ${visited.size} production packages to resources/vendor/jingyun...`
+);
+let copiedCount = 0;
 for (const [pkgName, realSrc] of visited.entries()) {
   const target = path.join(dstNodeMod, pkgName);
   if (!fs.existsSync(target)) {
     fs.mkdirSync(path.dirname(target), { recursive: true });
     fs.cpSync(realSrc, target, {
       recursive: true,
-      filter: (f) => !f.endsWith('.map') && !f.includes('.git'),
+      filter: (src) => {
+        const base = path.basename(src);
+        if (EXCLUDED_DIRS.has(base)) return false;
+        for (const ext of EXCLUDED_EXTS) {
+          if (base.endsWith(ext)) return false;
+        }
+        return true;
+      },
     });
+    copiedCount++;
   }
 }
+console.log(
+  `[BuildDeps] ✨ Up-to-date! (${copiedCount} copied, ${visited.size - copiedCount} cached)`
+);
 
 // 3. Inject wrappers & package.json
 const jsYamlDir = path.join(dstNodeMod, 'js-yaml');
