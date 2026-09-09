@@ -173,6 +173,13 @@ jobs:
           if [ -d "${{ env.PRODUCT_NAME }}.app" ]; then
             zip -r -y "$GITHUB_WORKSPACE/artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_macos_${{ matrix.arch }}.zip" "${{ env.PRODUCT_NAME }}.app"
           fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-assets-${{ matrix.platform }}-${{ matrix.arch || 'default' }}
+          path: artifacts/*
+
   create-release:
     needs: [publish-tauri, get-version]
     runs-on: ubuntu-latest
