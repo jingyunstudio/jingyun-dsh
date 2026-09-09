@@ -2,8 +2,6 @@ name: 'publish'
 
 on:
   push:
-    branches:
-      - main
     tags:
       - 'v*'
 
@@ -181,7 +179,6 @@ jobs:
           path: artifacts/*
 
   create-release:
-    if: startsWith(github.ref, 'refs/tags/v')
     needs: [publish-tauri, get-version, get-product-name]
     runs-on: ubuntu-latest
     permissions:
