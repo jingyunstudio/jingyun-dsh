@@ -1436,8 +1436,6 @@ function ConfigItemCard({ descriptor, onSaveConfig }: SingleCardProps) {
   const handleDiscard = () => {
     if (isBranding) {
       setMode(dbMode);
-      setApiUrl(dbApiUrl);
-      setTenantHost(dbTenantHost);
       setAppHost(dbAppHost);
       setCustomName(dbCustomName);
       setCustomLogo(dbCustomLogo);
