@@ -126,7 +126,7 @@ jobs:
             args: '--target x86_64-apple-darwin'
           - platform: 'ubuntu-22.04'
             arch: 'x86_64'
-            args: ''
+            args: '--no-bundle'
           - platform: 'windows-latest'
             arch: 'x64'
             args: ''
@@ -245,8 +245,6 @@ jobs:
       - name: Copy linux to release assets
         if: matrix.platform == 'ubuntu-22.04'
         run: |
-          cp "src-tauri/target/release/bundle/deb/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_amd64.deb" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.deb" || true
-          cp "src-tauri/target/release/bundle/rpm/${{ env.PRODUCT_NAME }}-${{ env.VERSION }}-1.x86_64.rpm" "artifacts/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_linux_amd64.rpm" || true
           cd src-tauri/target/release
           if [ -f "jingyun-dsh-client" ] && [ ! -f "${{ env.PRODUCT_NAME }}" ]; then
             cp "jingyun-dsh-client" "${{ env.PRODUCT_NAME }}"
