@@ -5,22 +5,7 @@ import path from 'path';
 import { WebSocket, type RawData } from 'ws';
 
 import { getDshHome } from '../common/paths';
-
-export interface WecomConfig {
-  botId: string;
-  botSecret: string;
-  gatewayUrl?: string;
-  autoReconnect?: boolean;
-}
-
-export type WecomStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
-
-export interface WecomState {
-  status: WecomStatus;
-  botId?: string;
-  connectedAt?: number;
-  lastError?: string;
-}
+import type { WecomConfig, WecomState, WecomStatus } from './types';
 
 interface NodeError extends Error {
   code?: string;
@@ -41,19 +26,13 @@ export class WecomConnectorService {
   private status: WecomStatus = 'disconnected';
   private connectedAt?: number;
   private lastError?: string;
-  private heartbeatTimer: NodeJS.Timeout | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
-  private missedPongCount: number = 0;
-  private maxMissedPong: number = 2;
-  private configPath: string = path.join(
-    getDshHome(),
-    'connectors',
-    'wecom.json'
-  );
-  constructor(customConfigPath?: string) {
-    if (customConfigPath) {
-      this.configPath = customConfigPath;
-    }
+  private heartbeatTimer: NodeJS.Timeout | null = null;
+  private missedPongCount = 0;
+  private readonly maxMissedPong = 3;
+
+  private get configPath(): string {
+    return path.join(getDshHome(), 'wecom.config.json');
   }
 
   public async init(): Promise<void> {
@@ -85,6 +64,7 @@ export class WecomConnectorService {
       return null;
     }
   }
+
   public async saveConfig(cfg: WecomConfig): Promise<void> {
     this.config = cfg;
     const dir = path.dirname(this.configPath);
@@ -191,8 +171,9 @@ export class WecomConnectorService {
     };
     try {
       this.ws.send(JSON.stringify(authFrame));
-    } catch (err: any) {
-      console.error('[WecomConnector] Failed to send auth frame:', err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[WecomConnector] Failed to send auth frame:', msg);
     }
   }
 
@@ -211,6 +192,7 @@ export class WecomConnectorService {
     this.status = 'disconnected';
     this.connectedAt = undefined;
   }
+
   public async sendTextMessage(chatId: string, content: string): Promise<void> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error('企微长连接未建立');
@@ -231,7 +213,13 @@ export class WecomConnectorService {
   private handleMessage(data: RawData): void {
     try {
       const msgStr = data.toString();
-      const frame = JSON.parse(msgStr);
+      const frame = JSON.parse(msgStr) as {
+        headers?: { req_id?: string };
+        errcode?: number;
+        errmsg?: string;
+        cmd?: string;
+        body?: unknown;
+      };
 
       const reqId = frame.headers?.req_id || '';
 
