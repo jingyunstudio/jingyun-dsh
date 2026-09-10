@@ -2,6 +2,45 @@ import { QRCodeSVG } from 'qrcode.react';
 import React, { useState, useEffect, useRef } from 'react';
 
 import { WecomDetailModal } from './WecomModal';
+const openExternalUrl = (target: string) => {
+  if (!target) return;
+  try {
+    const winWithTauri =
+      typeof window !== 'undefined'
+        ? (window as Window & {
+            __TAURI__?: {
+              opener?: { openUrl: (url: string) => Promise<void> };
+              core?: {
+                invoke: (
+                  cmd: string,
+                  args?: Record<string, unknown>
+                ) => Promise<unknown>;
+              };
+            };
+          })
+        : undefined;
+    const tauri = winWithTauri?.__TAURI__;
+    if (tauri?.opener?.openUrl) {
+      tauri.opener.openUrl(target).catch(() => {
+        window.open(target, '_blank', 'noopener,noreferrer');
+      });
+      return;
+    }
+    if (tauri?.core?.invoke) {
+      tauri.core
+        .invoke('plugin:opener|open_url', {
+          rule: { type: 'open', url: target },
+        })
+        .catch(() => {
+          window.open(target, '_blank', 'noopener,noreferrer');
+        });
+      return;
+    }
+  } catch {}
+  if (typeof window !== 'undefined') {
+    window.open(target, '_blank', 'noopener,noreferrer');
+  }
+};
 
 // 飞书 SVG 图标
 const FeishuLogo = () => (
@@ -1789,6 +1828,55 @@ const ConnectorAuthModal = ({
                     fgColor="#000000"
                   />
                 </div>
+                {/* 飞书网页授权跳转链接 */}
+                {channel !== 'wecom' && authData.verification_url && (
+                  <button
+                    type="button"
+                    onClick={() => openExternalUrl(authData.verification_url)}
+                    style={{
+                      fontSize: '12px',
+                      color: '#3370FF',
+                      textDecoration: 'none',
+                      fontWeight: 500,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'none',
+                      border: 'none',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        'rgba(51, 112, 255, 0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <span>
+                      {authMode === 'init'
+                        ? '或在浏览器中打开配置网址'
+                        : '或在浏览器中打开授权网址'}
+                    </span>
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                      <polyline points="15 3 21 3 21 9"></polyline>
+                      <line x1="10" y1="14" x2="21" y2="3"></line>
+                    </svg>
+                  </button>
+                )}
               </div>
             ) : null}
 
