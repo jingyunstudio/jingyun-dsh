@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { promises as fs } from 'fs';
+import https from 'https';
 import path from 'path';
 
 import { WebSocket, type RawData } from 'ws';
@@ -311,6 +312,90 @@ export class WecomConnectorService {
   private maskBotId(botId: string): string {
     if (botId.length <= 8) return botId;
     return `${botId.substring(0, 4)}...${botId.substring(botId.length - 4)}`;
+  }
+  public async getQrCode(): Promise<{ scode: string; authUrl: string }> {
+    return new Promise((resolve, reject) => {
+      const url = `https://work.weixin.qq.com/ai/qc/gen?source=codebuddy&state=state_${Date.now()}&timestamp=${Date.now()}`;
+      https
+        .get(url, (res) => {
+          let data = '';
+          res.on('data', (c) => (data += c));
+          res.on('end', () => {
+            const match = data.match(/window\.settings\s*=\s*(\{.*?\})/);
+            if (match) {
+              try {
+                const settings = JSON.parse(match[1]);
+                resolve({
+                  scode: settings.scode || '',
+                  authUrl: settings.auth_url || '',
+                });
+              } catch (e: any) {
+                reject(new Error(`解析官方配置失败: ${e.message}`));
+              }
+            } else {
+              reject(new Error('未能从企微获取到授权信息'));
+            }
+          });
+        })
+        .on('error', (err) =>
+          reject(new Error(`请求企微网关失败: ${err.message}`))
+        );
+    });
+  }
+
+  public async queryQrResult(scode: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const queryUrl = `https://work.weixin.qq.com/ai/qc/query_result?scode=${encodeURIComponent(scode)}`;
+      https
+        .get(queryUrl, (res) => {
+          let data = '';
+          res.on('data', (c) => (data += c));
+          res.on('end', async () => {
+            try {
+              const result = JSON.parse(data);
+              const status = result?.data?.status;
+              const botInfo = result?.data?.bot_info;
+
+              if (status === 'success' && botInfo?.botid && botInfo.secret) {
+                await this.connect({
+                  botId: botInfo.botid,
+                  botSecret: botInfo.secret,
+                  gatewayUrl: 'wss://openws.work.weixin.qq.com',
+                  autoReconnect: true,
+                });
+                resolve({
+                  success: true,
+                  status: 'success',
+                  bot_info: botInfo,
+                  data: {
+                    status: 'success',
+                    botId: botInfo.botid,
+                    botName: botInfo.name || '企业微信智能机器人',
+                    bot_info: botInfo,
+                  },
+                });
+              } else if (status === 'expired') {
+                resolve({
+                  success: true,
+                  status: 'expired',
+                  data: { status: 'expired' },
+                });
+              } else {
+                resolve({
+                  success: true,
+                  status: 'waiting',
+                  data: { status: 'waiting' },
+                });
+              }
+            } catch (err: any) {
+              reject(new Error(`解析轮询响应失败: ${err.message}`));
+            }
+          });
+        })
+        .on('error', (err) =>
+          reject(new Error(`轮询企微网关失败: ${err.message}`))
+        );
+    });
   }
 }
 

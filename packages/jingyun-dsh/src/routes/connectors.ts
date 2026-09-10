@@ -1,9 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import https from 'https';
 
 import type { Context } from '@deepseek-ai/cordis';
 
-import { sendError, sendJson } from '../common/http';
+import { parseJsonBody, sendError, sendJson } from '../common/http';
 import { larkConnector, type WecomConfig, wecomConnector } from '../connectors';
 
 export function registerConnectorsRoutes(ctx: Context) {
@@ -14,10 +13,9 @@ export function registerConnectorsRoutes(ctx: Context) {
     handler: async (_req, res) => {
       try {
         const result = await larkConnector.getStatus();
-        sendJson(res, result);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        sendError(res, msg, 500);
+        sendJson(res, { success: true, data: result });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
       }
     },
   });
@@ -29,10 +27,9 @@ export function registerConnectorsRoutes(ctx: Context) {
     handler: async (_req, res) => {
       try {
         const result = await larkConnector.startAuth();
-        sendJson(res, result);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        sendError(res, msg, 500);
+        sendJson(res, { success: true, data: result });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
       }
     },
   });
@@ -44,10 +41,9 @@ export function registerConnectorsRoutes(ctx: Context) {
     handler: async (_req, res) => {
       try {
         const result = await larkConnector.logout();
-        sendJson(res, result);
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        sendError(res, msg, 500);
+        sendJson(res, { success: true, data: result });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
       }
     },
   });
@@ -57,364 +53,158 @@ export function registerConnectorsRoutes(ctx: Context) {
     kind: 'exact',
     path: '/api/jingyun/connectors/lark/auth-poll',
     handler: async (req: IncomingMessage, res: ServerResponse) => {
-      let body = '';
-      req.on('data', (chunk: Buffer | string) => {
-        body += chunk;
-      });
-      req.on('end', async () => {
-        let payload: { device_code?: string } = {};
-        try {
-          payload = JSON.parse(body || '{}') as { device_code?: string };
-        } catch (e: unknown) {
-          const msg = e instanceof Error ? e.message : String(e);
-          sendError(res, `JSON 解析失败: ${msg}`, 400);
-          return;
-        }
-
-        const deviceCode = payload.device_code;
+      try {
+        const { device_code: deviceCode } = await parseJsonBody<{
+          device_code?: string;
+        }>(req);
         if (!deviceCode) {
-          sendError(res, '缺少 device_code 参数', 400);
-          return;
+          return sendError(res, '缺少 device_code 参数', 400);
         }
-
         const result = await larkConnector.pollAuth(deviceCode);
         sendJson(res, result);
-      });
+      } catch (err: any) {
+        sendError(res, err.message, 400);
+      }
     },
   });
 
   // 初始化企业微信连接器服务
-  wecomConnector.init().catch((err: unknown) => {
+  wecomConnector.init().catch((err: any) => {
     console.warn('[WecomConnector] Failed to initialize:', err);
   });
 
-  // 获取企业微信扫码授权信息 (生成官方授权链接与 scode)
-  const handleWecomQrStart = async (
-    _req: IncomingMessage,
-    res: ServerResponse
-  ) => {
-    try {
-      const url = `https://work.weixin.qq.com/ai/qc/gen?source=codebuddy&state=state_${Date.now()}&timestamp=${Date.now()}`;
-      https
-        .get(url, (remoteRes) => {
-          let data = '';
-          remoteRes.on('data', (c: Buffer | string) => {
-            data += c;
-          });
-          remoteRes.on('end', () => {
-            const match = data.match(/window\.settings\s*=\s*(\{.*?\})/);
-            if (match) {
-              try {
-                const settings = JSON.parse(match[1]) as {
-                  scode?: string;
-                  auth_url?: string;
-                };
-                sendJson(res, {
-                  success: true,
-                  data: {
-                    scode: settings.scode,
-                    authUrl: settings.auth_url,
-                  },
-                });
-              } catch (err: unknown) {
-                const msg = err instanceof Error ? err.message : String(err);
-                sendError(res, `解析官方配置失败: ${msg}`, 500);
-              }
-            } else {
-              sendError(res, '未能从企微获取到授权信息', 500);
-            }
-          });
-        })
-        .on('error', (err: Error) => {
-          sendError(res, `请求企微网关失败: ${err.message}`, 500);
-        });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      sendError(res, msg, 500);
-    }
-  };
+  // 企微路由（支持 /api/jingyun/connectors/wecom/* 与兼容路径 /api/connectors/wecom/*）
+  const wecomPrefixes = [
+    '/api/jingyun/connectors/wecom',
+    '/api/connectors/wecom',
+  ];
 
-  // 轮询企业微信扫码授权结果
-  const handleWecomQueryResult = async (
-    req: IncomingMessage,
-    res: ServerResponse
-  ) => {
-    try {
-      const parsedUrl = new URL(req.url || '', 'http://127.0.0.1');
-      const scode = parsedUrl.searchParams.get('scode') || '';
-      if (!scode) {
-        sendError(res, '缺少 scode 参数', 400);
-        return;
-      }
+  for (const prefix of wecomPrefixes) {
+    // 扫码授权发起
+    ctx.webServer.register({
+      kind: 'exact',
+      path: `${prefix}/qr-start`,
+      handler: async (_req, res) => {
+        try {
+          const data = await wecomConnector.getQrCode();
+          sendJson(res, { success: true, data });
+        } catch (err: any) {
+          sendError(res, err.message, 500);
+        }
+      },
+    });
 
-      const queryUrl = `https://work.weixin.qq.com/ai/qc/query_result?scode=${encodeURIComponent(scode)}`;
-      https
-        .get(queryUrl, (remoteRes) => {
-          let data = '';
-          remoteRes.on('data', (c: Buffer | string) => {
-            data += c;
-          });
-          remoteRes.on('end', async () => {
-            try {
-              const result = JSON.parse(data) as {
-                data?: {
-                  status?: string;
-                  bot_info?: {
-                    botid?: string;
-                    secret?: string;
-                    name?: string;
-                    [k: string]: unknown;
-                  };
-                };
-              };
-              const status = result?.data?.status;
-              const botInfo = result?.data?.bot_info;
-
-              if (status === 'success' && botInfo?.botid && botInfo.secret) {
-                const botId = botInfo.botid;
-                const botSecret = botInfo.secret;
-                await wecomConnector.connect({
-                  botId,
-                  botSecret,
-                  gatewayUrl: 'wss://openws.work.weixin.qq.com',
-                  autoReconnect: true,
-                });
-                sendJson(res, {
-                  success: true,
-                  status: 'success',
-                  data: {
-                    status: 'success',
-                    botId,
-                    botName: botInfo.name || '企业微信智能机器人',
-                    bot_info: botInfo,
-                  },
-                });
-              } else if (status === 'expired') {
-                sendJson(res, {
-                  success: true,
-                  status: 'expired',
-                  data: { status: 'expired' },
-                });
-              } else {
-                sendJson(res, {
-                  success: true,
-                  status: 'waiting',
-                  data: { status: 'waiting' },
-                });
-              }
-            } catch (err: unknown) {
-              const msg = err instanceof Error ? err.message : String(err);
-              sendJson(res, {
-                success: false,
-                status: 'error',
-                error: msg,
-              });
-            }
-          });
-        })
-        .on('error', (err: Error) => {
+    // 扫码授权结果轮询
+    ctx.webServer.register({
+      kind: 'exact',
+      path: `${prefix}/query-result`,
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        try {
+          const parsedUrl = new URL(req.url || '', 'http://127.0.0.1');
+          const scode = parsedUrl.searchParams.get('scode') || '';
+          if (!scode) {
+            return sendError(res, '缺少 scode 参数', 400);
+          }
+          const result = await wecomConnector.queryQrResult(scode);
+          sendJson(res, result);
+        } catch (err: any) {
           sendJson(res, {
             success: false,
             status: 'error',
             error: err.message,
           });
-        });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      sendError(res, msg, 500);
-    }
-  };
-
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/wecom/qr-start',
-    handler: handleWecomQrStart,
-  });
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/wecom/query-result',
-    handler: handleWecomQueryResult,
-  });
-
-  // 获取企业微信连接状态与配置信息
-  const handleWecomStatus = async (
-    _req: IncomingMessage,
-    res: ServerResponse
-  ) => {
-    const state = wecomConnector.getStatus();
-    const config = await wecomConnector.loadConfig();
-    sendJson(res, {
-      success: true,
-      data: {
-        ...state,
-        hasConfig: !!(config?.botId && config?.botSecret),
-        config: config
-          ? {
-              botId: config.botId,
-              gatewayUrl:
-                config.gatewayUrl ||
-                'wss://work.weixin.qq.com/wework_admin/aibot/ws',
-              autoReconnect: config.autoReconnect !== false,
-            }
-          : null,
+        }
       },
     });
-  };
 
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/wecom/status',
-    handler: handleWecomStatus,
-  });
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/connectors/wecom/status',
-    handler: handleWecomStatus,
-  });
-
-  // 保存企业微信配置并建立连接
-  const handleWecomConnect = async (
-    req: IncomingMessage,
-    res: ServerResponse
-  ) => {
-    let body = '';
-    req.on('data', (chunk: Buffer | string) => {
-      body += chunk;
-    });
-    req.on('end', async () => {
-      try {
-        const parsed = JSON.parse(body || '{}') as Partial<WecomConfig>;
-        if (!parsed.botId || !parsed.botSecret) {
-          sendJson(res, {
-            success: false,
-            error: 'BotId 和 BotSecret 为必填项',
-          });
-          return;
+    // 连接器状态
+    ctx.webServer.register({
+      kind: 'exact',
+      path: `${prefix}/status`,
+      handler: async (_req, res) => {
+        try {
+          const status = wecomConnector.getStatus();
+          sendJson(res, { success: true, data: status });
+        } catch (err: any) {
+          sendError(res, err.message, 500);
         }
-        const config: WecomConfig = {
-          botId: parsed.botId.trim(),
-          botSecret: parsed.botSecret.trim(),
-          gatewayUrl: parsed.gatewayUrl?.trim() || undefined,
-          autoReconnect: parsed.autoReconnect !== false,
-        };
-        await wecomConnector.connect(config);
-        sendJson(res, {
-          success: true,
-          data: wecomConnector.getStatus(),
-        });
-      } catch (err: unknown) {
-        const errorObj = err instanceof Error ? err : new Error(String(err));
-        sendJson(res, { success: false, error: errorObj.message });
-      }
+      },
     });
-  };
 
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/wecom/connect',
-    handler: handleWecomConnect,
-  });
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/connectors/wecom/connect',
-    handler: handleWecomConnect,
-  });
-
-  // 断开企业微信长连接
-  const handleWecomDisconnect = async (
-    _req: IncomingMessage,
-    res: ServerResponse
-  ) => {
-    try {
-      wecomConnector.disconnect();
-      sendJson(res, {
-        success: true,
-        data: wecomConnector.getStatus(),
-      });
-    } catch (err: unknown) {
-      const errorObj = err instanceof Error ? err : new Error(String(err));
-      sendJson(res, { success: false, error: errorObj.message });
-    }
-  };
-
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/wecom/disconnect',
-    handler: handleWecomDisconnect,
-  });
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/connectors/wecom/disconnect',
-    handler: handleWecomDisconnect,
-  });
-
-  // 清除企业微信配置并解绑
-  const handleWecomClear = async (
-    _req: IncomingMessage,
-    res: ServerResponse
-  ) => {
-    try {
-      await wecomConnector.clearConfig();
-      sendJson(res, {
-        success: true,
-        data: wecomConnector.getStatus(),
-      });
-    } catch (err: unknown) {
-      const errorObj = err instanceof Error ? err : new Error(String(err));
-      sendJson(res, { success: false, error: errorObj.message });
-    }
-  };
-
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/wecom/clear',
-    handler: handleWecomClear,
-  });
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/connectors/wecom/clear',
-    handler: handleWecomClear,
-  });
-
-  // 测试发送企微消息 (可选调试路由)
-  const handleWecomTestSend = async (
-    req: IncomingMessage,
-    res: ServerResponse
-  ) => {
-    let body = '';
-    req.on('data', (chunk: Buffer | string) => {
-      body += chunk;
-    });
-    req.on('end', async () => {
-      try {
-        const parsed = JSON.parse(body || '{}') as {
-          chatId?: string;
-          content?: string;
-        };
-        if (!parsed.chatId || !parsed.content) {
+    // 主动连接
+    ctx.webServer.register({
+      kind: 'exact',
+      path: `${prefix}/connect`,
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        try {
+          const config = await parseJsonBody<WecomConfig>(req);
+          if (!config?.botId || !config?.botSecret) {
+            return sendError(res, 'Bot ID and Secret are required', 400);
+          }
+          await wecomConnector.connect(config);
           sendJson(res, {
-            success: false,
-            error: 'chatId 和 content 为必填项',
+            success: true,
+            data: { message: 'Connected successfully', status: 'connected' },
           });
-          return;
+        } catch (err: any) {
+          sendError(res, err.message, 500);
         }
-        await wecomConnector.sendTextMessage(parsed.chatId, parsed.content);
-        sendJson(res, { success: true });
-      } catch (err: unknown) {
-        const errorObj = err instanceof Error ? err : new Error(String(err));
-        sendJson(res, { success: false, error: errorObj.message });
-      }
+      },
     });
-  };
 
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/wecom/test-send',
-    handler: handleWecomTestSend,
-  });
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/connectors/wecom/test-send',
-    handler: handleWecomTestSend,
-  });
+    // 断开连接
+    ctx.webServer.register({
+      kind: 'exact',
+      path: `${prefix}/disconnect`,
+      handler: async (_req, res) => {
+        try {
+          wecomConnector.disconnect();
+          sendJson(res, { success: true, data: { message: 'Disconnected' } });
+        } catch (err: any) {
+          sendError(res, err.message, 500);
+        }
+      },
+    });
+
+    // 清除配置
+    ctx.webServer.register({
+      kind: 'exact',
+      path: `${prefix}/clear`,
+      handler: async (_req, res) => {
+        try {
+          await wecomConnector.clearConfig();
+          sendJson(res, {
+            success: true,
+            data: { message: 'Configuration cleared' },
+          });
+        } catch (err: any) {
+          sendError(res, err.message, 500);
+        }
+      },
+    });
+
+    // 测试发送
+    ctx.webServer.register({
+      kind: 'exact',
+      path: `${prefix}/test-send`,
+      handler: async (req: IncomingMessage, res: ServerResponse) => {
+        try {
+          const body = await parseJsonBody<{
+            chatId?: string;
+            content?: string;
+          }>(req);
+          if (!body.chatId || !body.content) {
+            return sendError(res, 'chatId 和 content 为必填项', 400);
+          }
+          await wecomConnector.sendTextMessage(body.chatId, body.content);
+          sendJson(res, {
+            success: true,
+            data: { message: 'Test message sent' },
+          });
+        } catch (err: any) {
+          sendError(res, err.message, 500);
+        }
+      },
+    });
+  }
 }
