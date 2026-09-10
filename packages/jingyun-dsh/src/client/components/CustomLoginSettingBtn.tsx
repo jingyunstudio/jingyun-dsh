@@ -1360,35 +1360,37 @@ function ConfigItemCard({ descriptor, onSaveConfig }: SingleCardProps) {
   const [saving, setSaving] = React.useState(false);
 
   React.useEffect(() => {
-    if (isBranding) {
-      const activeMode = descriptor.value.mode || 'cloud';
-      setMode(activeMode);
-      setDbMode(activeMode);
+    queueMicrotask(() => {
+      if (isBranding) {
+        const activeMode = descriptor.value.mode || 'cloud';
+        setMode(activeMode);
+        setDbMode(activeMode);
 
-      const nameVal = descriptor.value.customName || '';
-      setCustomName(nameVal);
-      setDbCustomName(nameVal);
+        const nameVal = descriptor.value.customName || '';
+        setCustomName(nameVal);
+        setDbCustomName(nameVal);
 
-      const logoVal = descriptor.value.customLogo || '';
-      setCustomLogo(logoVal);
-      setDbCustomLogo(logoVal);
+        const logoVal = descriptor.value.customLogo || '';
+        setCustomLogo(logoVal);
+        setDbCustomLogo(logoVal);
 
-      const appHostVal = descriptor.value.appHost || '';
-      setAppHost(appHostVal);
-      setDbAppHost(appHostVal);
-    } else {
-      // General schemas properties mapper
-      const initVals: Record<string, string> = {};
-      const props = descriptor.schema.properties || {};
-      Object.keys(props).forEach((key) => {
-        initVals[key] =
-          descriptor.value[key] !== undefined
-            ? String(descriptor.value[key])
-            : props[key].default || '';
-      });
-      setDynamicValues(initVals);
-      setDbDynamicValues({ ...initVals });
-    }
+        const appHostVal = descriptor.value.appHost || '';
+        setAppHost(appHostVal);
+        setDbAppHost(appHostVal);
+      } else {
+        // General schemas properties mapper
+        const initVals: Record<string, string> = {};
+        const props = descriptor.schema.properties || {};
+        Object.keys(props).forEach((key) => {
+          initVals[key] =
+            descriptor.value[key] !== undefined
+              ? String(descriptor.value[key])
+              : props[key].default || '';
+        });
+        setDynamicValues(initVals);
+        setDbDynamicValues({ ...initVals });
+      }
+    });
   }, [descriptor, isBranding]);
 
   // Determine dirty state

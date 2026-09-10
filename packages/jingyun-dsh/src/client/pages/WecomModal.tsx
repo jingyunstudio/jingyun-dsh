@@ -1,5 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
-
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 export interface WecomConfigData {
   botId: string;
   botSecret: string;
@@ -28,90 +27,92 @@ export const WecomModal = ({
   const [authUrl, setAuthUrl] = useState('');
   const pollTimerRef = useRef<any>(null);
 
-  const handleAuthSuccess = async (botInfo: any) => {
-    try {
-      setStatusMsg('授权成功，正在连接企业微信机器人网关...');
-      const res = await fetch('/api/jingyun/connectors/wecom/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          botId: botInfo.botid,
-          botSecret: botInfo.secret,
-          gatewayUrl: DEFAULT_GATEWAY_URL,
-          autoReconnect: true,
-        }),
-      });
-      const data = await res.json();
-      if (data && data.success) {
-        setIsSuccess(true);
-        setStatusMsg('企业微信智能机器人连接成功！');
-        setTimeout(() => {
-          onSuccess();
-        }, 1500);
-      } else {
-        setErrorMsg(data?.error || '连接机器人失败');
-      }
-    } catch (e: any) {
-      setErrorMsg(e.message || '连接机器人失败');
-    }
-  };
-
-  const startPolling = (scode: string) => {
-    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-    pollTimerRef.current = setInterval(async () => {
+  const handleAuthSuccess = useCallback(
+    async (botInfo: any) => {
       try {
-        const res = await fetch(
-          `/api/jingyun/connectors/wecom/qr-poll?scode=${encodeURIComponent(scode)}`
-        );
-        if (res.ok) {
-          const result = await res.json();
-          if (result && result.status === 'success' && result.bot_info) {
-            if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-            handleAuthSuccess(result.bot_info);
-          }
+        setStatusMsg('授权成功，正在连接企业微信机器人网关...');
+        const res = await fetch('/api/jingyun/connectors/wecom/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            botId: botInfo.botid,
+            botSecret: botInfo.secret,
+            gatewayUrl: DEFAULT_GATEWAY_URL,
+            autoReconnect: true,
+          }),
+        });
+        const data = await res.json();
+        if (data && data.success) {
+          setIsSuccess(true);
+          setStatusMsg('企业微信智能机器人连接成功！');
+          setTimeout(() => {
+            onSuccess();
+          }, 1500);
+        } else {
+          setErrorMsg(data?.error || '连接机器人失败');
         }
-      } catch {
-        // ignore poll errors
+      } catch (e: any) {
+        setErrorMsg(e.message || '连接机器人失败');
       }
-    }, 2000);
-  };
+    },
+    [onSuccess]
+  );
 
-  const fetchQrAndStartPoll = async () => {
-    try {
-      setLoading(true);
-      setErrorMsg('');
-      setStatusMsg('正在向企业微信申请授权二维码...');
-
-      const res = await fetch('/api/jingyun/connectors/wecom/qr-start');
-      if (!res.ok) {
-        const errText = await res.text().catch(() => '');
-        throw new Error(
-          `获取二维码失败: ${res.status} ${errText || res.statusText}`
-        );
-      }
-
-      const json = await res.json();
-      const qrData = json?.data || json;
-      if (!qrData || !qrData.authUrl || !qrData.scode) {
-        throw new Error(json?.error || '返回的二维码授权数据异常');
-      }
-
-      setAuthUrl(qrData.authUrl);
-      setLoading(false);
-      setStatusMsg('请使用手机企业微信扫码授权');
-      startPolling(qrData.scode);
-    } catch (err: any) {
-      setLoading(false);
-      setErrorMsg(err.message || '生成二维码失败');
-    }
-  };
+  const startPolling = useCallback(
+    (scode: string) => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+      pollTimerRef.current = setInterval(async () => {
+        try {
+          const res = await fetch(
+            `/api/jingyun/connectors/wecom/qr-poll?scode=${encodeURIComponent(scode)}`
+          );
+          if (res.ok) {
+            const result = await res.json();
+            if (result && result.status === 'success' && result.bot_info) {
+              if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+              handleAuthSuccess(result.bot_info);
+            }
+          }
+        } catch {
+          // ignore poll errors
+        }
+      }, 2000);
+    },
+    [handleAuthSuccess]
+  );
 
   useEffect(() => {
+    const fetchQrAndStartPoll = async () => {
+      try {
+        const res = await fetch('/api/jingyun/connectors/wecom/qr-start');
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '');
+          throw new Error(
+            `获取二维码失败: ${res.status} ${errText || res.statusText}`
+          );
+        }
+
+        const json = await res.json();
+        const qrData = json?.data || json;
+        if (!qrData || !qrData.authUrl || !qrData.scode) {
+          throw new Error(json?.error || '返回的二维码授权数据异常');
+        }
+
+        setAuthUrl(qrData.authUrl);
+        setLoading(false);
+        setStatusMsg('请使用手机企业微信扫码授权');
+        startPolling(qrData.scode);
+      } catch (err: any) {
+        setLoading(false);
+        setErrorMsg(err.message || '生成二维码失败');
+      }
+    };
+
     fetchQrAndStartPoll();
     return () => {
       if (pollTimerRef.current) clearInterval(pollTimerRef.current);
     };
-  }, []);
+  }, [startPolling]);
 
   return (
     <div

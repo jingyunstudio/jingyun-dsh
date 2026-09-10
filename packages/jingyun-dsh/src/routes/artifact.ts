@@ -30,7 +30,10 @@ export function registerArtifactRoutes(ctx: Context) {
           req.url || '',
           `http://${req.headers.host || 'localhost'}`
         );
-        const fileName = reqUrl.searchParams.get('file') || reqUrl.searchParams.get('path') || '';
+        const fileName =
+          reqUrl.searchParams.get('file') ||
+          reqUrl.searchParams.get('path') ||
+          '';
         const rawSessionId = reqUrl.searchParams.get('sessionId') || '';
 
         if (!fileName) {
@@ -41,7 +44,8 @@ export function registerArtifactRoutes(ctx: Context) {
         const directNormalized = cleanAndNormalizeFilePath(fileName);
         if (
           (path.isAbsolute(directNormalized) ||
-            (process.platform === 'win32' && /^[a-zA-Z]:[/\\]/.test(directNormalized))) &&
+            (process.platform === 'win32' &&
+              /^[a-zA-Z]:[/\\]/.test(directNormalized))) &&
           fs.existsSync(directNormalized)
         ) {
           try {
@@ -79,10 +83,16 @@ export function registerArtifactRoutes(ctx: Context) {
         for (const homeDir of candidateHomes) {
           if (!fs.existsSync(homeDir)) continue;
 
-          const projCacheFile = path.resolve(homeDir, 'storages', 'session_projcache.json');
+          const projCacheFile = path.resolve(
+            homeDir,
+            'storages',
+            'session_projcache.json'
+          );
           if (fs.existsSync(projCacheFile)) {
             try {
-              const cacheData = JSON.parse(fs.readFileSync(projCacheFile, 'utf8'));
+              const cacheData = JSON.parse(
+                fs.readFileSync(projCacheFile, 'utf8')
+              );
               const sessionRows = cacheData?.tables?.sessions || {};
               for (const [sId, item] of Object.entries<any>(sessionRows)) {
                 const cwd = item?.identity?.cwd;
@@ -91,7 +101,8 @@ export function registerArtifactRoutes(ctx: Context) {
                   if (
                     !resolvedWorkspacePath &&
                     cleanSessionId &&
-                    (sId.includes(cleanSessionId) || cleanSessionId.includes(sId.replace(/^session-/, '')))
+                    (sId.includes(cleanSessionId) ||
+                      cleanSessionId.includes(sId.replace(/^session-/, '')))
                   ) {
                     resolvedWorkspacePath = cwd;
                   }
@@ -109,8 +120,16 @@ export function registerArtifactRoutes(ctx: Context) {
                 const p = entry?.path;
                 if (p && fs.existsSync(p)) {
                   if (!allWorkspaces.includes(p)) allWorkspaces.push(p);
-                  if (!resolvedWorkspacePath && cleanSessionId && Array.isArray(entry.sessionIds)) {
-                    if (entry.sessionIds.some((id: string) => id.includes(cleanSessionId))) {
+                  if (
+                    !resolvedWorkspacePath &&
+                    cleanSessionId &&
+                    Array.isArray(entry.sessionIds)
+                  ) {
+                    if (
+                      entry.sessionIds.some((id: string) =>
+                        id.includes(cleanSessionId)
+                      )
+                    ) {
                       resolvedWorkspacePath = p;
                     }
                   }
@@ -189,7 +208,10 @@ export function registerArtifactRoutes(ctx: Context) {
           let fallbackFound: string | null = null;
           const baseName = path.basename(cleanFileName);
           if (resolvedWorkspacePath) {
-            fallbackFound = findFileRecursively(resolvedWorkspacePath, baseName);
+            fallbackFound = findFileRecursively(
+              resolvedWorkspacePath,
+              baseName
+            );
           }
           if (!fallbackFound) {
             for (const ws of allWorkspaces) {

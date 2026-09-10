@@ -6,11 +6,6 @@ import { ConnectorPanel } from '../pages/ConnectorPanel';
 import { sessionAgentMemory } from './AgentSelectorBtn';
 import { brandingManager } from './BrandBranding';
 
-function checkIsTauri() {
-  if (typeof window === 'undefined') return false;
-  return !!(window as any).__TAURI_INTERNALS__ || !!(window as any).__TAURI__;
-}
-
 export function OnlineWorkspaceOverlay() {
   const [appHost, setAppHost] = React.useState('');
   const [currentHash, setCurrentHash] = React.useState(

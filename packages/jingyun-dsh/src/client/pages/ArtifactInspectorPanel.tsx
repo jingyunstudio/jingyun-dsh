@@ -370,7 +370,9 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
           console.warn('[ArtifactPanel] Failed to read current session ID:', e);
         }
         if (!sessionId && typeof window !== 'undefined') {
-          const urlMatch = window.location.pathname.match(/session\/([a-zA-Z0-9_-]+)/);
+          const urlMatch = window.location.pathname.match(
+            /session\/([a-zA-Z0-9_-]+)/
+          );
           if (urlMatch) sessionId = urlMatch[1];
         }
 
@@ -380,14 +382,22 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
         if (!res.ok) return null;
         const data = await res.json();
         if (data && data.success && typeof data.content === 'string') {
-          return data as { success: boolean; content: string; path?: string; fileName?: string };
+          return data as {
+            success: boolean;
+            content: string;
+            path?: string;
+            fileName?: string;
+          };
         }
       } catch (e) {
-        console.warn('[ArtifactPanel] Failed to fetch physical file from API:', e);
+        console.warn(
+          '[ArtifactPanel] Failed to fetch physical file from API:',
+          e
+        );
       }
       return null;
     },
-    [ctx?.sessions?.list]
+    [ctx]
   );
 
   React.useEffect(() => {
@@ -605,7 +615,7 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
       document.removeEventListener('click', handleGlobalClick, true);
       document.body.classList.remove('jy-artifact-split-open');
     };
-  }, [ctx.sessions.list]);
+  }, [ctx, fetchPhysicalArtifact]);
 
   // 智能扫描 DOM 中的产物节点 (解决历史会话切换及产物库空白的交互 Bug)
   const scanDOMArtifacts = React.useCallback(() => {
@@ -737,9 +747,10 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
       });
     }
 
-    // 挂载时立刻扫描一次
-    scanDOMArtifacts();
-
+    // 挂载时异步扫描一次，避免 effect 内同步触发渲染级联
+    queueMicrotask(() => {
+      scanDOMArtifacts();
+    });
     return () => {
       if (observer) observer.disconnect();
       if (debounceTimer) clearTimeout(debounceTimer);
@@ -759,14 +770,22 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
         setOpenTabs((prev) =>
           prev.map((t) =>
             t.id === activeTabItem.id
-              ? { ...t, content: diskData.content, path: diskData.path || t.path }
+              ? {
+                  ...t,
+                  content: diskData.content,
+                  path: diskData.path || t.path,
+                }
               : t
           )
         );
         setArtifactList((prev) =>
           prev.map((t) =>
             t.id === activeTabItem.id
-              ? { ...t, content: diskData.content, path: diskData.path || t.path }
+              ? {
+                  ...t,
+                  content: diskData.content,
+                  path: diskData.path || t.path,
+                }
               : t
           )
         );
@@ -790,14 +809,22 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
         setOpenTabs((prev) =>
           prev.map((t) =>
             t.id === activeTabItem.id
-              ? { ...t, content: diskData.content, path: diskData.path || t.path }
+              ? {
+                  ...t,
+                  content: diskData.content,
+                  path: diskData.path || t.path,
+                }
               : t
           )
         );
         setArtifactList((prev) =>
           prev.map((t) =>
             t.id === activeTabItem.id
-              ? { ...t, content: diskData.content, path: diskData.path || t.path }
+              ? {
+                  ...t,
+                  content: diskData.content,
+                  path: diskData.path || t.path,
+                }
               : t
           )
         );
@@ -806,13 +833,7 @@ export function ArtifactInspectorPanel({ ctx }: { ctx?: any }) {
     return () => {
       isMounted = false;
     };
-  }, [
-    activeTabItem?.id,
-    activeTabItem?.content,
-    activeTabItem?.path,
-    activeTabItem?.name,
-    fetchPhysicalArtifact,
-  ]);
+  }, [activeTabItem, fetchPhysicalArtifact]);
 
   const handleRevealFolder = async () => {
     if (!activeTabItem?.path) return;

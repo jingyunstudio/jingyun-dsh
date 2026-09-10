@@ -7,11 +7,7 @@ function checkIsTauri() {
 }
 
 export function JYTopDragBar() {
-  const [isTauri, setIsTauri] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsTauri(checkIsTauri());
-  }, []);
+  const [isTauri] = React.useState(checkIsTauri);
 
   if (!isTauri || typeof document === 'undefined') return null;
 

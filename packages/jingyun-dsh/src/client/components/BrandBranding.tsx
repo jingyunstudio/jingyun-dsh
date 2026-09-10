@@ -94,10 +94,7 @@ export function CustomBrandName() {
   );
 }
 
-export function HeroSlotAutoHider(_props?: {
-  size?: number;
-  className?: string;
-}) {
+export function HeroSlotAutoHider() {
   const ref = React.useRef<HTMLSpanElement>(null);
   const [loaded, setLoaded] = React.useState(false);
 

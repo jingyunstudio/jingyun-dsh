@@ -3,14 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 
 import { WecomDetailModal } from './WecomModal';
 
-interface Connector {
-  id: string;
-  name: string;
-  logo: React.ReactNode;
-  description: string;
-  comingSoon?: boolean;
-}
-
 // 飞书 SVG 图标
 const FeishuLogo = () => (
   <svg
@@ -281,8 +273,10 @@ export const ConnectorPanel = () => {
   };
 
   useEffect(() => {
-    fetchLarkStatus();
-    fetchWecomStatus();
+    queueMicrotask(() => {
+      fetchLarkStatus();
+      fetchWecomStatus();
+    });
   }, []);
 
   const isLarkConnected =
@@ -928,7 +922,7 @@ export const ConnectorPanel = () => {
 };
 
 interface DetailModalProps {
-  channel: string;
+  channel?: string;
   title: string;
   userName: string;
   appId: string;
@@ -940,7 +934,6 @@ interface DetailModalProps {
 
 // 已启用连接器的详情管理弹窗 (仿图 2 UI)
 const ConnectorDetailModal = ({
-  channel,
   title,
   userName,
   appId,
@@ -1321,7 +1314,6 @@ const ConnectorAuthModal = ({
 
   // 1. 开始授权流程，获取设备码与验证链接
   const startAuth = async () => {
-    setLoading(true);
     setErrorMessage('');
     try {
       if (channel === 'wecom') {
@@ -1493,8 +1485,14 @@ const ConnectorAuthModal = ({
       },
     };
   };
+  const startAuthRef = useRef(startAuth);
   useEffect(() => {
-    startAuth();
+    startAuthRef.current = startAuth;
+  });
+  useEffect(() => {
+    queueMicrotask(() => {
+      startAuthRef.current();
+    });
     return () => {
       if (
         intervalRef.current &&

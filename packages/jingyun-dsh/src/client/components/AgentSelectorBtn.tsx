@@ -21,9 +21,16 @@ export const AgentSelectorBtn = (props: any) => {
     (props?.useSessions ? props.useSessions((s: any) => s?.current) : '') ||
     'default';
 
+  const [prevSessionId, setPrevSessionId] = React.useState(currentSessionId);
   const [currentAgent, setCurrentAgent] = React.useState<string>(() => {
     return sessionAgentMemory[currentSessionId] || 'none';
   });
+  if (prevSessionId !== currentSessionId) {
+    setPrevSessionId(currentSessionId);
+    if (sessionAgentMemory[currentSessionId]) {
+      setCurrentAgent(sessionAgentMemory[currentSessionId]);
+    }
+  }
 
   const fetchAgents = React.useCallback(
     async (sessId?: string) => {
@@ -80,12 +87,11 @@ export const AgentSelectorBtn = (props: any) => {
     [currentSessionId]
   );
 
-  // 每次会话 ID 切换或组件挂载时，立即同步当前会话智能体
+  // 每次会话 ID 切换或组件挂载时，获取智能体列表
   React.useEffect(() => {
-    if (sessionAgentMemory[currentSessionId]) {
-      setCurrentAgent(sessionAgentMemory[currentSessionId]);
-    }
-    fetchAgents(currentSessionId);
+    queueMicrotask(() => {
+      fetchAgents(currentSessionId);
+    });
   }, [currentSessionId, fetchAgents]);
 
   // 监听智能体变更全局通知 (支持按会话校验)

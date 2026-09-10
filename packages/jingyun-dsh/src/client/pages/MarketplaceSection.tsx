@@ -46,7 +46,9 @@ export const MarketplaceAgentsTab = () => {
   };
 
   useEffect(() => {
-    loadLocalAgents();
+    queueMicrotask(() => {
+      loadLocalAgents();
+    });
   }, []);
 
   const filteredItems = agents.filter(
@@ -273,7 +275,9 @@ export const MarketplaceSkillsTab = () => {
 
   useEffect(() => {
     if (skills.length === 0) {
-      loadSkills('', '', false);
+      queueMicrotask(() => {
+        loadSkills('', '', false);
+      });
     }
   }, [skills.length]);
 
@@ -838,7 +842,9 @@ export const MarketplaceCommunityPluginsTab = () => {
   };
 
   useEffect(() => {
-    checkInstalledPlugins();
+    queueMicrotask(() => {
+      checkInstalledPlugins();
+    });
   }, []);
 
   // 监听搜索词输入 (防抖 300ms) 与 排序切换
