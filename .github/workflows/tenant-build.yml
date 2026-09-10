@@ -12,7 +12,7 @@ on:
         required: true
         default: 'AI Studio'
       logo_url:
-        description: '租户Logo下载地址'
+        description: '租户Logo下载地址 (支持 SVG, PNG, JPG, WEBP, ICO 等多种格式)'
         required: false
         default: ''
       domain:
@@ -172,10 +172,10 @@ jobs:
       - name: apply tenant branding
         shell: bash
         run: |
-          # 1. 若提供 Logo，下载租户 Logo 并自动生成全尺寸图标
+          # 1. 若提供 Logo，支持多种格式（SVG, PNG, JPG, WEBP, ICO 等）并自动生成全套客户端图标
           if [ -n "${{ env.LOGO_URL }}" ]; then
-            curl -sSL "${{ env.LOGO_URL }}" -o tenant_logo.png
-            pnpm tauri icon tenant_logo.png
+            python3 -m pip install pillow --quiet || python -m pip install pillow --quiet || pip install pillow --quiet || true
+            python3 scripts/process_icon.py "${{ env.LOGO_URL }}" || python scripts/process_icon.py "${{ env.LOGO_URL }}"
           fi
 
           # 2. 写入 desktop-config.json
