@@ -1870,7 +1870,7 @@ dependencies = [
 
 [[package]]
 name = "jingyun-dsh-client"
-version = "0.1.15"
+version = "0.1.16"
 dependencies = [
  "ico",
  "pelite",
