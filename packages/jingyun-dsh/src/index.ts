@@ -108,6 +108,31 @@ function syncBuiltinSkills() {
     console.warn('[UIBranding] Failed to sync builtin skills:', err.message);
   }
 }
+/**
+ * 彻底禁用 DSH Web 端身份验证机制 (BrowserAuth)
+ * 1. authorizeIndex: 始终返回 true，任何客户端访问 / 或 /index.html 均直接返回 200 HTML，无需 token / cookie
+ * 2. requestRejection: 始终返回 undefined，允许全量 /api 与 RPC 请求无阻通行
+ * 3. browserAuth.isAuthenticated: 始终返回 true
+ * 4. authenticatedUrl: 保持干净 URL，控制台启动输出不再携带 ?token=...
+ */
+function disableBrowserAuth(ctx: Context) {
+  ctx.inject(['connection'], (sctx: any) => {
+    const connection = sctx.connection;
+    if (!connection) return;
+
+    connection.authorizeIndex = () => true;
+    connection.requestRejection = () => undefined;
+    if (connection.browserAuth) {
+      connection.browserAuth.authorizeIndex = () => true;
+      connection.browserAuth.isAuthenticated = () => true;
+    }
+    connection.authenticatedUrl = (baseUrl: string) => baseUrl;
+
+    console.log(
+      '[UIBranding] DSH Web BrowserAuth authentication has been completely disabled.'
+    );
+  });
+}
 
 export function apply(ctx: Context, config: Config) {
   console.log('[UIBranding] Mounting branding backend plugin...');
@@ -146,4 +171,7 @@ export function apply(ctx: Context, config: Config) {
 
   // 5. 注册全量 API 控制器路由
   registerRoutes(ctx, config);
+
+  // 6. 彻底禁用 DSH Web 身份验证机制，无需 token / cookie
+  disableBrowserAuth(ctx);
 }
