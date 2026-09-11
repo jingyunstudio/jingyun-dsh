@@ -4,34 +4,91 @@ import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 
-import type { LarkAuthStartResult, LarkAuthStatus } from './types';
-
+import { getLarkConfigDir } from '../common/paths.js';
+import type { LarkAuthStartResult, LarkAuthStatus } from './types.js';
 const execAsync = promisify(exec);
 
 export class LarkConnectorService {
   private currentInitProcess: ChildProcess | null = null;
   private currentPollProcess: ChildProcess | null = null;
+  private cachedStatus: { data: LarkAuthStatus; expiresAt: number } | null =
+    null;
+  private getLarkEnv(): NodeJS.ProcessEnv {
+    const configDir = getLarkConfigDir();
+    if (!fs.existsSync(configDir)) {
+      try {
+        fs.mkdirSync(configDir, { recursive: true });
+      } catch {}
+    }
+    return {
+      ...process.env,
+      LARKSUITE_CLI_CONFIG_DIR: configDir,
+      LARKSUITE_CLI_NO_UPDATE_NOTIFIER: '1',
+    };
+  }
 
-  public async getStatus(): Promise<LarkAuthStatus> {
+  private isConfiguredLocally(): boolean {
     try {
-      const { stdout } = await execAsync('lark-cli auth status --json');
-      return JSON.parse(stdout) as LarkAuthStatus;
+      const configDir = getLarkConfigDir();
+      const configPath = path.join(configDir, 'config.json');
+      if (!fs.existsSync(configPath)) {
+        const legacyPath = path.join(os.homedir(), '.lark-cli', 'config.json');
+        if (fs.existsSync(legacyPath)) {
+          try {
+            if (!fs.existsSync(configDir)) {
+              fs.mkdirSync(configDir, { recursive: true });
+            }
+            fs.copyFileSync(legacyPath, configPath);
+          } catch {}
+        }
+      }
+      if (!fs.existsSync(configPath)) return false;
+      const raw = fs.readFileSync(configPath, 'utf-8');
+      const data = JSON.parse(raw);
+      if (Array.isArray(data?.apps) && data.apps.length > 0) return true;
+      if (data?.appId) return true;
+      return false;
+    } catch {
+      return false;
+    }
+  }
+  public async getStatus(): Promise<LarkAuthStatus> {
+    if (!this.isConfiguredLocally()) {
+      this.cachedStatus = null;
+      return { status: 'needs_login', error: 'not configured' };
+    }
+
+    const now = Date.now();
+    if (this.cachedStatus && this.cachedStatus.expiresAt > now) {
+      return this.cachedStatus.data;
+    }
+
+    try {
+      const { stdout } = await execAsync('lark-cli auth status --json', {
+        env: this.getLarkEnv(),
+      });
+      const data = JSON.parse(stdout) as LarkAuthStatus;
+      this.cachedStatus = { data, expiresAt: now + 3000 };
+      return data;
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'stdout' in err) {
         const out = String((err as { stdout: unknown }).stdout);
         try {
-          return JSON.parse(out) as LarkAuthStatus;
+          const data = JSON.parse(out) as LarkAuthStatus;
+          this.cachedStatus = { data, expiresAt: now + 3000 };
+          return data;
         } catch {}
       }
       const message = err instanceof Error ? err.message : String(err);
       return { status: 'needs_login', error: message };
     }
   }
-
   public async startAuth(): Promise<LarkAuthStartResult> {
     let isConfigured = false;
     try {
-      const { stdout } = await execAsync('lark-cli auth status --json');
+      const { stdout } = await execAsync('lark-cli auth status --json', {
+        env: this.getLarkEnv(),
+      });
       const data = JSON.parse(stdout) as { appId?: string };
       if (data?.appId) {
         isConfigured = true;
@@ -61,7 +118,8 @@ export class LarkConnectorService {
       };
     } else {
       const { stdout } = await execAsync(
-        'lark-cli auth login --no-wait --json --domain all'
+        'lark-cli auth login --no-wait --json --domain all',
+        { env: this.getLarkEnv() }
       );
       const data = JSON.parse(stdout) as {
         verification_url: string;
@@ -76,8 +134,9 @@ export class LarkConnectorService {
   }
 
   public async logout(): Promise<{ success: boolean }> {
+    this.cachedStatus = null;
     try {
-      await execAsync('lark-cli auth logout');
+      await execAsync('lark-cli auth logout', { env: this.getLarkEnv() });
     } catch {}
     return { success: true };
   }
@@ -148,7 +207,7 @@ export class LarkConnectorService {
       const child = spawn(
         'lark-cli',
         ['auth', 'login', '--device-code', deviceCode, '--json'],
-        { shell: true }
+        { shell: true, env: this.getLarkEnv() }
       );
       this.currentPollProcess = child;
       childProcessForLogin = child;
@@ -180,6 +239,7 @@ export class LarkConnectorService {
       });
 
       if (timeoutId) clearTimeout(timeoutId);
+      this.cachedStatus = null;
       console.log('[LarkConnector] Phase 2 auth login finished successfully!');
       return {
         success: true,
@@ -215,7 +275,7 @@ export class LarkConnectorService {
       const cmd = `lark-cli config init --new > "${tempLogPath}" 2>&1`;
       console.log(`[LarkConnector] Executing command: ${cmd}`);
 
-      const child = exec(cmd);
+      const child = exec(cmd, { env: this.getLarkEnv() });
       this.currentInitProcess = child;
 
       let urlFound = false;

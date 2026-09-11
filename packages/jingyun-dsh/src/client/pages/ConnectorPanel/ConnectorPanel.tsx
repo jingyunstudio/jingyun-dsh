@@ -177,7 +177,6 @@ const WechatWorkLogo = () => (
 export const ConnectorPanel = () => {
   const [larkStatus, setLarkStatus] = useState<any>(null);
   const [wecomStatus, setWecomStatus] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showWecomModal, setShowWecomModal] = useState(false);
@@ -252,8 +251,6 @@ export const ConnectorPanel = () => {
       }
     } catch (err) {
       console.error('[ConnectorPanel] Failed to fetch lark status:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -263,7 +260,6 @@ export const ConnectorPanel = () => {
       !confirm('确定要断开飞书的连接吗？断开后相关的飞书智能体能力将无法使用。')
     )
       return;
-    setLoading(true);
     try {
       const res = await fetch('/api/jingyun/connectors/lark/auth-logout', {
         method: 'POST',
@@ -273,7 +269,6 @@ export const ConnectorPanel = () => {
       }
     } catch (err) {
       console.error('[ConnectorPanel] Failed to disconnect lark:', err);
-      setLoading(false);
     }
   };
   // 获取企业微信连接状态
@@ -391,20 +386,6 @@ export const ConnectorPanel = () => {
         </p>
       </div>
 
-      {loading ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '80px 0',
-            color: 'var(--dsw-alias-label-tertiary, #64748b)',
-            fontSize: '14px',
-          }}
-        >
-          正在获取连接器状态...
-        </div>
-      ) : (
         <div
           style={{
             display: 'grid',
@@ -896,7 +877,6 @@ export const ConnectorPanel = () => {
             </div>
           </div>
         </div>
-      )}
 
       {/* 企业微信授权扫码弹窗 (完全复用飞书 ConnectorAuthModal 组件) */}
       {showWecomModal && (
@@ -907,6 +887,10 @@ export const ConnectorPanel = () => {
           onSuccess={() => {
             setShowWecomModal(false);
             fetchWecomStatus();
+          }}
+          onDisconnect={() => {
+            setShowWecomModal(false);
+            handleWecomDisconnect();
           }}
         />
       )}
@@ -932,6 +916,10 @@ export const ConnectorPanel = () => {
           onSuccess={() => {
             setShowAuthModal(false);
             fetchLarkStatus();
+          }}
+          onDisconnect={() => {
+            setShowAuthModal(false);
+            handleDisconnect();
           }}
         />
       )}
@@ -1331,6 +1319,7 @@ interface AuthModalProps {
   title: string;
   onClose: () => void;
   onSuccess: () => void;
+  onDisconnect?: () => void;
 }
 
 // 扫码授权弹窗组件
@@ -1339,6 +1328,7 @@ const ConnectorAuthModal = ({
   title,
   onClose,
   onSuccess,
+  onDisconnect,
 }: AuthModalProps) => {
   const [loading, setLoading] = useState(true);
   const [authData, setAuthData] = useState<{
@@ -1856,7 +1846,7 @@ const ConnectorAuthModal = ({
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <span>
+                    <span style={{ borderBottom: '1px solid #3370FF' }}>
                       {authMode === 'init'
                         ? '或在浏览器中打开配置网址'
                         : '或在浏览器中打开授权网址'}
@@ -1886,10 +1876,34 @@ const ConnectorAuthModal = ({
                 width: '100%',
                 display: 'flex',
                 justifyContent: 'center',
+                alignItems: 'center',
                 gap: '12px',
               }}
             >
+              {onDisconnect && (channel !== 'lark' || authMode === 'login') && (
+                <button
+                  type="button"
+                  onClick={onDisconnect}
+                  style={{
+                    padding: '6px 16px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(239, 68, 68, 0.2)',
+                    background: 'rgba(239, 68, 68, 0.05)',
+                    color: '#ef4444',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  <UnbindIcon />
+                  解除授权
+                </button>
+              )}
               <button
+                type="button"
                 className="jy-btn-secondary"
                 onClick={onClose}
                 style={{

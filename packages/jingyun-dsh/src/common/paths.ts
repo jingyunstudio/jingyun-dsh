@@ -23,6 +23,19 @@ export function getDshHome(): string {
 
   return path.resolve(os.homedir(), '.dsh');
 }
+/**
+ * 获取连接器存储目录 ($DSH_HOME/connectors)
+ */
+export function getConnectorsDir(): string {
+  return path.join(getDshHome(), 'connectors');
+}
+
+/**
+ * 获取飞书 CLI 认证与配置目录 ($DSH_HOME/connectors/lark)
+ */
+export function getLarkConfigDir(): string {
+  return path.join(getConnectorsDir(), 'lark');
+}
 
 /**
  * 获取插件包根目录

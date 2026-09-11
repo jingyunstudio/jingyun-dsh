@@ -1,11 +1,12 @@
 import crypto from 'crypto';
 import { promises as fs } from 'fs';
+import fsSync from 'fs';
 import https from 'https';
 import path from 'path';
 
 import { WebSocket, type RawData } from 'ws';
 
-import { getDshHome } from '../common/paths';
+import { getConnectorsDir, getDshHome } from '../common/paths';
 import type { WecomConfig, WecomState, WecomStatus } from './types';
 
 interface NodeError extends Error {
@@ -33,6 +34,10 @@ export class WecomConnectorService {
   private readonly maxMissedPong = 3;
 
   private get configPath(): string {
+    const connectorsConfig = path.join(getConnectorsDir(), 'wecom.json');
+    if (fsSync.existsSync(connectorsConfig)) {
+      return connectorsConfig;
+    }
     return path.join(getDshHome(), 'wecom.config.json');
   }
 
