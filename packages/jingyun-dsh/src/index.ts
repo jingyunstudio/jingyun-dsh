@@ -24,6 +24,7 @@ if (initialData.app_host) {
 export const name = 'jingyun-dsh';
 export const inject = ['webServer', 'settings', 'commands'];
 export { Config };
+export * from './connectors';
 
 function installSettingsSection(
   ctx: Context,

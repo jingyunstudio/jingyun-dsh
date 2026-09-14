@@ -152,14 +152,17 @@ export function registerConnectorsRoutes(ctx: Context) {
       },
     });
 
-    // 断开连接
+    // 断开连接（解绑，清除全部配置）
     ctx.webServer.register({
       kind: 'exact',
       path: `${prefix}/disconnect`,
       handler: async (_req, res) => {
         try {
-          wecomConnector.disconnect();
-          sendJson(res, { success: true, data: { message: 'Disconnected' } });
+          await wecomConnector.clearConfig();
+          sendJson(res, {
+            success: true,
+            data: { message: 'Disconnected and cleared' },
+          });
         } catch (err: any) {
           sendError(res, err.message, 500);
         }

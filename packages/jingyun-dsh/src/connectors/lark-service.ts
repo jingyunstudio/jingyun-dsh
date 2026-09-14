@@ -135,9 +135,51 @@ export class LarkConnectorService {
 
   public async logout(): Promise<{ success: boolean }> {
     this.cachedStatus = null;
+
+    if (this.currentInitProcess) {
+      try {
+        this.currentInitProcess.kill();
+      } catch {}
+      this.currentInitProcess = null;
+    }
+    if (this.currentPollProcess) {
+      try {
+        this.currentPollProcess.kill();
+      } catch {}
+      this.currentPollProcess = null;
+    }
+
     try {
       await execAsync('lark-cli auth logout', { env: this.getLarkEnv() });
     } catch {}
+
+    // 彻底清除本地飞书自建应用配置与缓存，确保完成解绑
+    try {
+      const configDir = getLarkConfigDir();
+      const configPath = path.join(configDir, 'config.json');
+      if (fs.existsSync(configPath)) {
+        fs.unlinkSync(configPath);
+      }
+      const cacheDir = path.join(configDir, 'cache');
+      if (fs.existsSync(cacheDir)) {
+        fs.rmSync(cacheDir, { recursive: true, force: true });
+      }
+      const locksDir = path.join(configDir, 'locks');
+      if (fs.existsSync(locksDir)) {
+        fs.rmSync(locksDir, { recursive: true, force: true });
+      }
+    } catch (e) {
+      console.warn('[LarkConnector] Failed to clean lark config files:', e);
+    }
+
+    // 避免旧遗留目录残留导致自动拷贝复活
+    try {
+      const legacyPath = path.join(os.homedir(), '.lark-cli', 'config.json');
+      if (fs.existsSync(legacyPath)) {
+        fs.unlinkSync(legacyPath);
+      }
+    } catch {}
+
     return { success: true };
   }
 

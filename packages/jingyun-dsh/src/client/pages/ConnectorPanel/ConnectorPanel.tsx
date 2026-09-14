@@ -181,10 +181,12 @@ export const ConnectorPanel = () => {
     }
   };
 
-  // 登出飞书
+  // 解绑飞书
   const handleDisconnect = async () => {
     if (
-      !confirm('确定要断开飞书的连接吗？断开后相关的飞书智能体能力将无法使用。')
+      !confirm(
+        '确定要解绑飞书吗？解绑后将清除本地配置与凭据，相关的飞书智能体能力将无法使用。'
+      )
     )
       return;
     try {
@@ -192,12 +194,14 @@ export const ConnectorPanel = () => {
         method: 'POST',
       });
       if (res.ok) {
+        setLarkStatus({ status: 'needs_login' });
         await fetchLarkStatus();
       }
     } catch (err) {
       console.error('[ConnectorPanel] Failed to disconnect lark:', err);
     }
   };
+
   // 获取企业微信连接状态
   const fetchWecomStatus = async () => {
     try {
@@ -213,19 +217,20 @@ export const ConnectorPanel = () => {
     }
   };
 
-  // 断开企业微信
+  // 解绑企业微信
   const handleWecomDisconnect = async () => {
     if (
       !confirm(
-        '确定要断开企业微信的连接吗？断开后相关的企业微信智能体能力将无法使用。'
+        '确定要解绑企业微信吗？解绑后将清除本地配置，相关的企业微信智能体能力将无法使用。'
       )
     )
       return;
     try {
-      const res = await fetch('/api/jingyun/connectors/wecom/disconnect', {
+      const res = await fetch('/api/jingyun/connectors/wecom/clear', {
         method: 'POST',
       });
       if (res.ok) {
+        setWecomStatus({ status: 'disconnected' });
         await fetchWecomStatus();
       }
     } catch (err) {
@@ -242,17 +247,20 @@ export const ConnectorPanel = () => {
 
   const isLarkConnected = Boolean(
     larkStatus &&
+    larkStatus.status !== 'needs_login' &&
     (larkStatus.identities?.user?.status === 'ready' ||
       larkStatus.identities?.user?.status === 'needs_refresh' ||
       larkStatus.identities?.user?.available === true ||
-      larkStatus.identities?.bot?.status === 'ready' ||
+      (larkStatus.appId && larkStatus.identities?.bot?.status === 'ready') ||
       (larkStatus.appId && larkStatus.identities?.user?.userName))
   );
   const larkUser = larkStatus?.identities?.user?.userName || '';
   const larkAppId = larkStatus?.appId || '';
 
-  const isWecomConnected =
-    wecomStatus?.hasConfig === true || wecomStatus?.status === 'connected';
+  const isWecomConnected = Boolean(
+    (wecomStatus?.hasConfig === true || wecomStatus?.status === 'connected') &&
+    (wecomStatus?.botId || wecomStatus?.config?.botId)
+  );
 
   const wecomBotId = wecomStatus?.botId || wecomStatus?.config?.botId || '';
 
@@ -1059,7 +1067,8 @@ const ConnectorAuthModal = ({
                 status === 'ready' ||
                 status === 'needs_refresh' ||
                 available === true ||
-                json.data.identities?.bot?.status === 'ready'
+                (authMode !== 'init' &&
+                  json.data.identities?.bot?.status === 'ready')
               ) {
                 triggerSuccess();
               }

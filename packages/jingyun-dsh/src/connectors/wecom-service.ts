@@ -32,6 +32,7 @@ export class WecomConnectorService {
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private missedPongCount = 0;
   private readonly maxMissedPong = 3;
+  private isIntentionalDisconnect = false;
 
   private get configPath(): string {
     const connectorsConfig = path.join(getConnectorsDir(), 'wecom.json');
@@ -81,12 +82,25 @@ export class WecomConnectorService {
   public async clearConfig(): Promise<void> {
     this.disconnect();
     this.config = null;
-    try {
-      await fs.unlink(this.configPath);
-    } catch (err: unknown) {
-      const nodeErr = err as NodeError;
-      if (nodeErr.code !== 'ENOENT') {
-        console.error('[WecomConnector] Failed to remove config file:', err);
+    this.status = 'disconnected';
+    this.connectedAt = undefined;
+    this.lastError = undefined;
+
+    const filesToRemove = [
+      path.join(getConnectorsDir(), 'wecom.json'),
+      path.join(getDshHome(), 'wecom.config.json'),
+    ];
+
+    for (const filePath of filesToRemove) {
+      try {
+        if (fsSync.existsSync(filePath)) {
+          await fs.unlink(filePath);
+        }
+      } catch (err: unknown) {
+        const nodeErr = err as NodeError;
+        if (nodeErr.code !== 'ENOENT') {
+          console.error(`[WecomConnector] Failed to remove ${filePath}:`, err);
+        }
       }
     }
   }
@@ -109,6 +123,7 @@ export class WecomConnectorService {
       throw new Error('未配置企业微信 BotId 或 BotSecret');
     }
 
+    this.isIntentionalDisconnect = false;
     this.disconnect();
     this.status = 'connecting';
     this.lastError = undefined;
@@ -145,7 +160,10 @@ export class WecomConnectorService {
         if (this.status === 'connected') {
           this.status = 'disconnected';
         }
-        if (this.config?.autoReconnect !== false) {
+        if (
+          !this.isIntentionalDisconnect &&
+          this.config?.autoReconnect !== false
+        ) {
           this.scheduleReconnect();
         }
       });
@@ -184,6 +202,7 @@ export class WecomConnectorService {
   }
 
   public disconnect(): void {
+    this.isIntentionalDisconnect = true;
     this.stopHeartbeat();
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
@@ -191,6 +210,7 @@ export class WecomConnectorService {
     }
     if (this.ws) {
       try {
+        this.ws.removeAllListeners();
         this.ws.terminate();
       } catch {}
       this.ws = null;
