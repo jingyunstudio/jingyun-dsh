@@ -3,7 +3,11 @@ import path from 'path';
 
 import type { Context } from '@deepseek-ai/cordis';
 
-import { larkConnector, wecomConnector } from '../connectors';
+import {
+  dingtalkConnector,
+  larkConnector,
+  wecomConnector,
+} from '../connectors';
 import { baseHome, getSessionAgentsConfig } from './manager';
 
 interface CachedAgent {
@@ -190,6 +194,13 @@ ${content}
               connectorsPrompt += `\n- 【飞书连接器 (Feishu/Lark Connector)】：已就绪（App ID: ${larkCached.appId || 'configured'}）。
   * 核心能力：可向飞书发送群聊/单聊消息、查询与创建日程、读取与追加多维表格记录。
   * 技能指引：当用户要求“发到飞书群”、“查飞书日程”、“追加飞书多维表格”时，请使用 \`feishu-connector\` 技能执行。`;
+            }
+
+            const dingtalkState = dingtalkConnector.getStatus();
+            if (dingtalkState.status === 'connected') {
+              connectorsPrompt += `\n- 【钉钉连接器 (DingTalk Connector)】：已就绪（${dingtalkState.appKey ? '主体: ' + dingtalkState.appKey : '已连接'}）。
+  * 核心能力：已通过钉钉官方工作区生态（dws）授权就绪。支持协同钉钉群聊、文档、日程、待办、多维表与通讯录。
+  * 技能指引：当用户需要与钉钉交互时，可直接使用官方 \`dws\` 钉钉能力套件（如发送消息使用 \`dws chat\`）。`;
             }
 
             if (connectorsPrompt) {

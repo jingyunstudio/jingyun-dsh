@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { sendPromptToComposer } from '../../dom-helper';
 import {
   ConnectorDetailModal,
+  DEFAULT_DINGTALK_SUGGESTIONS,
   DEFAULT_LARK_SUGGESTIONS,
   DEFAULT_WECOM_SUGGESTIONS,
   UnbindIcon,
@@ -107,6 +108,9 @@ export const ConnectorPanel = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showWecomModal, setShowWecomModal] = useState(false);
   const [showWecomDetailModal, setShowWecomDetailModal] = useState(false);
+  const [dingtalkStatus, setDingtalkStatus] = useState<any>(null);
+  const [showDingtalkModal, setShowDingtalkModal] = useState(false);
+  const [showDingtalkDetailModal, setShowDingtalkDetailModal] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
 
   const showToast = (msg: string) => {
@@ -128,12 +132,16 @@ export const ConnectorPanel = () => {
     }
   };
 
-  const handleInstallCli = async (name: 'wecom' | 'lark') => {
+  const handleInstallCli = async (name: 'wecom' | 'lark' | 'dingtalk') => {
     if (installingCli) return;
     setInstallingCli(name);
-    showToast(
-      `正在后台通过 npm 安装 ${name === 'wecom' ? '@wecom/cli' : '@larksuite/cli'}，请稍候...`
-    );
+    const pkgName =
+      name === 'dingtalk'
+        ? 'dingtalk-workspace-cli'
+        : name === 'wecom'
+          ? '@wecom/cli'
+          : '@larksuite/cli';
+    showToast(`正在后台通过 npm 安装 ${pkgName}，请稍候...`);
     try {
       const res = await fetch('/api/jingyun/connectors/cli/install', {
         method: 'POST',
@@ -175,7 +183,9 @@ export const ConnectorPanel = () => {
     const list =
       channel === 'wecom'
         ? DEFAULT_WECOM_SUGGESTIONS
-        : DEFAULT_LARK_SUGGESTIONS;
+        : channel === 'dingtalk'
+          ? DEFAULT_DINGTALK_SUGGESTIONS
+          : DEFAULT_LARK_SUGGESTIONS;
     const randomIndex = Math.floor(Math.random() * list.length);
     const randomPrompt = list[randomIndex]?.text || '';
     handleNewChatWithPrompt(randomPrompt);
@@ -232,6 +242,21 @@ export const ConnectorPanel = () => {
     }
   };
 
+  // 获取钉钉连接状态
+  const fetchDingtalkStatus = async () => {
+    try {
+      const res = await fetch('/api/jingyun/connectors/dingtalk/status');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setDingtalkStatus(json.data);
+        }
+      }
+    } catch (err) {
+      console.error('[ConnectorPanel] Failed to fetch dingtalk status:', err);
+    }
+  };
+
   // 解绑企业微信
   const handleWecomDisconnect = async () => {
     if (
@@ -253,10 +278,32 @@ export const ConnectorPanel = () => {
     }
   };
 
+  // 解绑钉钉
+  const handleDingtalkDisconnect = async () => {
+    if (
+      !confirm(
+        '确定要解除钉钉账号授权吗？解除后将退出当前钉钉工作区登录，相关的钉钉智能体能力将无法使用。'
+      )
+    )
+      return;
+    try {
+      const res = await fetch('/api/jingyun/connectors/dingtalk/clear', {
+        method: 'POST',
+      });
+      if (res.ok) {
+        setDingtalkStatus({ status: 'disconnected' });
+        await fetchDingtalkStatus();
+      }
+    } catch (err) {
+      console.error('[ConnectorPanel] Failed to disconnect dingtalk:', err);
+    }
+  };
+
   useEffect(() => {
     queueMicrotask(() => {
       fetchLarkStatus();
       fetchWecomStatus();
+      fetchDingtalkStatus();
       fetchCliStatus();
     });
   }, []);
@@ -295,6 +342,18 @@ export const ConnectorPanel = () => {
   );
 
   const wecomBotId = wecomStatus?.botId || wecomStatus?.config?.botId || '';
+
+  const isDingtalkConnected = Boolean(
+    dingtalkStatus?.status === 'connected' ||
+    dingtalkStatus?.cliAuth?.authenticated === true
+  );
+
+  const dingtalkAccountTitle =
+    (dingtalkStatus?.cliAuth?.corpName
+      ? `${dingtalkStatus.cliAuth.corpName}${dingtalkStatus.cliAuth.userName ? ' · ' + dingtalkStatus.cliAuth.userName : ''}`
+      : dingtalkStatus?.cliAuth?.userName) ||
+    dingtalkStatus?.appKey ||
+    '';
 
   return (
     <div
@@ -599,6 +658,13 @@ export const ConnectorPanel = () => {
         {/* 钉钉列表行 */}
         <div
           className="jy-connector-card"
+          onClick={() => {
+            if (isDingtalkConnected) {
+              setShowDingtalkDetailModal(true);
+            } else {
+              setShowDingtalkModal(true);
+            }
+          }}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -612,8 +678,9 @@ export const ConnectorPanel = () => {
               'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
             boxSizing: 'border-box',
             height: '80px',
-            opacity: 0.65,
-            cursor: 'not-allowed',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
           }}
         >
           {/* Logo */}
@@ -669,8 +736,69 @@ export const ConnectorPanel = () => {
                   borderRadius: '4px',
                 }}
               >
-                即将上线
+                官方
               </span>
+
+              {isDingtalkConnected && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '10px',
+                    color: '#16a34a',
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    fontWeight: 500,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: '4px',
+                      height: '4px',
+                      borderRadius: '50%',
+                      background: '#22c55e',
+                    }}
+                  />
+                  已启用
+                </span>
+              )}
+
+              {cliStatus?.dingtalk?.installed ? (
+                <span
+                  style={{
+                    fontSize: '10px',
+                    color: '#059669',
+                    background: 'rgba(16, 185, 129, 0.1)',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    fontWeight: 500,
+                  }}
+                  title="钉钉 CLI 工具 (dws) 已就绪"
+                >
+                  CLI v{cliStatus.dingtalk.version || 'ready'}
+                </span>
+              ) : (
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleInstallCli('dingtalk');
+                  }}
+                  style={{
+                    fontSize: '10px',
+                    color: '#2563eb',
+                    background: 'rgba(37, 99, 235, 0.1)',
+                    padding: '1px 6px',
+                    borderRadius: '4px',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                  title="点击安装 dingtalk-workspace-cli"
+                >
+                  {installingCli === 'dingtalk' ? '安装中...' : '＋安装 CLI'}
+                </span>
+              )}
             </div>
             <p
               style={{
@@ -681,30 +809,64 @@ export const ConnectorPanel = () => {
                 overflow: 'hidden',
                 whiteSpace: 'nowrap',
               }}
+              title="与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。"
             >
-              通过钉钉官方接口，支持智能体介入群组对话、创建待办事项及跨组织表格同步。
+              与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。
             </p>
           </div>
 
           {/* Action */}
-          <div style={{ flexShrink: 0, marginLeft: '4px' }}>
-            <button
-              disabled
-              style={{
-                height: '28px',
-                padding: '0 14px',
-                borderRadius: '9999px',
-                border: 'none',
-                background:
-                  'var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-                color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                fontSize: '12px',
-                fontWeight: 500,
-                cursor: 'not-allowed',
-              }}
-            >
-              未开放
-            </button>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ flexShrink: 0, marginLeft: '4px' }}
+          >
+            {isDingtalkConnected ? (
+              <button
+                className="jy-btn-secondary"
+                onClick={() => setShowDingtalkDetailModal(true)}
+                style={{
+                  height: '28px',
+                  padding: '0 14px',
+                  borderRadius: '9999px',
+                  border:
+                    '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+                  background:
+                    'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
+                  color: 'var(--dsw-alias-label-primary, #0f172a)',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                管理
+              </button>
+            ) : (
+              <button
+                className="jy-btn-primary"
+                onClick={() => setShowDingtalkModal(true)}
+                style={{
+                  height: '28px',
+                  padding: '0 14px',
+                  borderRadius: '9999px',
+                  border: 'none',
+                  background: '#007FFF',
+                  color: '#ffffff',
+                  fontSize: '12px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = '0.9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = '1';
+                }}
+              >
+                ＋ 连接
+              </button>
+            )}
           </div>
         </div>
 
@@ -956,6 +1118,44 @@ export const ConnectorPanel = () => {
           }}
         />
       )}
+
+      {/* 钉钉官方授权扫码/浏览器弹窗 */}
+      {showDingtalkModal && (
+        <ConnectorAuthModal
+          channel="dingtalk"
+          title="钉钉授权连接"
+          onClose={() => setShowDingtalkModal(false)}
+          onSuccess={() => {
+            setShowDingtalkModal(false);
+            fetchDingtalkStatus();
+          }}
+          onDisconnect={() => {
+            setShowDingtalkModal(false);
+            handleDingtalkDisconnect();
+          }}
+        />
+      )}
+
+      {/* 钉钉管理详情弹窗 */}
+      {showDingtalkDetailModal && (
+        <ConnectorDetailModal
+          channel="dingtalk"
+          title="钉钉 (DingTalk)"
+          userName={dingtalkAccountTitle}
+          status={isDingtalkConnected ? 'connected' : 'disconnected'}
+          onClose={() => setShowDingtalkDetailModal(false)}
+          onDisconnect={() => {
+            setShowDingtalkDetailModal(false);
+            handleDingtalkDisconnect();
+          }}
+          onTryIt={() => {
+            handleTryIt('dingtalk');
+          }}
+          onSendPrompt={(text) => {
+            handleSendPrompt(text);
+          }}
+        />
+      )}
       {/* 飞书授权扫码弹窗 */}
       {showAuthModal && (
         <ConnectorAuthModal
@@ -1065,6 +1265,9 @@ const ConnectorAuthModal = ({
           setAuthData(json.data);
           setAuthMode(json.data.mode || 'login');
           startPolling(json.data.device_code);
+          if (channel === 'dingtalk' && json.data.verification_url) {
+            openExternalUrl(json.data.verification_url);
+          }
         } else {
           setErrorMessage(json.error || '无法初始化授权链接');
         }
@@ -1169,6 +1372,14 @@ const ConnectorAuthModal = ({
               if (json.data.status === 'connected' || json.data.hasConfig) {
                 triggerSuccess();
               }
+            } else if (channel === 'dingtalk') {
+              if (
+                json.data.cliAuth?.authenticated === true ||
+                json.data.status === 'connected' ||
+                json.data.connected === true
+              ) {
+                triggerSuccess();
+              }
             } else {
               const status = json.data.identities?.user?.status;
               const available = json.data.identities?.user?.available;
@@ -1210,6 +1421,21 @@ const ConnectorAuthModal = ({
       },
     };
   };
+
+  const handleModalClose = () => {
+    if (channel === 'dingtalk') {
+      fetch('/api/jingyun/connectors/dingtalk/auth-cancel', {
+        method: 'POST',
+      }).catch(() => {});
+    }
+    onClose();
+  };
+
+  const channelRef = useRef(channel);
+  useEffect(() => {
+    channelRef.current = channel;
+  });
+
   const startAuthRef = useRef(startAuth);
   useEffect(() => {
     startAuthRef.current = startAuth;
@@ -1219,6 +1445,11 @@ const ConnectorAuthModal = ({
       startAuthRef.current();
     });
     return () => {
+      if (channelRef.current === 'dingtalk') {
+        fetch('/api/jingyun/connectors/dingtalk/auth-cancel', {
+          method: 'POST',
+        }).catch(() => {});
+      }
       if (
         intervalRef.current &&
         typeof intervalRef.current.close === 'function'
@@ -1318,14 +1549,16 @@ const ConnectorAuthModal = ({
             >
               {channel === 'wecom'
                 ? '已安全绑定至您的企业微信。'
-                : '已安全绑定至您的飞书账号。'}
+                : channel === 'dingtalk'
+                  ? '已安全授权至您的钉钉账号。'
+                  : '已安全绑定至您的飞书账号。'}
             </p>
           </div>
         ) : (
           <>
             {/* 关闭按钮 */}
             <button
-              onClick={onClose}
+              onClick={handleModalClose}
               style={{
                 position: 'absolute',
                 top: '20px',
@@ -1383,7 +1616,13 @@ const ConnectorAuthModal = ({
                 alignItems: 'center',
               }}
             >
-              {channel === 'wecom' ? (
+              {channel === 'dingtalk' ? (
+                <>
+                  已为您在系统默认浏览器中打开钉钉授权页面，
+                  <br />
+                  您也可以使用手机钉钉直接扫描下方二维码完成授权。
+                </>
+              ) : channel === 'wecom' ? (
                 <>
                   请使用手机企业微信扫描下方二维码完成授权，
                   <br />
@@ -1523,14 +1762,14 @@ const ConnectorAuthModal = ({
                     fgColor="#000000"
                   />
                 </div>
-                {/* 飞书网页授权跳转链接 */}
+                {/* 飞书 / 钉钉网页授权跳转链接 */}
                 {channel !== 'wecom' && authData.verification_url && (
                   <button
                     type="button"
                     onClick={() => openExternalUrl(authData.verification_url)}
                     style={{
                       fontSize: '12px',
-                      color: '#3370FF',
+                      color: channel === 'dingtalk' ? '#007FFF' : '#3370FF',
                       textDecoration: 'none',
                       fontWeight: 500,
                       display: 'inline-flex',
@@ -1545,16 +1784,26 @@ const ConnectorAuthModal = ({
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor =
-                        'rgba(51, 112, 255, 0.08)';
+                        channel === 'dingtalk'
+                          ? 'rgba(0, 127, 255, 0.08)'
+                          : 'rgba(51, 112, 255, 0.08)';
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor = 'transparent';
                     }}
                   >
-                    <span style={{ borderBottom: '1px solid #3370FF' }}>
-                      {authMode === 'init'
-                        ? '或在浏览器中打开配置网址'
-                        : '或在浏览器中打开授权网址'}
+                    <span
+                      style={{
+                        borderBottom: `1px solid ${
+                          channel === 'dingtalk' ? '#007FFF' : '#3370FF'
+                        }`,
+                      }}
+                    >
+                      {channel === 'dingtalk'
+                        ? '在浏览器中重新打开授权页面 ↗'
+                        : authMode === 'init'
+                          ? '或在浏览器中打开配置网址'
+                          : '或在浏览器中打开授权网址'}
                     </span>
                     <svg
                       width="12"
@@ -1613,7 +1862,7 @@ const ConnectorAuthModal = ({
               <button
                 type="button"
                 className="jy-btn-secondary"
-                onClick={onClose}
+                onClick={handleModalClose}
                 style={{
                   padding: '6px 20px',
                   borderRadius: '6px',

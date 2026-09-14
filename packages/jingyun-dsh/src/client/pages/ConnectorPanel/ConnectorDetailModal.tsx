@@ -33,6 +33,22 @@ export const WechatWorkLogo = () => (
   </svg>
 );
 
+// 钉钉 SVG 图标
+export const DingtalkLogo = () => (
+  <svg
+    width="36"
+    height="36"
+    viewBox="0 0 48 48"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <path
+      d="M24 4C12.95 4 4 12.95 4 24C4 35.05 12.95 44 24 44C35.05 44 44 35.05 44 24C44 12.95 35.05 4 24 4ZM31.95 19.48C30.93 23.63 26.35 29.02 20.17 31.79C19.34 32.16 18.52 31.42 18.78 30.56C19.78 27.27 21.6 23.27 22.58 19.72C22.75 19.11 22.37 18.54 21.75 18.66C18.64 19.26 14.88 20.69 11.95 22.25C11.39 22.55 10.74 21.99 11.08 21.46C13.88 17.15 19.26 11.59 25.96 9.43C26.78 9.16 27.53 9.94 27.23 10.76C26.06 13.98 24.32 18.12 23.41 21.43C23.24 22.04 23.63 22.61 24.25 22.49C27.35 21.89 31.11 20.46 34.04 18.9C34.6 18.6 35.25 19.16 34.91 19.69C34.25 20.7 33.15 22.25 31.95 19.48Z"
+      fill="#007FFF"
+    />
+  </svg>
+);
+
 // 去试试图标 (气泡)
 const TryItIcon = () => (
   <svg
@@ -127,8 +143,20 @@ export const DEFAULT_WECOM_SUGGESTIONS = [
   },
 ];
 
+export const DEFAULT_DINGTALK_SUGGESTIONS = [
+  {
+    text: '帮我整理今日开发进展汇报，发送工作通知给钉钉群【技术研发组】',
+  },
+  {
+    text: '向钉钉发送一条 Markdown 格式的系统构建与发布成功通知',
+  },
+  {
+    text: '把本次会议记录生成摘要并推送到钉钉',
+  },
+];
+
 export interface DetailModalProps {
-  channel?: 'lark' | 'wecom' | string;
+  channel?: 'lark' | 'wecom' | 'dingtalk' | string;
   title: string;
   status?: string;
   authLevel?: 'full' | 'bot_only' | 'disconnected';
@@ -166,54 +194,45 @@ export const ConnectorDetailModal = ({
   onAuthorizeUser,
 }: DetailModalProps) => {
   const isWecom = channel === 'wecom';
+  const isDingtalk = channel === 'dingtalk';
   const isConnected = status ? status === 'connected' : true;
 
   // 默认描述
-  const defaultDesc = isWecom
-    ? '与企业微信智能机器人深度集成，支持 WebSocket 长连接实时消息收发与协同，使 AI 具备在企业微信中自动响应消息并执行任务的能力。'
-    : '支持通过飞书账号授权，使 AI 具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。';
+  const defaultDesc = isDingtalk
+    ? '与钉钉官方工作区生态深度集成，支持浏览器一键授权与官方 CLI（dws）原生驱动，使智能体具备跨群聊、文档、日程与待办协同能力。'
+    : isWecom
+      ? '与企业微信智能机器人深度集成，支持 WebSocket 长连接实时消息收发与协同，使 AI 具备在企业微信中自动响应消息并执行任务的能力。'
+      : '支持通过飞书账号授权，使 AI 具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。';
 
   // 默认 Prompt 推荐列表
   const promptList =
     suggestions ||
-    (isWecom ? DEFAULT_WECOM_SUGGESTIONS : DEFAULT_LARK_SUGGESTIONS);
+    (isDingtalk
+      ? DEFAULT_DINGTALK_SUGGESTIONS
+      : isWecom
+        ? DEFAULT_WECOM_SUGGESTIONS
+        : DEFAULT_LARK_SUGGESTIONS);
 
   // 默认详细信息列表
   const infoItems =
     extraInfo ||
-    (isWecom
+    (isDingtalk
       ? [
           {
-            label: '机器人 ID (BotId)',
+            label: '组织 / 账号',
             value: (
-              <span style={{ fontFamily: 'monospace' }}>
-                {botId || appId || '-'}
+              <span style={{ fontWeight: 500 }}>
+                {userName || appId || botId || '-'}
               </span>
             ),
           },
           {
             label: '连接模式',
-            value: 'WebSocket 长连接',
+            value: 'DingTalk Workspace CLI (dws)',
           },
           {
             label: '运行状态',
-            value: isConnected ? '长连接已就绪' : '连接断开 / 正在重连',
-          },
-        ]
-      : [
-          ...(appId
-            ? [
-                {
-                  label: '应用 AppID',
-                  value: (
-                    <span style={{ fontFamily: 'monospace' }}>{appId}</span>
-                  ),
-                },
-              ]
-            : []),
-          {
-            label: '机器人底座',
-            value: (
+            value: isConnected ? (
               <span
                 style={{
                   color: '#16a34a',
@@ -231,66 +250,123 @@ export const ConnectorDetailModal = ({
                     background: '#22c55e',
                   }}
                 />
-                已就绪
+                已授权连接
               </span>
+            ) : (
+              '未连接'
             ),
           },
-          {
-            label: '应用授权',
-            value: userName ? (
-              <strong
-                style={{
-                  color: 'var(--dsw-alias-label-primary, #0f172a)',
-                }}
-              >
-                已授权 ({userName})
-              </strong>
-            ) : (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
+        ]
+      : isWecom
+        ? [
+            {
+              label: '机器人 ID (BotId)',
+              value: (
+                <span style={{ fontFamily: 'monospace' }}>
+                  {botId || appId || '-'}
+                </span>
+              ),
+            },
+            {
+              label: '连接模式',
+              value: 'WebSocket 长连接',
+            },
+            {
+              label: '运行状态',
+              value: isConnected ? '长连接已就绪' : '连接断开 / 正在重连',
+            },
+          ]
+        : [
+            ...(appId
+              ? [
+                  {
+                    label: '应用 AppID',
+                    value: (
+                      <span style={{ fontFamily: 'monospace' }}>{appId}</span>
+                    ),
+                  },
+                ]
+              : []),
+            {
+              label: '机器人底座',
+              value: (
                 <span
                   style={{
-                    color: '#d97706',
-                    fontSize: '12px',
+                    color: '#16a34a',
                     fontWeight: 500,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
                   }}
                 >
-                  未授权
-                </span>
-                {onAuthorizeUser && (
-                  <button
-                    type="button"
-                    onClick={onAuthorizeUser}
+                  <span
                     style={{
-                      padding: '2px 10px',
-                      fontSize: '11px',
-                      borderRadius: '4px',
-                      border: 'none',
-                      background: '#3370FF',
-                      color: '#ffffff',
-                      cursor: 'pointer',
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: '#22c55e',
+                    }}
+                  />
+                  已就绪
+                </span>
+              ),
+            },
+            {
+              label: '应用授权',
+              value: userName ? (
+                <strong
+                  style={{
+                    color: 'var(--dsw-alias-label-primary, #0f172a)',
+                  }}
+                >
+                  已授权 ({userName})
+                </strong>
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}
+                >
+                  <span
+                    style={{
+                      color: '#d97706',
+                      fontSize: '12px',
                       fontWeight: 500,
-                      transition: 'opacity 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.opacity = '0.9';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.opacity = '1';
                     }}
                   >
-                    去授权
-                  </button>
-                )}
-              </div>
-            ),
-          },
-        ]);
+                    未授权
+                  </span>
+                  {onAuthorizeUser && (
+                    <button
+                      type="button"
+                      onClick={onAuthorizeUser}
+                      style={{
+                        padding: '2px 10px',
+                        fontSize: '11px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        background: '#3370FF',
+                        color: '#ffffff',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        transition: 'opacity 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.opacity = '0.9';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.opacity = '1';
+                      }}
+                    >
+                      去授权
+                    </button>
+                  )}
+                </div>
+              ),
+            },
+          ]);
 
   const handleTryItClick = () => {
     if (onTryIt) {
@@ -390,19 +466,29 @@ export const ConnectorDetailModal = ({
               width: '56px',
               height: '56px',
               borderRadius: '12px',
-              background: isWecom
-                ? 'rgba(24, 117, 240, 0.08)'
-                : 'rgba(51, 112, 255, 0.08)',
+              background: isDingtalk
+                ? 'rgba(0, 127, 255, 0.08)'
+                : isWecom
+                  ? 'rgba(24, 117, 240, 0.08)'
+                  : 'rgba(51, 112, 255, 0.08)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              border: isWecom
-                ? '1px solid rgba(24, 117, 240, 0.15)'
-                : '1px solid rgba(51, 112, 255, 0.15)',
+              border: isDingtalk
+                ? '1px solid rgba(0, 127, 255, 0.15)'
+                : isWecom
+                  ? '1px solid rgba(24, 117, 240, 0.15)'
+                  : '1px solid rgba(51, 112, 255, 0.15)',
               flexShrink: 0,
             }}
           >
-            {isWecom ? <WechatWorkLogo /> : <FeishuLogo />}
+            {isDingtalk ? (
+              <DingtalkLogo />
+            ) : isWecom ? (
+              <WechatWorkLogo />
+            ) : (
+              <FeishuLogo />
+            )}
           </div>
           <div
             style={{

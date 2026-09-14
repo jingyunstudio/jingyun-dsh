@@ -5,6 +5,7 @@ import type { Context } from '@deepseek-ai/cordis';
 import { parseJsonBody, sendError, sendJson } from '../common/http';
 import {
   cliManager,
+  dingtalkConnector,
   larkConnector,
   type WecomConfig,
   wecomConnector,
@@ -222,4 +223,119 @@ export function registerConnectorsRoutes(ctx: Context) {
       },
     });
   }
+
+  // 初始化钉钉连接器服务
+  dingtalkConnector.init().catch((err: any) => {
+    console.warn('[DingtalkConnector] Failed to initialize:', err);
+  });
+
+  // 钉钉路由（标准路径 /api/jingyun/connectors/dingtalk/*）
+  const prefix = '/api/jingyun/connectors/dingtalk';
+
+  // 钉钉连接器状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/status`,
+    handler: async (_req, res) => {
+      try {
+        const status = await dingtalkConnector.getCombinedStatus();
+        sendJson(res, { success: true, data: status });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // 启动钉钉 CLI OAuth2 网页/扫码授权流程
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/auth-start`,
+    handler: async (_req, res) => {
+      try {
+        const data = await dingtalkConnector.startCliAuth();
+        sendJson(res, { success: true, data });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // 轮询钉钉 CLI 授权状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/auth-poll`,
+    handler: async (_req, res) => {
+      try {
+        const cliAuth = await dingtalkConnector.getCliAuthStatus();
+        sendJson(res, {
+          success: Boolean(cliAuth.authenticated),
+          data: cliAuth,
+          authenticated: Boolean(cliAuth.authenticated),
+        });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // 取消钉钉 CLI 登录流程
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/auth-cancel`,
+    handler: async (_req, res) => {
+      try {
+        dingtalkConnector.cancelCliAuth();
+        sendJson(res, { success: true, data: { message: 'Cancelled' } });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // 退出钉钉 CLI 登录
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/auth-logout`,
+    handler: async (_req, res) => {
+      try {
+        await dingtalkConnector.logoutCli();
+        sendJson(res, { success: true, data: { message: 'Logged out' } });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // 断开连接 / 清除配置
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/disconnect`,
+    handler: async (_req, res) => {
+      try {
+        await dingtalkConnector.clearConfig();
+        sendJson(res, {
+          success: true,
+          data: { message: 'Disconnected and cleared' },
+        });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/clear`,
+    handler: async (_req, res) => {
+      try {
+        await dingtalkConnector.clearConfig();
+        sendJson(res, {
+          success: true,
+          data: { message: 'Configuration cleared' },
+        });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
 }

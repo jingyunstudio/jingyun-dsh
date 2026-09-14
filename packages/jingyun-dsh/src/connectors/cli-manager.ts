@@ -62,17 +62,33 @@ export class CliManagerService {
   public getEnv(): NodeJS.ProcessEnv {
     const vendorDir = this.resolveVendorDir();
     const currentPath = process.env.PATH || '';
-    let newPath = currentPath;
+    const isWin = process.platform === 'win32';
+    const pathParts: string[] = [];
 
     if (vendorDir) {
-      const isWin = process.platform === 'win32';
       const nodeDir = isWin
         ? path.resolve(vendorDir, 'node')
         : path.resolve(vendorDir, 'node', 'bin');
-      newPath = isWin
-        ? `${nodeDir};${currentPath}`
-        : `${nodeDir}:${currentPath}`;
+      pathParts.push(nodeDir);
     }
+
+    // 探测本地 WorkBuddy 或全局 node 安装目录中可能存在的 CLI packages
+    const wbCliDir = path.resolve(
+      os.homedir(),
+      '.workbuddy',
+      'binaries',
+      'node',
+      'cli-connector-packages'
+    );
+    if (fs.existsSync(wbCliDir)) {
+      pathParts.push(wbCliDir);
+    }
+
+    const sep = isWin ? ';' : ':';
+    const newPath =
+      pathParts.length > 0
+        ? `${pathParts.join(sep)}${sep}${currentPath}`
+        : currentPath;
 
     return {
       ...process.env,
@@ -81,17 +97,22 @@ export class CliManagerService {
   }
 
   public async getSingleCliStatus(
-    name: 'wecom' | 'lark'
+    name: 'wecom' | 'lark' | 'dingtalk'
   ): Promise<CliToolStatus> {
     const isWin = process.platform === 'win32';
-    const cmdName =
-      name === 'wecom'
-        ? isWin
-          ? 'wecom-cli.cmd'
-          : 'wecom-cli'
-        : isWin
-          ? 'lark-cli.cmd'
-          : 'lark-cli';
+    let cmdName: string;
+    let fallbackCmd: string;
+
+    if (name === 'wecom') {
+      cmdName = isWin ? 'wecom-cli.cmd' : 'wecom-cli';
+      fallbackCmd = 'wecom-cli';
+    } else if (name === 'lark') {
+      cmdName = isWin ? 'lark-cli.cmd' : 'lark-cli';
+      fallbackCmd = 'lark-cli';
+    } else {
+      cmdName = isWin ? 'dws.cmd' : 'dws';
+      fallbackCmd = 'dws';
+    }
 
     try {
       const { stdout } = await execAsync(`${cmdName} --version`, {
@@ -106,7 +127,6 @@ export class CliManagerService {
     } catch (err: any) {
       // 尝试不用 .cmd 后缀再探测一次
       try {
-        const fallbackCmd = name === 'wecom' ? 'wecom-cli' : 'lark-cli';
         const { stdout } = await execAsync(`${fallbackCmd} --version`, {
           env: this.getEnv(),
         });
@@ -126,9 +146,10 @@ export class CliManagerService {
   }
 
   public async getAllStatus(): Promise<AllCliStatus> {
-    const [wecom, lark] = await Promise.all([
+    const [wecom, lark, dingtalk] = await Promise.all([
       this.getSingleCliStatus('wecom'),
       this.getSingleCliStatus('lark'),
+      this.getSingleCliStatus('dingtalk'),
     ]);
 
     const vendorNpm = this.resolveNpmPath();
@@ -146,16 +167,24 @@ export class CliManagerService {
     return {
       wecom,
       lark,
+      dingtalk,
       npmAvailable,
       npmPath,
     };
   }
 
   public async installCli(
-    name: 'wecom' | 'lark'
+    name: 'wecom' | 'lark' | 'dingtalk'
   ): Promise<{ success: boolean; message: string; version?: string }> {
     const npmExec = this.resolveNpmPath() || 'npm';
-    const pkgName = name === 'wecom' ? '@wecom/cli' : '@larksuite/cli';
+    let pkgName: string;
+    if (name === 'wecom') {
+      pkgName = '@wecom/cli';
+    } else if (name === 'lark') {
+      pkgName = '@larksuite/cli';
+    } else {
+      pkgName = 'dingtalk-workspace-cli';
+    }
 
     const cmd = `"${npmExec}" install -g ${pkgName} --registry=https://registry.npmmirror.com`;
     console.log(`[CliManager] Executing install: ${cmd}`);
