@@ -1,7 +1,12 @@
 import { QRCodeSVG } from 'qrcode.react';
 import React, { useState, useEffect, useRef } from 'react';
 
-import { WecomDetailModal } from './WecomModal';
+import {
+  ConnectorDetailModal,
+  DEFAULT_LARK_SUGGESTIONS,
+  DEFAULT_WECOM_SUGGESTIONS,
+  UnbindIcon,
+} from './ConnectorDetailModal';
 const openExternalUrl = (target: string) => {
   if (!target) return;
   try {
@@ -57,88 +62,6 @@ const FeishuLogo = () => (
     />
   </svg>
 );
-
-// 去试试图标 (气泡)
-const TryItIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{ marginRight: '4px' }}
-  >
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-  </svg>
-);
-
-// 解绑图标 (断开/重置)
-const UnbindIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{ marginRight: '4px' }}
-  >
-    <path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path>
-    <line x1="12" y1="2" x2="12" y2="12"></line>
-  </svg>
-);
-
-// 💡 试试这样用 灯泡图标
-const LightbulbIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A5 5 0 0 0 8 8c0 1 .3 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path>
-    <line x1="9" y1="18" x2="15" y2="18"></line>
-    <line x1="10" y1="22" x2="14" y2="22"></line>
-  </svg>
-);
-
-// 对话气泡发送图标
-const SendIcon = () => (
-  <svg
-    width="14"
-    height="14"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    style={{ opacity: 0.6, flexShrink: 0 }}
-  >
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-  </svg>
-);
-
-const PROMPT_SUGGESTIONS = [
-  {
-    text: '在飞书群【产品周会】里用机器人发一条通知：今天 15:00 在 3 楼会议室开周会，请带上周的进展材料',
-  },
-  {
-    text: '查下周我和张三、李四的飞书日程，找出三人都空闲的 2 小时时段，并创建一个标题为【Q2 规划对齐】的日程，邀请他们俩，预定一间会议室',
-  },
-  {
-    text: '在飞书多维表格【任务跟踪】里新增一行：标题=Q2 上线评审、负责人=张三、截止=2026-05-20、状态=进行中；并按负责人聚合未完成任务数',
-  },
-];
 
 // 钉钉 SVG 图标
 const DingtalkLogo = () => (
@@ -232,10 +155,14 @@ export const ConnectorPanel = () => {
     handleNewChatWithPrompt(text);
   };
 
-  const handleTryIt = () => {
+  const handleTryIt = (channel: string = 'lark') => {
     // 随机选择一个推荐提示词进行填充，带入新会话中
-    const randomIndex = Math.floor(Math.random() * PROMPT_SUGGESTIONS.length);
-    const randomPrompt = PROMPT_SUGGESTIONS[randomIndex]?.text || '';
+    const list =
+      channel === 'wecom'
+        ? DEFAULT_WECOM_SUGGESTIONS
+        : DEFAULT_LARK_SUGGESTIONS;
+    const randomIndex = Math.floor(Math.random() * list.length);
+    const randomPrompt = list[randomIndex]?.text || '';
     handleNewChatWithPrompt(randomPrompt);
   };
 
@@ -313,8 +240,14 @@ export const ConnectorPanel = () => {
     });
   }, []);
 
-  const isLarkConnected =
-    larkStatus && larkStatus.identities?.user?.status === 'ready';
+  const isLarkConnected = Boolean(
+    larkStatus &&
+      (larkStatus.identities?.user?.status === 'ready' ||
+        larkStatus.identities?.user?.status === 'needs_refresh' ||
+        larkStatus.identities?.user?.available === true ||
+        larkStatus.identities?.bot?.status === 'ready' ||
+        (larkStatus.appId && larkStatus.identities?.user?.userName))
+  );
   const larkUser = larkStatus?.identities?.user?.userName || '';
   const larkAppId = larkStatus?.appId || '';
 
@@ -891,15 +824,23 @@ export const ConnectorPanel = () => {
         />
       )}
 
-      {/* 企业微信管理详情弹窗 */}
+      {/* 企业微信管理详情弹窗 (复用通用 ConnectorDetailModal 组件) */}
       {showWecomDetailModal && (
-        <WecomDetailModal
+        <ConnectorDetailModal
+          channel="wecom"
+          title="企业微信 (WeCom)"
           botId={wecomBotId}
           status={wecomStatus?.status || 'connected'}
           onClose={() => setShowWecomDetailModal(false)}
           onDisconnect={() => {
             setShowWecomDetailModal(false);
             handleWecomDisconnect();
+          }}
+          onTryIt={() => {
+            handleTryIt('wecom');
+          }}
+          onSendPrompt={(text) => {
+            handleSendPrompt(text);
           }}
         />
       )}
@@ -927,385 +868,20 @@ export const ConnectorPanel = () => {
           title="飞书 (Lark)"
           userName={larkUser}
           appId={larkAppId}
+          status={isLarkConnected ? 'connected' : 'disconnected'}
           onClose={() => setShowDetailModal(false)}
           onDisconnect={() => {
             setShowDetailModal(false);
             handleDisconnect();
           }}
           onTryIt={() => {
-            handleTryIt();
+            handleTryIt('lark');
           }}
           onSendPrompt={(text) => {
             handleSendPrompt(text);
           }}
         />
       )}
-    </div>
-  );
-};
-
-interface DetailModalProps {
-  channel?: string;
-  title: string;
-  userName: string;
-  appId: string;
-  onClose: () => void;
-  onDisconnect: () => void;
-  onTryIt: () => void;
-  onSendPrompt: (text: string) => void;
-}
-
-// 已启用连接器的详情管理弹窗 (仿图 2 UI)
-const ConnectorDetailModal = ({
-  title,
-  userName,
-  appId,
-  onClose,
-  onDisconnect,
-  onTryIt,
-  onSendPrompt,
-}: DetailModalProps) => {
-  return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'rgba(0, 0, 0, 0.5)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 999,
-        backdropFilter: 'blur(4px)',
-        animation: 'fade-in 0.15s ease',
-      }}
-    >
-      <div
-        className="jy-detail-modal"
-        style={{
-          width: '512px',
-          maxHeight: '85vh',
-          background: 'var(--dsw-alias-bg-layer-2, #ffffff)',
-          borderRadius: '16px',
-          border:
-            '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-          boxShadow:
-            '0 20px 25px -5px rgba(0,0,0,0.2), 0 10px 10px -5px rgba(0,0,0,0.1)',
-          display: 'flex',
-          flexDirection: 'column',
-          padding: '24px',
-          boxSizing: 'border-box',
-          position: 'relative',
-          animation: 'slide-up 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-      >
-        {/* 关闭按钮 */}
-        <button
-          onClick={onClose}
-          style={{
-            position: 'absolute',
-            top: '20px',
-            right: '20px',
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            color: 'var(--dsw-alias-label-tertiary, #94a3b8)',
-            padding: '4px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-
-        {/* 1. Header Area */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '16px',
-            alignItems: 'flex-start',
-            marginBottom: '20px',
-          }}
-        >
-          <div
-            className="jy-card-icon-box"
-            style={{
-              width: '56px',
-              height: '56px',
-              borderRadius: '12px',
-              background: 'rgba(51, 112, 255, 0.08)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: '1px solid rgba(51, 112, 255, 0.15)',
-              flexShrink: 0,
-            }}
-          >
-            <FeishuLogo />
-          </div>
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '4px',
-              minWidth: 0,
-              flex: 1,
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                flexWrap: 'wrap',
-              }}
-            >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  color: 'var(--dsw-alias-label-primary, #0f172a)',
-                }}
-              >
-                {title}
-              </h3>
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: '#16a34a',
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  fontWeight: 500,
-                }}
-              >
-                已连接到底座
-              </span>
-            </div>
-            <div
-              style={{
-                fontSize: '12px',
-                color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <span>v1.0.0</span>
-              <span>•</span>
-              <span style={{ textTransform: 'capitalize' }}>connector</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Scrollable Body Content */}
-        <div
-          style={{
-            flex: 1,
-            overflowY: 'auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            paddingRight: '2px',
-          }}
-        >
-          {/* 详细说明框 */}
-          <div
-            className="jy-detail-desc-box"
-            style={{
-              background:
-                'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
-              padding: '16px',
-              borderRadius: '12px',
-              border:
-                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-              fontSize: '13px',
-              color: 'var(--dsw-alias-label-secondary, #475569)',
-              lineHeight: '1.6',
-            }}
-          >
-            <div
-              style={{
-                marginBottom: '8px',
-                fontWeight: 600,
-                color: 'var(--dsw-alias-label-primary, #0f172a)',
-              }}
-            >
-              功能说明：
-            </div>
-            支持通过飞书账号授权，使 AI
-            具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。
-            <div
-              style={{
-                borderTop:
-                  '1px dashed var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-                marginTop: '12px',
-                paddingTop: '12px',
-                fontSize: '11.5px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-              }}
-            >
-              <div>
-                授权账号：
-                <strong
-                  style={{ color: 'var(--dsw-alias-label-primary, #0f172a)' }}
-                >
-                  {userName}
-                </strong>
-              </div>
-              <div>
-                应用 AppID：
-                <span style={{ fontFamily: 'monospace' }}>{appId}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 💡 试试这样用 */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '12px',
-                fontWeight: 600,
-                color: 'var(--dsw-alias-label-secondary, #334155)',
-              }}
-            >
-              <LightbulbIcon />
-              试试这样用
-            </div>
-
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}
-            >
-              {PROMPT_SUGGESTIONS.map((item, idx) => (
-                <div
-                  key={idx}
-                  className="jy-prompt-suggestion-item"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSendPrompt(item.text);
-                  }}
-                  style={{
-                    background: 'var(--dsw-alias-bg-layer-3, #f8fafc)',
-                    padding: '10px 12px',
-                    borderRadius: '10px',
-                    fontSize: '12px',
-                    color: 'var(--dsw-alias-label-secondary, #475569)',
-                    lineHeight: '1.4',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '8px',
-                    border: '1px solid var(--dsw-alias-border-l2, #f1f5f9)',
-                    transition: 'all 0.15s ease',
-                  }}
-                >
-                  <span
-                    style={{
-                      flex: 1,
-                      textOverflow: 'ellipsis',
-                      overflow: 'hidden',
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={item.text}
-                  >
-                    {item.text}
-                  </span>
-                  <SendIcon />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Bottom Action Footer */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: '10px',
-            paddingTop: '16px',
-            borderTop:
-              '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-            marginTop: '20px',
-          }}
-        >
-          <button
-            className="jy-btn-secondary"
-            onClick={onDisconnect}
-            style={{
-              height: '34px',
-              padding: '0 16px',
-              borderRadius: '9999px',
-              border:
-                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-              background: 'var(--dsw-alias-bg-layer-3, #ffffff)',
-              color: 'var(--dsw-alias-label-primary, #0f172a)',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <UnbindIcon />
-            解绑
-          </button>
-          <button
-            className="jy-btn-primary"
-            onClick={onTryIt}
-            style={{
-              height: '34px',
-              padding: '0 20px',
-              borderRadius: '9999px',
-              border: 'none',
-              background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-              color: 'var(--dsw-alias-label-inverse, #ffffff)',
-              fontSize: '13px',
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '4px',
-              transition: 'opacity 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.opacity = '0.9';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.opacity = '1';
-            }}
-          >
-            <TryItIcon />
-            去试试
-          </button>
-        </div>
-      </div>
     </div>
   );
 };
@@ -1478,7 +1054,13 @@ const ConnectorAuthModal = ({
               }
             } else {
               const status = json.data.identities?.user?.status;
-              if (status === 'ready') {
+              const available = json.data.identities?.user?.available;
+              if (
+                status === 'ready' ||
+                status === 'needs_refresh' ||
+                available === true ||
+                json.data.identities?.bot?.status === 'ready'
+              ) {
                 triggerSuccess();
               }
             }
