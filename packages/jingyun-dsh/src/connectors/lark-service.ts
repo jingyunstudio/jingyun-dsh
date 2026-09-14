@@ -31,17 +31,6 @@ export class LarkConnectorService {
     try {
       const configDir = getLarkConfigDir();
       const configPath = path.join(configDir, 'config.json');
-      if (!fs.existsSync(configPath)) {
-        const legacyPath = path.join(os.homedir(), '.lark-cli', 'config.json');
-        if (fs.existsSync(legacyPath)) {
-          try {
-            if (!fs.existsSync(configDir)) {
-              fs.mkdirSync(configDir, { recursive: true });
-            }
-            fs.copyFileSync(legacyPath, configPath);
-          } catch {}
-        }
-      }
       if (!fs.existsSync(configPath)) return false;
       const raw = fs.readFileSync(configPath, 'utf-8');
       const data = JSON.parse(raw);
@@ -171,14 +160,6 @@ export class LarkConnectorService {
     } catch (e) {
       console.warn('[LarkConnector] Failed to clean lark config files:', e);
     }
-
-    // 避免旧遗留目录残留导致自动拷贝复活
-    try {
-      const legacyPath = path.join(os.homedir(), '.lark-cli', 'config.json');
-      if (fs.existsSync(legacyPath)) {
-        fs.unlinkSync(legacyPath);
-      }
-    } catch {}
 
     return { success: true };
   }
