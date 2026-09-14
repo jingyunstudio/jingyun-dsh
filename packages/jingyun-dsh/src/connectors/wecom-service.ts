@@ -6,7 +6,7 @@ import path from 'path';
 
 import { WebSocket, type RawData } from 'ws';
 
-import { getConnectorsDir, getDshHome } from '../common/paths';
+import { getWecomConfigDir } from '../common/paths';
 import type { WecomConfig, WecomState, WecomStatus } from './types';
 
 interface NodeError extends Error {
@@ -35,11 +35,7 @@ export class WecomConnectorService {
   private isIntentionalDisconnect = false;
 
   private get configPath(): string {
-    const connectorsConfig = path.join(getConnectorsDir(), 'wecom.json');
-    if (fsSync.existsSync(connectorsConfig)) {
-      return connectorsConfig;
-    }
-    return path.join(getDshHome(), 'wecom.config.json');
+    return path.join(getWecomConfigDir(), 'config.json');
   }
 
   public async init(): Promise<void> {
@@ -86,21 +82,14 @@ export class WecomConnectorService {
     this.connectedAt = undefined;
     this.lastError = undefined;
 
-    const filesToRemove = [
-      path.join(getConnectorsDir(), 'wecom.json'),
-      path.join(getDshHome(), 'wecom.config.json'),
-    ];
-
-    for (const filePath of filesToRemove) {
-      try {
-        if (fsSync.existsSync(filePath)) {
-          await fs.unlink(filePath);
-        }
-      } catch (err: unknown) {
-        const nodeErr = err as NodeError;
-        if (nodeErr.code !== 'ENOENT') {
-          console.error(`[WecomConnector] Failed to remove ${filePath}:`, err);
-        }
+    try {
+      if (fsSync.existsSync(this.configPath)) {
+        await fs.unlink(this.configPath);
+      }
+    } catch (err: unknown) {
+      const nodeErr = err as NodeError;
+      if (nodeErr.code !== 'ENOENT') {
+        console.error('[WecomConnector] Failed to remove config file:', err);
       }
     }
   }
@@ -209,11 +198,16 @@ export class WecomConnectorService {
       this.reconnectTimer = null;
     }
     if (this.ws) {
-      try {
-        this.ws.removeAllListeners();
-        this.ws.terminate();
-      } catch {}
+      const socket = this.ws;
       this.ws = null;
+      try {
+        socket.removeAllListeners();
+        // 关键防护：Node.js EventEmitter 在没有 'error' 监听器时 emit error 会导致进程抛出 Unhandled 'error' event 崩溃。
+        // 当 WebSocket 处于 CONNECTING 状态时调用 terminate()，ws 库会异步派发 'WebSocket was closed before the connection was established' 的 error 事件。
+        // 因此必须挂载空监听器吞掉销毁期间的错误，防止进程崩溃。
+        socket.on('error', () => {});
+        socket.terminate();
+      } catch {}
     }
     this.status = 'disconnected';
     this.connectedAt = undefined;

@@ -38,6 +38,13 @@ export function getLarkConfigDir(): string {
 }
 
 /**
+ * 获取企业微信连接器配置目录 ($DSH_HOME/connectors/wecom)
+ */
+export function getWecomConfigDir(): string {
+  return path.join(getConnectorsDir(), 'wecom');
+}
+
+/**
  * 获取插件包根目录
  */
 export function getPluginDir(): string {
