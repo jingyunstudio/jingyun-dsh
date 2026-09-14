@@ -170,59 +170,40 @@ export function OnlineWorkspaceOverlay() {
       }
 
       if (type === 'JY_CREATE_AGENT_ACTION') {
-        const prompt = payload?.prompt;
+        const promptText = payload?.prompt;
+        if (!promptText) return;
+
         window.location.hash = '#/';
         setCurrentHash('#/');
 
         setTimeout(() => {
-          const allButtons = Array.from(document.querySelectorAll('button'));
-          const newChatBtn = allButtons.find((b) => {
-            const t =
-              (b.textContent || '') + (b.getAttribute('aria-label') || '');
-            return (
-              t.includes('新建') ||
-              t.includes('New') ||
+          // 1. 点击新建会话
+          const newChatBtn = Array.from(
+            document.querySelectorAll('button')
+          ).find(
+            (b) =>
+              (b.textContent || '').includes('新建') ||
               b.className.includes('newSession')
-            );
-          }) as HTMLElement;
+          ) as HTMLElement | null;
+          newChatBtn?.click();
 
-          if (newChatBtn) {
-            newChatBtn.click();
-          }
+          // 2. 等待输入框可编辑并直接写入文本
+          let attempts = 0;
+          const timer = setInterval(() => {
+            attempts++;
+            const el = document.querySelector(
+              '[data-composer-input][contenteditable="true"]'
+            ) as HTMLElement | null;
 
-          setTimeout(() => {
-            if (prompt && typeof window !== 'undefined') {
-              const textareas = document.querySelectorAll('textarea');
-              if (textareas.length > 0) {
-                const targetInput = (
-                  document.activeElement?.tagName === 'TEXTAREA'
-                    ? document.activeElement
-                    : textareas[textareas.length - 1]
-                ) as HTMLTextAreaElement;
-
-                if (targetInput) {
-                  const nativeInputValueSetter =
-                    Object.getOwnPropertyDescriptor(
-                      window.HTMLTextAreaElement.prototype,
-                      'value'
-                    )?.set;
-                  if (nativeInputValueSetter) {
-                    nativeInputValueSetter.call(targetInput, prompt);
-                  } else {
-                    targetInput.value = prompt;
-                  }
-                  targetInput.focus();
-                  targetInput.setSelectionRange(prompt.length, prompt.length);
-                  targetInput.dispatchEvent(
-                    new Event('input', { bubbles: true })
-                  );
-                  targetInput.dispatchEvent(
-                    new Event('change', { bubbles: true })
-                  );
-                }
-              }
+            if (el) {
+              el.focus();
+              document.execCommand('selectAll', false);
+              document.execCommand('insertText', false, promptText);
+              clearInterval(timer);
+            } else if (attempts > 20) {
+              clearInterval(timer);
             }
-          }, 250);
+          }, 100);
         }, 150);
       }
       if (type === 'JY_START_CHAT_AGENT') {

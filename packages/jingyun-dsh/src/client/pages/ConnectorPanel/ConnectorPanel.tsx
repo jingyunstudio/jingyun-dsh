@@ -242,11 +242,11 @@ export const ConnectorPanel = () => {
 
   const isLarkConnected = Boolean(
     larkStatus &&
-      (larkStatus.identities?.user?.status === 'ready' ||
-        larkStatus.identities?.user?.status === 'needs_refresh' ||
-        larkStatus.identities?.user?.available === true ||
-        larkStatus.identities?.bot?.status === 'ready' ||
-        (larkStatus.appId && larkStatus.identities?.user?.userName))
+    (larkStatus.identities?.user?.status === 'ready' ||
+      larkStatus.identities?.user?.status === 'needs_refresh' ||
+      larkStatus.identities?.user?.available === true ||
+      larkStatus.identities?.bot?.status === 'ready' ||
+      (larkStatus.appId && larkStatus.identities?.user?.userName))
   );
   const larkUser = larkStatus?.identities?.user?.userName || '';
   const larkAppId = larkStatus?.appId || '';
