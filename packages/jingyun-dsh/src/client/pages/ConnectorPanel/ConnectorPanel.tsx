@@ -245,15 +245,31 @@ export const ConnectorPanel = () => {
     });
   }, []);
 
+  const isLarkUserAuthorized = Boolean(
+    larkStatus?.identities?.user?.status === 'ready' ||
+    larkStatus?.identities?.user?.status === 'needs_refresh' ||
+    larkStatus?.identities?.user?.available === true ||
+    larkStatus?.identities?.user?.userName
+  );
+
+  const isLarkBotReady = Boolean(
+    larkStatus?.appId &&
+    (larkStatus?.identities?.bot?.status === 'ready' ||
+      larkStatus?.identities?.bot?.available === true)
+  );
+
   const isLarkConnected = Boolean(
     larkStatus &&
     larkStatus.status !== 'needs_login' &&
-    (larkStatus.identities?.user?.status === 'ready' ||
-      larkStatus.identities?.user?.status === 'needs_refresh' ||
-      larkStatus.identities?.user?.available === true ||
-      (larkStatus.appId && larkStatus.identities?.bot?.status === 'ready') ||
-      (larkStatus.appId && larkStatus.identities?.user?.userName))
+    (isLarkUserAuthorized || isLarkBotReady)
   );
+
+  const larkAuthLevel: 'full' | 'bot_only' | 'disconnected' = isLarkConnected
+    ? isLarkUserAuthorized
+      ? 'full'
+      : 'bot_only'
+    : 'disconnected';
+
   const larkUser = larkStatus?.identities?.user?.userName || '';
   const larkAppId = larkStatus?.appId || '';
 
@@ -433,8 +449,11 @@ export const ConnectorPanel = () => {
                     alignItems: 'center',
                     gap: '4px',
                     fontSize: '10px',
-                    color: '#16a34a',
-                    background: 'rgba(34, 197, 94, 0.1)',
+                    color: larkAuthLevel === 'full' ? '#16a34a' : '#d97706',
+                    background:
+                      larkAuthLevel === 'full'
+                        ? 'rgba(34, 197, 94, 0.1)'
+                        : 'rgba(217, 119, 6, 0.1)',
                     padding: '1px 6px',
                     borderRadius: '4px',
                     fontWeight: 500,
@@ -445,10 +464,13 @@ export const ConnectorPanel = () => {
                       width: '4px',
                       height: '4px',
                       borderRadius: '50%',
-                      background: '#22c55e',
+                      background:
+                        larkAuthLevel === 'full' ? '#22c55e' : '#f59e0b',
                     }}
                   />
-                  已启用
+                  {larkAuthLevel === 'full'
+                    ? '已完整授权'
+                    : '底座就绪 · 待应用授权'}
                 </span>
               )}
             </div>
@@ -825,10 +847,6 @@ export const ConnectorPanel = () => {
             setShowWecomModal(false);
             fetchWecomStatus();
           }}
-          onDisconnect={() => {
-            setShowWecomModal(false);
-            handleWecomDisconnect();
-          }}
         />
       )}
 
@@ -877,6 +895,11 @@ export const ConnectorPanel = () => {
           userName={larkUser}
           appId={larkAppId}
           status={isLarkConnected ? 'connected' : 'disconnected'}
+          authLevel={larkAuthLevel}
+          onAuthorizeUser={() => {
+            setShowDetailModal(false);
+            setShowAuthModal(true);
+          }}
           onClose={() => setShowDetailModal(false)}
           onDisconnect={() => {
             setShowDetailModal(false);
@@ -916,7 +939,7 @@ const ConnectorAuthModal = ({
     device_code: string;
     mode?: string;
   } | null>(null);
-  const [authMode, setAuthMode] = useState<'init' | 'login'>('login');
+  const [authMode, setAuthMode] = useState<'init' | 'login' | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const intervalRef = useRef<any>(null);
@@ -1067,7 +1090,7 @@ const ConnectorAuthModal = ({
                 status === 'ready' ||
                 status === 'needs_refresh' ||
                 available === true ||
-                (authMode !== 'init' &&
+                (authMode === 'login' &&
                   json.data.identities?.bot?.status === 'ready')
               ) {
                 triggerSuccess();
@@ -1207,7 +1230,9 @@ const ConnectorAuthModal = ({
                 color: 'var(--dsw-alias-label-tertiary, #64748b)',
               }}
             >
-              已安全绑定至您的飞书账号。
+              {channel === 'wecom'
+                ? '已安全绑定至您的企业微信。'
+                : '已安全绑定至您的飞书账号。'}
             </p>
           </div>
         ) : (
@@ -1265,6 +1290,11 @@ const ConnectorAuthModal = ({
                 textAlign: 'center',
                 lineHeight: '1.4',
                 fontWeight: authMode === 'init' ? 500 : 'normal',
+                minHeight: '44px',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
               }}
             >
               {channel === 'wecom' ? (
@@ -1273,6 +1303,8 @@ const ConnectorAuthModal = ({
                   <br />
                   授权后智能体即可介入您的企业微信会话。
                 </>
+              ) : !authMode ? (
+                <>正在检查飞书授权状态并生成二维码...</>
               ) : authMode === 'init' ? (
                 <>
                   <strong
@@ -1467,28 +1499,31 @@ const ConnectorAuthModal = ({
                 gap: '12px',
               }}
             >
-              {onDisconnect && (channel !== 'lark' || authMode === 'login') && (
-                <button
-                  type="button"
-                  onClick={onDisconnect}
-                  style={{
-                    padding: '6px 16px',
-                    borderRadius: '6px',
-                    border: '1px solid rgba(239, 68, 68, 0.2)',
-                    background: 'rgba(239, 68, 68, 0.05)',
-                    color: '#ef4444',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <UnbindIcon />
-                  解除授权
-                </button>
-              )}
+              {onDisconnect &&
+                channel === 'lark' &&
+                !loading &&
+                authMode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={onDisconnect}
+                    style={{
+                      padding: '6px 16px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(239, 68, 68, 0.2)',
+                      background: 'rgba(239, 68, 68, 0.05)',
+                      color: '#ef4444',
+                      fontSize: '13px',
+                      fontWeight: 500,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <UnbindIcon />
+                    解除授权
+                  </button>
+                )}
               <button
                 type="button"
                 className="jy-btn-secondary"

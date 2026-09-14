@@ -131,6 +131,7 @@ export interface DetailModalProps {
   channel?: 'lark' | 'wecom' | string;
   title: string;
   status?: string;
+  authLevel?: 'full' | 'bot_only' | 'disconnected';
   userName?: string;
   appId?: string;
   botId?: string;
@@ -142,6 +143,7 @@ export interface DetailModalProps {
   onDisconnect: () => void;
   onTryIt?: () => void;
   onSendPrompt?: (text: string) => void;
+  onAuthorizeUser?: () => void;
 }
 
 // 已启用连接器的通用详情管理弹窗组件
@@ -149,6 +151,7 @@ export const ConnectorDetailModal = ({
   channel = 'lark',
   title,
   status,
+  authLevel,
   userName,
   appId,
   botId,
@@ -160,6 +163,7 @@ export const ConnectorDetailModal = ({
   onDisconnect,
   onTryIt,
   onSendPrompt,
+  onAuthorizeUser,
 }: DetailModalProps) => {
   const isWecom = channel === 'wecom';
   const isConnected = status ? status === 'connected' : true;
@@ -197,22 +201,6 @@ export const ConnectorDetailModal = ({
           },
         ]
       : [
-          ...(userName
-            ? [
-                {
-                  label: '授权账号',
-                  value: (
-                    <strong
-                      style={{
-                        color: 'var(--dsw-alias-label-primary, #0f172a)',
-                      }}
-                    >
-                      {userName}
-                    </strong>
-                  ),
-                },
-              ]
-            : []),
           ...(appId
             ? [
                 {
@@ -223,6 +211,85 @@ export const ConnectorDetailModal = ({
                 },
               ]
             : []),
+          {
+            label: '机器人底座',
+            value: (
+              <span
+                style={{
+                  color: '#16a34a',
+                  fontWeight: 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                  }}
+                />
+                已就绪
+              </span>
+            ),
+          },
+          {
+            label: '应用授权',
+            value: userName ? (
+              <strong
+                style={{
+                  color: 'var(--dsw-alias-label-primary, #0f172a)',
+                }}
+              >
+                已授权 ({userName})
+              </strong>
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                }}
+              >
+                <span
+                  style={{
+                    color: '#d97706',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                  }}
+                >
+                  未授权
+                </span>
+                {onAuthorizeUser && (
+                  <button
+                    type="button"
+                    onClick={onAuthorizeUser}
+                    style={{
+                      padding: '2px 10px',
+                      fontSize: '11px',
+                      borderRadius: '4px',
+                      border: 'none',
+                      background: '#3370FF',
+                      color: '#ffffff',
+                      cursor: 'pointer',
+                      fontWeight: 500,
+                      transition: 'opacity 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.opacity = '0.9';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.opacity = '1';
+                    }}
+                  >
+                    去授权
+                  </button>
+                )}
+              </div>
+            ),
+          },
         ]);
 
   const handleTryItClick = () => {
@@ -364,20 +431,46 @@ export const ConnectorDetailModal = ({
               >
                 {title}
               </h3>
-              <span
-                style={{
-                  fontSize: '11px',
-                  color: isConnected ? '#16a34a' : '#d97706',
-                  background: isConnected
-                    ? 'rgba(34, 197, 94, 0.1)'
-                    : 'rgba(245, 158, 11, 0.1)',
-                  padding: '2px 8px',
-                  borderRadius: '9999px',
-                  fontWeight: 500,
-                }}
-              >
-                {isConnected ? '已连接到底座' : '连接异常 / 未就绪'}
-              </span>
+              {(() => {
+                let badgeText = isConnected
+                  ? '已连接到底座'
+                  : '连接异常 / 未就绪';
+                let badgeColor = isConnected ? '#16a34a' : '#d97706';
+                let badgeBg = isConnected
+                  ? 'rgba(34, 197, 94, 0.1)'
+                  : 'rgba(245, 158, 11, 0.1)';
+
+                if (!isWecom) {
+                  if (authLevel === 'full' || Boolean(userName)) {
+                    badgeText = '已完整授权';
+                    badgeColor = '#16a34a';
+                    badgeBg = 'rgba(34, 197, 94, 0.1)';
+                  } else if (authLevel === 'bot_only' || isConnected) {
+                    badgeText = '底座就绪 · 待应用授权';
+                    badgeColor = '#d97706';
+                    badgeBg = 'rgba(217, 119, 6, 0.1)';
+                  } else {
+                    badgeText = '连接异常 / 未就绪';
+                    badgeColor = '#ef4444';
+                    badgeBg = 'rgba(239, 68, 68, 0.1)';
+                  }
+                }
+
+                return (
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      color: badgeColor,
+                      background: badgeBg,
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    {badgeText}
+                  </span>
+                );
+              })()}
             </div>
             <div
               style={{
