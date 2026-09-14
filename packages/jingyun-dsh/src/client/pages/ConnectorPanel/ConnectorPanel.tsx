@@ -102,8 +102,6 @@ const WechatWorkLogo = () => (
 export const ConnectorPanel = () => {
   const [larkStatus, setLarkStatus] = useState<any>(null);
   const [wecomStatus, setWecomStatus] = useState<any>(null);
-  const [cliStatus, setCliStatus] = useState<any>(null);
-  const [installingCli, setInstallingCli] = useState<string | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showWecomModal, setShowWecomModal] = useState(false);
@@ -111,56 +109,6 @@ export const ConnectorPanel = () => {
   const [dingtalkStatus, setDingtalkStatus] = useState<any>(null);
   const [showDingtalkModal, setShowDingtalkModal] = useState(false);
   const [showDingtalkDetailModal, setShowDingtalkDetailModal] = useState(false);
-  const [toastMsg, setToastMsg] = useState('');
-
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    setTimeout(() => setToastMsg(''), 4000);
-  };
-
-  const fetchCliStatus = async () => {
-    try {
-      const res = await fetch('/api/jingyun/connectors/cli/status');
-      if (res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          setCliStatus(json.data);
-        }
-      }
-    } catch (err) {
-      console.error('[ConnectorPanel] Failed to fetch cli status:', err);
-    }
-  };
-
-  const handleInstallCli = async (name: 'wecom' | 'lark' | 'dingtalk') => {
-    if (installingCli) return;
-    setInstallingCli(name);
-    const pkgName =
-      name === 'dingtalk'
-        ? 'dingtalk-workspace-cli'
-        : name === 'wecom'
-          ? '@wecom/cli'
-          : '@larksuite/cli';
-    showToast(`正在后台通过 npm 安装 ${pkgName}，请稍候...`);
-    try {
-      const res = await fetch('/api/jingyun/connectors/cli/install', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        showToast(`✅ ${data.message}`);
-        await fetchCliStatus();
-      } else {
-        showToast(`❌ ${data.message || '安装失败'}`);
-      }
-    } catch (err: any) {
-      showToast(`❌ 安装失败: ${err.message}`);
-    } finally {
-      setInstallingCli(null);
-    }
-  };
 
   const handleNewChatWithPrompt = (promptText: string) => {
     try {
@@ -304,7 +252,6 @@ export const ConnectorPanel = () => {
       fetchLarkStatus();
       fetchWecomStatus();
       fetchDingtalkStatus();
-      fetchCliStatus();
     });
   }, []);
 
@@ -370,30 +317,6 @@ export const ConnectorPanel = () => {
         position: 'relative',
       }}
     >
-      {toastMsg && (
-        <div
-          style={{
-            position: 'fixed',
-            top: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-            color: 'var(--dsw-alias-label-inverse, #ffffff)',
-            padding: '8px 16px',
-            borderRadius: '20px',
-            fontSize: '12px',
-            fontWeight: 500,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            animation: 'fade-in 0.2s ease',
-          }}
-        >
-          {toastMsg}
-        </div>
-      )}
       {/* 头部标题描述 */}
       <div style={{ marginBottom: '28px' }}>
         <h2
@@ -498,6 +421,7 @@ export const ConnectorPanel = () => {
                   fontSize: '13px',
                   fontWeight: 600,
                   color: 'var(--dsw-alias-label-primary, #0f172a)',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 飞书 (Lark)
@@ -546,41 +470,6 @@ export const ConnectorPanel = () => {
                   {larkAuthLevel === 'full'
                     ? '已完整授权'
                     : '底座就绪 · 待应用授权'}
-                </span>
-              )}
-
-              {cliStatus?.lark?.installed ? (
-                <span
-                  style={{
-                    fontSize: '10px',
-                    color: '#059669',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                  }}
-                  title="飞书 CLI 工具已就绪"
-                >
-                  CLI v{cliStatus.lark.version || 'ready'}
-                </span>
-              ) : (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleInstallCli('lark');
-                  }}
-                  style={{
-                    fontSize: '10px',
-                    color: '#2563eb',
-                    background: 'rgba(37, 99, 235, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                  title="点击通过 vendor npm 安装 @larksuite/cli"
-                >
-                  {installingCli === 'lark' ? '安装中...' : '＋安装 CLI'}
                 </span>
               )}
             </div>
@@ -720,6 +609,7 @@ export const ConnectorPanel = () => {
                   fontSize: '13px',
                   fontWeight: 600,
                   color: 'var(--dsw-alias-label-primary, #0f172a)',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 钉钉 (DingTalk)
@@ -762,41 +652,6 @@ export const ConnectorPanel = () => {
                     }}
                   />
                   已启用
-                </span>
-              )}
-
-              {cliStatus?.dingtalk?.installed ? (
-                <span
-                  style={{
-                    fontSize: '10px',
-                    color: '#059669',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                  }}
-                  title="钉钉 CLI 工具 (dws) 已就绪"
-                >
-                  CLI v{cliStatus.dingtalk.version || 'ready'}
-                </span>
-              ) : (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleInstallCli('dingtalk');
-                  }}
-                  style={{
-                    fontSize: '10px',
-                    color: '#2563eb',
-                    background: 'rgba(37, 99, 235, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                  title="点击安装 dingtalk-workspace-cli"
-                >
-                  {installingCli === 'dingtalk' ? '安装中...' : '＋安装 CLI'}
                 </span>
               )}
             </div>
@@ -934,6 +789,7 @@ export const ConnectorPanel = () => {
                   fontSize: '13px',
                   fontWeight: 600,
                   color: 'var(--dsw-alias-label-primary, #0f172a)',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 企业微信
@@ -976,41 +832,6 @@ export const ConnectorPanel = () => {
                     }}
                   />
                   已启用
-                </span>
-              )}
-
-              {cliStatus?.wecom?.installed ? (
-                <span
-                  style={{
-                    fontSize: '10px',
-                    color: '#059669',
-                    background: 'rgba(16, 185, 129, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                  }}
-                  title="企业微信 CLI 工具已就绪"
-                >
-                  CLI v{cliStatus.wecom.version || 'ready'}
-                </span>
-              ) : (
-                <span
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleInstallCli('wecom');
-                  }}
-                  style={{
-                    fontSize: '10px',
-                    color: '#2563eb',
-                    background: 'rgba(37, 99, 235, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                    cursor: 'pointer',
-                  }}
-                  title="点击通过 vendor npm 安装 @wecom/cli"
-                >
-                  {installingCli === 'wecom' ? '安装中...' : '＋安装 CLI'}
                 </span>
               )}
             </div>
