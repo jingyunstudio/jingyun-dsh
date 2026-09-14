@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootDir = path.join(__dirname, '..');
+const rootDir = path.resolve(__dirname, '..');
 const dshPkgPath = path.join(
   rootDir,
   'node_modules',
@@ -35,6 +35,24 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
+// 注入便携环境变量
+process.env.DSH_HOME = process.env.DSH_HOME || dataDir;
+process.env.DSH_CONFIG_DIR = process.env.DSH_CONFIG_DIR || dataDir;
+process.env.DSH_PORTABLE = '1';
+
+// 清理 data/.env 中被 DSH 规范禁止显式定义的 DSH_* 变量
+const envPath = path.join(dataDir, '.env');
+if (fs.existsSync(envPath)) {
+  try {
+    const raw = fs.readFileSync(envPath, 'utf8');
+    const cleaned = raw
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('DSH_'))
+      .join('\n');
+    if (cleaned !== raw) fs.writeFileSync(envPath, cleaned, 'utf8');
+  } catch {}
+}
+
 const targetConfig = path.join(dataDir, 'desktop-config.json');
 const srcConfig = path.join(
   rootDir,
@@ -61,4 +79,28 @@ if (!fs.existsSync(targetConfig)) {
       '[DevPrepare] 📁 Initialized data/desktop-config.json from example template'
     );
   }
+}
+
+// 3. Ensure data/profiles/web/package.json exists with @jingyun-ai/jingyun-dsh bundle
+const webProfileDir = path.join(dataDir, 'profiles', 'web');
+const webProfilePkg = path.join(webProfileDir, 'package.json');
+if (!fs.existsSync(webProfileDir)) {
+  fs.mkdirSync(webProfileDir, { recursive: true });
+}
+if (!fs.existsSync(webProfilePkg)) {
+  const defaultPkg = {
+    name: 'dsh-profile-web',
+    private: true,
+    dependencies: {},
+    dsh: {
+      profile: {
+        bundles: [
+          '@deepseek-ai/dsh-base',
+          '@deepseek-ai/dsh-web-app',
+          '@jingyun-ai/jingyun-dsh',
+        ],
+      },
+    },
+  };
+  fs.writeFileSync(webProfilePkg, JSON.stringify(defaultPkg, null, 2), 'utf8');
 }
