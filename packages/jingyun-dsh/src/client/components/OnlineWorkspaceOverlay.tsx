@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 
+import { sendPromptToComposer } from '../dom-helper';
 import { AutomationPanel } from '../pages/AutomationPanel';
 import { ConnectorPanel } from '../pages/ConnectorPanel';
 import { sessionAgentMemory } from './AgentSelectorBtn';
@@ -172,39 +173,7 @@ export function OnlineWorkspaceOverlay() {
       if (type === 'JY_CREATE_AGENT_ACTION') {
         const promptText = payload?.prompt;
         if (!promptText) return;
-
-        window.location.hash = '#/';
-        setCurrentHash('#/');
-
-        setTimeout(() => {
-          // 1. 点击新建会话
-          const newChatBtn = Array.from(
-            document.querySelectorAll('button')
-          ).find(
-            (b) =>
-              (b.textContent || '').includes('新建') ||
-              b.className.includes('newSession')
-          ) as HTMLElement | null;
-          newChatBtn?.click();
-
-          // 2. 等待输入框可编辑并直接写入文本
-          let attempts = 0;
-          const timer = setInterval(() => {
-            attempts++;
-            const el = document.querySelector(
-              '[data-composer-input][contenteditable="true"]'
-            ) as HTMLElement | null;
-
-            if (el) {
-              el.focus();
-              document.execCommand('selectAll', false);
-              document.execCommand('insertText', false, promptText);
-              clearInterval(timer);
-            } else if (attempts > 20) {
-              clearInterval(timer);
-            }
-          }, 100);
-        }, 150);
+        sendPromptToComposer(promptText);
       }
       if (type === 'JY_START_CHAT_AGENT') {
         const agentId = payload?.agentId || 'none';

@@ -117,13 +117,13 @@ export const DEFAULT_LARK_SUGGESTIONS = [
 
 export const DEFAULT_WECOM_SUGGESTIONS = [
   {
-    text: '在企业微信群【项目周会】里用机器人发送通知：今天 15:00 准时在第一会议室开周会，请大家带好周报',
+    text: '帮我整理下最新一周AI资讯，通过企业微信消息发送给我自己',
   },
   {
-    text: '通过企业微信机器人查询并总结今日技术支持群内反馈的待处理问题',
+    text: '根据最近一周我与客户沟通的企业微信邮件和会议，生成给客户的演示文稿',
   },
   {
-    text: '在企业微信中发送一条跟进消息：关于上周沟通的接口方案已优化，请查收并确认',
+    text: '根据产品文档内容，生成一份总结摘要的PDF，文档链接是https://doc.weixin.qq.com/XXXXXX',
   },
 ];
 

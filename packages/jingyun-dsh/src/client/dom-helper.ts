@@ -158,3 +158,54 @@ export function initClientBrandingDOM() {
     });
   }
 }
+
+/**
+ * 切换回主会话页，新建会话并向 DSH 原生 Lexical Composer 输入框填充指定提示词
+ */
+export function sendPromptToComposer(promptText: string) {
+  if (typeof window === 'undefined' || !promptText) return;
+
+  // 1. 退出任何自定义面板/遮罩层，切回根会话页
+  window.location.hash = '#/';
+
+  setTimeout(() => {
+    // 2. 模拟点击侧边栏的新建会话按钮
+    const newChatBtn = Array.from(document.querySelectorAll('button')).find(
+      (b) =>
+        (b.textContent || '').includes('新建') ||
+        b.className.includes('newSession')
+    ) as HTMLElement | null;
+    newChatBtn?.click();
+
+    // 3. 轮询等待可编辑输入框就绪并写入文本
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts++;
+      const el = (document.querySelector(
+        '[data-composer-input][contenteditable="true"]'
+      ) ||
+        document.querySelector('[data-composer-input]') ||
+        document.querySelector('textarea')) as HTMLElement | null;
+
+      if (el) {
+        el.focus();
+        if (el.tagName === 'TEXTAREA') {
+          const inputEl = el as HTMLTextAreaElement;
+          const setter = Object.getOwnPropertyDescriptor(
+            window.HTMLTextAreaElement.prototype,
+            'value'
+          )?.set;
+          setter?.call(inputEl, promptText);
+          inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+          inputEl.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+          document.execCommand('selectAll', false);
+          document.execCommand('insertText', false, promptText);
+        }
+        clearInterval(timer);
+      } else if (attempts > 20) {
+        clearInterval(timer);
+      }
+    }, 100);
+  }, 150);
+}

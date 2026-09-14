@@ -1,6 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react';
 import React, { useState, useEffect, useRef } from 'react';
 
+import { sendPromptToComposer } from '../../dom-helper';
 import {
   ConnectorDetailModal,
   DEFAULT_LARK_SUGGESTIONS,
@@ -108,40 +109,7 @@ export const ConnectorPanel = () => {
 
   const handleNewChatWithPrompt = (promptText: string) => {
     try {
-      // 1. 尝试寻找并点击宿主 DSH 系统的“新建会话”按钮
-      const newChatBtn: any =
-        document.querySelector('button[aria-label="新建会话"]') ||
-        Array.from(document.querySelectorAll('button')).find((el) =>
-          el.textContent?.includes('新建任务')
-        );
-      if (newChatBtn) {
-        newChatBtn.click();
-      }
-
-      // 2. 切换哈希回默认主页 (#/ 或空)，让连接器面板退场
-      window.location.hash = '#/';
-
-      // 3. 延迟一小会儿，等聊天 DOM 载入完成，强行写入 React 受控输入框并聚焦
-      setTimeout(() => {
-        const textarea: any =
-          document.querySelector('textarea[placeholder="给智能体发消息"]') ||
-          document.querySelector('textarea.uV2eYG_input') ||
-          document.querySelector('textarea');
-        if (textarea) {
-          const setter = Object.getOwnPropertyDescriptor(
-            HTMLTextAreaElement.prototype,
-            'value'
-          )?.set;
-          setter?.call(textarea, promptText);
-          textarea.dispatchEvent(new Event('input', { bubbles: true }));
-
-          setTimeout(() => {
-            textarea.focus();
-          }, 50);
-        }
-      }, 200);
-
-      // 4. 关闭已启用的管理详情弹窗
+      sendPromptToComposer(promptText);
       setShowDetailModal(false);
     } catch (e) {
       console.error(

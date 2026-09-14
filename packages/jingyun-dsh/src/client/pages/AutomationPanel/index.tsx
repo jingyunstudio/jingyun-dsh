@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 
+import { sendPromptToComposer } from '../../dom-helper';
 import type { TemplateItem } from './constants';
 import { AUTOMATION_TEMPLATES } from './constants';
 
@@ -361,19 +362,7 @@ export function AutomationPanel() {
           <button
             className="jy-btn-primary"
             onClick={() => {
-              window.location.hash = '#/';
-              setTimeout(() => {
-                const textarea: any = document.querySelector('textarea');
-                if (textarea) {
-                  const setter = Object.getOwnPropertyDescriptor(
-                    HTMLTextAreaElement.prototype,
-                    'value'
-                  )?.set;
-                  setter?.call(textarea, '帮我创建一个自动化任务：');
-                  textarea.dispatchEvent(new Event('input', { bubbles: true }));
-                  textarea.focus();
-                }
-              }, 250);
+              sendPromptToComposer('帮我创建一个自动化任务：');
             }}
             style={{
               height: '32px',
