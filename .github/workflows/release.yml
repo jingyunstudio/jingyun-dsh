@@ -122,6 +122,17 @@ jobs:
       - name: Create artifacts directory
         run: mkdir -p artifacts
 
+      - name: Fix macOS bundle signature and repack DMG
+        if: matrix.platform == 'macos-latest'
+        shell: bash
+        env:
+          ARCH_ALIAS: ${{ matrix.arch == 'x86_64' && 'x64' || matrix.arch }}
+        run: |
+          bash scripts/fix_macos_build.sh \
+            "src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/macos/${{ env.PRODUCT_NAME }}.app" \
+            "src-tauri/target/${{ matrix.arch }}-apple-darwin/release/bundle/dmg/${{ env.PRODUCT_NAME }}_${{ env.VERSION }}_${{ env.ARCH_ALIAS }}.dmg" \
+            "${{ env.PRODUCT_NAME }}"
+
       - name: Copy windows to release assets
         if: matrix.platform == 'windows-latest'
         shell: bash
