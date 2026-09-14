@@ -3,9 +3,45 @@ import type { IncomingMessage, ServerResponse } from 'http';
 import type { Context } from '@deepseek-ai/cordis';
 
 import { parseJsonBody, sendError, sendJson } from '../common/http';
-import { larkConnector, type WecomConfig, wecomConnector } from '../connectors';
+import {
+  cliManager,
+  larkConnector,
+  type WecomConfig,
+  wecomConnector,
+} from '../connectors';
 
 export function registerConnectorsRoutes(ctx: Context) {
+  // 0.1 获取所有 CLI 工具状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/cli/status',
+    handler: async (_req, res) => {
+      try {
+        const result = await cliManager.getAllStatus();
+        sendJson(res, { success: true, data: result });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // 0.2 一键安装 CLI 工具
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/cli/install',
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = await parseJsonBody<{ name?: 'wecom' | 'lark' }>(req);
+        if (!body?.name || (body.name !== 'wecom' && body.name !== 'lark')) {
+          return sendError(res, 'name 参数必须为 wecom 或 lark', 400);
+        }
+        const result = await cliManager.installCli(body.name);
+        sendJson(res, result);
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
   // 1. 飞书认证状态
   ctx.webServer.register({
     kind: 'exact',
@@ -179,30 +215,6 @@ export function registerConnectorsRoutes(ctx: Context) {
           sendJson(res, {
             success: true,
             data: { message: 'Configuration cleared' },
-          });
-        } catch (err: any) {
-          sendError(res, err.message, 500);
-        }
-      },
-    });
-
-    // 测试发送
-    ctx.webServer.register({
-      kind: 'exact',
-      path: `${prefix}/test-send`,
-      handler: async (req: IncomingMessage, res: ServerResponse) => {
-        try {
-          const body = await parseJsonBody<{
-            chatId?: string;
-            content?: string;
-          }>(req);
-          if (!body.chatId || !body.content) {
-            return sendError(res, 'chatId 和 content 为必填项', 400);
-          }
-          await wecomConnector.sendTextMessage(body.chatId, body.content);
-          sendJson(res, {
-            success: true,
-            data: { message: 'Test message sent' },
           });
         } catch (err: any) {
           sendError(res, err.message, 500);

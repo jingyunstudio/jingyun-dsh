@@ -72,19 +72,17 @@ function syncBuiltinSkills() {
     }
 
     const candidateDirs = [
-      path.resolve(process.cwd(), 'src-tauri', 'resources', 'builtin-skills'),
-      path.resolve(process.cwd(), 'resources', 'builtin-skills'),
       path.resolve(
-        __dirname,
-        '..',
-        '..',
-        '..',
-        'src-tauri',
+        process.cwd(),
+        'packages',
+        'jingyun-dsh',
         'resources',
         'builtin-skills'
       ),
       path.resolve(__dirname, '..', 'resources', 'builtin-skills'),
       path.resolve(__dirname, 'builtin-skills'),
+      path.resolve(process.cwd(), 'resources', 'builtin-skills'),
+      path.resolve(process.cwd(), 'src-tauri', 'resources', 'builtin-skills'),
     ];
 
     for (const srcDir of candidateDirs) {

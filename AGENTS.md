@@ -53,7 +53,7 @@
 | `packages/jingyun-dsh/src/routes/` | REST API routes mounted under `/api/jingyun/*`. |
 | `packages/jingyun-dsh/src/common/` | Shared utilities: path resolution, HTTP helpers, logger, and tenant discovery. |
 | `src-tauri/` | Rust Tauri v2 desktop application shell, window management, and sidecar process controller. |
-| `src-tauri/resources/builtin-skills/` | Builtin skills (e.g. `agent-manager`, `skill-creator`) synced to user environment. |
+| `packages/jingyun-dsh/resources/builtin-skills/` | Builtin skills (e.g. `wecom-connector`, `feishu-connector`, `agent-manager`, `skill-creator`) synced to user environment. |
 | `scripts/` | Build, packaging (`pack_gui.py`), vendor preparation, and environment setup scripts. |
 
 ---

@@ -26,3 +26,17 @@ export interface LarkAuthStartResult {
   verification_url: string;
   device_code: string;
 }
+
+export interface CliToolStatus {
+  installed: boolean;
+  version?: string;
+  command?: string;
+  error?: string;
+}
+
+export interface AllCliStatus {
+  wecom: CliToolStatus;
+  lark: CliToolStatus;
+  npmAvailable: boolean;
+  npmPath?: string;
+}

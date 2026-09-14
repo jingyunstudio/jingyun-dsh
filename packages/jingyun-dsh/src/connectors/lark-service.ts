@@ -72,6 +72,17 @@ export class LarkConnectorService {
       return { status: 'needs_login', error: message };
     }
   }
+
+  public getCachedStatus(): LarkAuthStatus | null {
+    if (this.cachedStatus && this.cachedStatus.expiresAt > Date.now()) {
+      return this.cachedStatus.data;
+    }
+    if (this.isConfiguredLocally()) {
+      return { status: 'configured', configuredLocally: true };
+    }
+    return null;
+  }
+
   public async startAuth(): Promise<LarkAuthStartResult> {
     let isConfigured = false;
     try {

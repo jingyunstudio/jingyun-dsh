@@ -159,10 +159,17 @@ export function checkRuntimesExist(platform, arch) {
     configs.python.expectedFile
   );
 
-  const nodeOk =
+  const hasNodeBinary =
     fs.existsSync(nodeExpected) ||
     fs.existsSync(path.join(configs.node.targetDir, 'node')) ||
     fs.existsSync(path.join(configs.node.targetDir, 'node.exe'));
+
+  const hasNpmBinary =
+    fs.existsSync(path.join(configs.node.targetDir, 'npm.cmd')) ||
+    fs.existsSync(path.join(configs.node.targetDir, 'npm')) ||
+    fs.existsSync(path.join(configs.node.targetDir, 'bin', 'npm'));
+
+  const nodeOk = hasNodeBinary && hasNpmBinary;
 
   const pythonOk =
     fs.existsSync(pythonExpected) ||
@@ -257,71 +264,97 @@ async function processNodeRuntime(config, force = false) {
 
   // 2. 一行代码使用 decompress 解压 (支持 .zip 与 .tar.gz)
   console.log(`[RuntimeDownload] 📦 正在解压 Node.js 运行时...`);
-  // 2. 仅从压缩包中解压 node 单一可执行文件 (跳过所有无关的 npm/include/share 等数千个小文件及符号链接)
-  console.log(`[RuntimeDownload] 📦 正在从压缩包提取 Node.js 可执行文件...`);
+  // 2. 提取 Node.js 及配套的 NPM 工具链 (跳过无关的 include/share 等开发头文件)
+  console.log(
+    `[RuntimeDownload] 📦 正在从压缩包提取 Node.js 及完整 NPM 工具链...`
+  );
   if (fs.existsSync(extractTempDir)) {
     fs.rmSync(extractTempDir, { recursive: true, force: true });
   }
 
-  const isNodeBinary = (file) => {
+  const isNeededNodeFile = (file) => {
     const p = file.path.replace(/\\/g, '/');
-    return (
-      file.type === 'file' &&
-      (p.endsWith('/node.exe') ||
-        p === 'node.exe' ||
-        p.endsWith('/bin/node') ||
-        p === 'bin/node' ||
-        p.endsWith('/node') ||
-        p === 'node')
-    );
+    const parts = p.split('/');
+    if (parts.length <= 1) return true;
+    const rel = parts.slice(1).join('/');
+
+    // Windows 单文件及模块
+    if (
+      rel === 'node.exe' ||
+      rel === 'npm' ||
+      rel === 'npm.cmd' ||
+      rel === 'npx' ||
+      rel === 'npx.cmd'
+    )
+      return true;
+    if (rel.startsWith('node_modules/npm')) return true;
+
+    // Unix 结构
+    if (rel === 'bin/node' || rel === 'bin/npm' || rel === 'bin/npx')
+      return true;
+    if (rel.startsWith('lib/node_modules/npm')) return true;
+
+    return false;
   };
 
   await decompress(rawArchivePath, extractTempDir, {
-    filter: isNodeBinary,
+    filter: isNeededNodeFile,
   });
 
-  // 3. 递归寻找解压出的 node / node.exe 可执行文件
-  let foundBinary = null;
-  function findBinary(dir) {
+  // 3. 递归寻找解压出的包含 node / node.exe 的根目录
+  let foundRoot = null;
+  function findNodeRoot(dir) {
     if (!fs.existsSync(dir)) return;
     for (const entry of fs.readdirSync(dir)) {
       const full = path.join(dir, entry);
       const stat = fs.statSync(full);
-      if (stat.isFile() && (entry === 'node.exe' || entry === 'node')) {
-        foundBinary = full;
+      if (
+        (stat.isFile() && (entry === 'node.exe' || entry === 'node')) ||
+        (stat.isDirectory() &&
+          entry === 'bin' &&
+          fs.existsSync(path.join(full, 'node')))
+      ) {
+        foundRoot = dir;
         return;
       }
       if (stat.isDirectory()) {
-        findBinary(full);
-        if (foundBinary) return;
+        findNodeRoot(full);
+        if (foundRoot) return;
       }
     }
   }
-  findBinary(extractTempDir);
+  findNodeRoot(extractTempDir);
 
-  if (!foundBinary) {
-    throw new Error(`未能在解压产物中找到 node 可执行文件!`);
+  if (!foundRoot) {
+    throw new Error(`未能在解压产物中找到 node 可执行文件或根目录!`);
   }
 
-  // 4. 平铺放置到目标目录
+  // 4. 将提取内容平铺同步到目标目录
   if (fs.existsSync(config.targetDir)) {
     fs.rmSync(config.targetDir, { recursive: true, force: true });
   }
-  const finalDest = path.join(config.targetDir, config.expectedFile);
-  fs.mkdirSync(path.dirname(finalDest), { recursive: true });
-  fs.copyFileSync(foundBinary, finalDest);
+  fs.mkdirSync(config.targetDir, { recursive: true });
+  fs.cpSync(foundRoot, config.targetDir, { recursive: true });
 
-  // 5. Unix 下赋予可执行权限
+  // 5. 实体化软链接 (防止 Tauri walkdir 打包报错) 并赋予执行权限
+  resolveAllSymlinks(config.targetDir);
   if (process.platform !== 'win32') {
-    try {
-      fs.chmodSync(finalDest, 0o755);
-    } catch {}
+    const binDir = path.join(config.targetDir, 'bin');
+    if (fs.existsSync(binDir)) {
+      for (const f of fs.readdirSync(binDir)) {
+        try {
+          fs.chmodSync(path.join(binDir, f), 0o755);
+        } catch {}
+      }
+    }
   }
 
   // 6. 清理临时文件
   fs.rmSync(rawArchivePath, { force: true });
   fs.rmSync(extractTempDir, { recursive: true, force: true });
-  console.log(`[RuntimeDownload] 🎉 ${config.name} 准备完成: ${finalDest}`);
+  console.log(
+    `[RuntimeDownload] 🎉 ${config.name} 准备完成 (已包含完整 npm 工具链)`
+  );
 }
 
 /**

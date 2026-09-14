@@ -28,6 +28,7 @@ export class WecomConnectorService {
   private status: WecomStatus = 'disconnected';
   private connectedAt?: number;
   private lastError?: string;
+  private lastChatId?: string;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private heartbeatTimer: NodeJS.Timeout | null = null;
   private missedPongCount = 0;
@@ -279,6 +280,12 @@ export class WecomConnectorService {
           `[WecomConnector] Received message/event callback from user:`,
           JSON.stringify(frame.body)
         );
+        const body = frame.body as Record<string, any> | undefined;
+        if (body?.chatid) {
+          this.lastChatId = String(body.chatid);
+        } else if (body?.from) {
+          this.lastChatId = String(body.from);
+        }
       }
     } catch (err: unknown) {
       console.error('[WecomConnector] Error parsing message frame:', err);

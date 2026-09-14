@@ -3,6 +3,7 @@ import path from 'path';
 
 import type { Context } from '@deepseek-ai/cordis';
 
+import { larkConnector, wecomConnector } from '../connectors';
 import { baseHome, getSessionAgentsConfig } from './manager';
 
 interface CachedAgent {
@@ -173,6 +174,31 @@ ${content}
               } catch {}
             }
           }
+
+          // 3. 动态扫描并注入已授权连接器状态与操作指引
+          try {
+            let connectorsPrompt = '';
+            const wecomState = wecomConnector.getStatus();
+            if (wecomState.status === 'connected') {
+              connectorsPrompt += `\n- 【企业微信连接器 (WeCom Connector)】：已就绪（Bot ID: ${wecomState.botId || 'connected'}）。
+  * 核心能力：可向企业微信发送单聊、群聊消息或通知（支持纯文本与 Markdown 格式）。
+  * 技能指引：当用户要求“发到企业微信”、“向企微发送通知/周报/总结”时，请使用 \`wecom-connector\` 技能执行发送。`;
+            }
+
+            const larkCached = larkConnector.getCachedStatus();
+            if (larkCached && larkCached.status !== 'needs_login') {
+              connectorsPrompt += `\n- 【飞书连接器 (Feishu/Lark Connector)】：已就绪（App ID: ${larkCached.appId || 'configured'}）。
+  * 核心能力：可向飞书发送群聊/单聊消息、查询与创建日程、读取与追加多维表格记录。
+  * 技能指引：当用户要求“发到飞书群”、“查飞书日程”、“追加飞书多维表格”时，请使用 \`feishu-connector\` 技能执行。`;
+            }
+
+            if (connectorsPrompt) {
+              agentsPrompt += `\n\n<active_connectors>
+### 【当前已授权就绪的连接器与可用技能】
+${connectorsPrompt}
+</active_connectors>\n`;
+            }
+          } catch {}
 
           return agentsPrompt;
         },

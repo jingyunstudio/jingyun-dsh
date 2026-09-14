@@ -1,6 +1,6 @@
 # 团队协同智能体开发规范 (DSH Team Collaboration Specification)
 
-本规范继承自 [`common-base-spec.md`](file:///C:/Users/尚风/Documents/trae_projects/jingyun_dsh/src-tauri/resources/builtin-skills/agent-manager/references/common-base-spec.md)。开发多智能体协同团队包（`agentType: "team"`）时，必须在此基础上遵循本文件规定的特化清单结构、团队主理人（Team Lead）Prompt 结构与协同 SOP 编排机制。
+本规范继承自 [`common-base-spec.md`](./common-base-spec.md)。开发多智能体协同团队包（`agentType: "team"`）时，必须在此基础上遵循本文件规定的特化清单结构、团队主理人（Team Lead）Prompt 结构与协同 SOP 编排机制。
 
 ---
 

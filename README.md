@@ -97,13 +97,12 @@ jingyun_dsh/
 │       │   ├── routes/           # HTTP 路由 (插件市场/智能体 API/会员接口)
 │       │   ├── config/           # 配置加载器 (井云平台对接)
 │       │   └── common/           # 公共工具函数
-│       └── resources/            # 静态资源 (插件注册表快照)
+│       └── resources/            # 静态资源 (插件注册表快照、builtin-skills 内置技能包)
 ├── src-tauri/                    # [桌面] Tauri v2 原生壳 (Rust)
 │       ├── src/lib.rs            # 主进程逻辑 (后端进程管理/托盘/窗口)
 │       ├── resources/
 │       │   ├── splash/           # 启动屏 (HTML)
-│       │   ├── vendor/           # 内嵌运行时 (Node.js/Python/Git)
-│       │   └── builtin-skills/   # 内置技能包 (第三方开源)
+│       │   └── vendor/           # 内嵌运行时 (Node.js/Python/Git)
 │       └── capabilities/         # Tauri 安全权限声明
 ├── scripts/                      # 构建 & 打包脚本
 │   ├── pack_gui.py               # GUI 打包控制台 (Python/Tkinter)
@@ -215,10 +214,12 @@ run_pack.bat
 
 ## 🤖 内置技能包
 
-`src-tauri/resources/builtin-skills/` 目录下的技能包来自第三方开源社区，用于增强 AI 助手的专业能力：
+`packages/jingyun-dsh/resources/builtin-skills/` 目录下的技能包用于增强 AI 助手的专业能力：
 
 | 技能包 | 说明 |
 |:---|:---|
+| `wecom-connector` | 企业微信连接器（通过官方 `@wecom/cli` 发送单聊或群聊消息） |
+| `feishu-connector` | 飞书连接器（通过官方 `@larksuite/cli` 发送消息与通知） |
 | `agent-manager` | 智能体包的全生命周期管理（创建 / 修改 / 校验 / 注册） |
 | `skill-creator` | 引导创建自定义技能包 |
 
