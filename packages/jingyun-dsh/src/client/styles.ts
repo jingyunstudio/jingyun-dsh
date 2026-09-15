@@ -1931,6 +1931,12 @@ body.jy-resizing-artifact iframe {
   color: var(--dsw-alias-label-inverse, #09090b) !important;
 }
 
+.jy-btn-primary:disabled {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+}
+
 /* 连接器详情与扫码弹窗暗黑模式 */
 .dark .jy-detail-modal,
 [data-ds-dark-theme] .jy-detail-modal,

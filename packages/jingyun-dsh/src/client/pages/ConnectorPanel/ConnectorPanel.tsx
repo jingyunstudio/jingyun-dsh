@@ -153,6 +153,7 @@ interface ConnectorCardProps {
   description: string;
   titleTooltip?: string;
   isConnected: boolean;
+  isLoading?: boolean;
   statusBadge?: React.ReactNode;
   onConnect: () => void;
   onManage: () => void;
@@ -165,6 +166,7 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
   description,
   titleTooltip,
   isConnected,
+  isLoading,
   statusBadge,
   onConnect,
   onManage,
@@ -172,6 +174,7 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
   <div
     className="jy-connector-card"
     onClick={() => {
+      if (isLoading) return;
       if (isConnected) {
         onManage();
       } else {
@@ -190,7 +193,7 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
       background:
         'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
       boxSizing: 'border-box',
-      cursor: 'pointer',
+      cursor: isLoading ? 'default' : 'pointer',
       height: '80px',
       transition: 'all 0.2s ease',
       boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
@@ -308,7 +311,8 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
       ) : (
         <button
           className="jy-btn-primary"
-          onClick={onConnect}
+          disabled={isLoading}
+          onClick={isLoading ? undefined : onConnect}
           style={{
             height: '28px',
             padding: '0 14px',
@@ -318,14 +322,20 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
             color: 'var(--dsw-alias-label-inverse, #ffffff)',
             fontSize: '12px',
             fontWeight: 500,
-            cursor: 'pointer',
+            cursor: isLoading ? 'not-allowed' : 'pointer',
+            opacity: isLoading ? 0.45 : 1,
+            pointerEvents: isLoading ? 'none' : 'auto',
             transition: 'opacity 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.opacity = '0.9';
+            if (!isLoading) {
+              e.currentTarget.style.opacity = '0.9';
+            }
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.opacity = '1';
+            if (!isLoading) {
+              e.currentTarget.style.opacity = '1';
+            }
           }}
         >
           ＋ 连接
@@ -343,6 +353,9 @@ export const ConnectorPanel = () => {
   const [showWecomModal, setShowWecomModal] = useState(false);
   const [showWecomDetailModal, setShowWecomDetailModal] = useState(false);
   const [dingtalkStatus, setDingtalkStatus] = useState<any>(null);
+  const [larkLoading, setLarkLoading] = useState(true);
+  const [wecomLoading, setWecomLoading] = useState(true);
+  const [dingtalkLoading, setDingtalkLoading] = useState(true);
   const [cliStatus, setCliStatus] = useState<
     Record<string, { installed: boolean; installing?: boolean }>
   >({});
@@ -431,6 +444,7 @@ export const ConnectorPanel = () => {
 
   // 获取飞书连接状态
   const fetchLarkStatus = async () => {
+    setLarkLoading(true);
     try {
       const res = await fetch('/api/jingyun/connectors/lark/status');
       if (res.ok) {
@@ -441,6 +455,8 @@ export const ConnectorPanel = () => {
       }
     } catch (err) {
       console.error('[ConnectorPanel] Failed to fetch lark status:', err);
+    } finally {
+      setLarkLoading(false);
     }
   };
 
@@ -467,6 +483,7 @@ export const ConnectorPanel = () => {
 
   // 获取企业微信连接状态
   const fetchWecomStatus = async () => {
+    setWecomLoading(true);
     try {
       const res = await fetch('/api/jingyun/connectors/wecom/status');
       if (res.ok) {
@@ -477,11 +494,14 @@ export const ConnectorPanel = () => {
       }
     } catch (err) {
       console.error('[ConnectorPanel] Failed to fetch wecom status:', err);
+    } finally {
+      setWecomLoading(false);
     }
   };
 
   // 获取钉钉连接状态
   const fetchDingtalkStatus = async () => {
+    setDingtalkLoading(true);
     try {
       const res = await fetch('/api/jingyun/connectors/dingtalk/status');
       if (res.ok) {
@@ -492,6 +512,8 @@ export const ConnectorPanel = () => {
       }
     } catch (err) {
       console.error('[ConnectorPanel] Failed to fetch dingtalk status:', err);
+    } finally {
+      setDingtalkLoading(false);
     }
   };
 
@@ -646,6 +668,7 @@ export const ConnectorPanel = () => {
           icon={<FeishuLogo />}
           description="支持通过飞书账号授权，使 AI 具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。"
           isConnected={isLarkConnected}
+          isLoading={larkLoading}
           statusBadge={
             <span
               style={{
@@ -685,6 +708,7 @@ export const ConnectorPanel = () => {
           icon={<DingtalkLogo />}
           description="与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。"
           isConnected={isDingtalkConnected}
+          isLoading={dingtalkLoading}
           statusBadge={
             <span
               style={{
@@ -719,6 +743,7 @@ export const ConnectorPanel = () => {
           icon={<WechatWorkLogo />}
           description="与企业微信智能机器人深度集成，支持 WebSocket 长连接实时消息收发与协同。"
           isConnected={isWecomConnected}
+          isLoading={wecomLoading}
           statusBadge={
             <span
               style={{
