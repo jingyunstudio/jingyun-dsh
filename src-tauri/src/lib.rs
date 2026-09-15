@@ -50,7 +50,8 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
 
         #[cfg(target_os = "windows")]
         let new_path = format!(
-            "{};{};{};{}",
+            "{};{};{};{};{}",
+            dsh_home.join("bin").to_string_lossy(),
             vendor_dir.join("node").to_string_lossy(),
             vendor_dir.join("python").to_string_lossy(),
             vendor_dir.join("git/PortableGit/cmd").to_string_lossy(),
@@ -59,7 +60,8 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
 
         #[cfg(not(target_os = "windows"))]
         let new_path = format!(
-            "{}:{}:{}:{}",
+            "{}:{}:{}:{}:{}",
+            dsh_home.join("bin").to_string_lossy(),
             vendor_dir.join("node").join("bin").to_string_lossy(),
             vendor_dir.join("python").join("bin").to_string_lossy(),
             vendor_dir.join("node").to_string_lossy(),
@@ -70,6 +72,14 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
         cmd.env("DSH_HOME", dsh_home.to_string_lossy().as_ref());
         cmd.env("DSH_CONFIG_DIR", dsh_home.to_string_lossy().as_ref());
         cmd.env("DSH_PORTABLE", if is_portable { "1" } else { "0" });
+        cmd.env(
+            "DWS_CONFIG_DIR",
+            dsh_home
+                .join("connectors")
+                .join("dingtalk")
+                .to_string_lossy()
+                .as_ref(),
+        );
 
         #[cfg(target_os = "windows")]
         {

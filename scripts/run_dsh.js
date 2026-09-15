@@ -47,8 +47,14 @@ const dshArgs = [
 ];
 
 // 将 $DSH_HOME/bin 与 vendor node/npm 优先置于 PATH 最前列
-const dshHome = process.env.DSH_HOME?.trim() || path.join(os.homedir(), '.dsh');
+const defaultDataDir = path.join(rootDir, 'data');
+const dshHome =
+  process.env.DSH_HOME?.trim() ||
+  (fs.existsSync(defaultDataDir)
+    ? defaultDataDir
+    : path.join(os.homedir(), '.dsh'));
 const dshBinDir = path.join(dshHome, 'bin');
+const dingtalkConfigDir = path.join(dshHome, 'connectors', 'dingtalk');
 const pathKey =
   Object.keys(process.env).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
 const envPath = [
@@ -64,7 +70,13 @@ const envPath = [
 const child = spawn(nodeBin, dshArgs, {
   cwd: rootDir,
   stdio: 'inherit',
-  env: { ...process.env, [pathKey]: envPath },
+  env: {
+    ...process.env,
+    DSH_HOME: dshHome,
+    DSH_CONFIG_DIR: dshHome,
+    DWS_CONFIG_DIR: process.env.DWS_CONFIG_DIR || dingtalkConfigDir,
+    [pathKey]: envPath,
+  },
 });
 
 child.on('exit', (code, signal) => {

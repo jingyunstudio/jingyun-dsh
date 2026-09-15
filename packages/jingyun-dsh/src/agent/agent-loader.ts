@@ -200,7 +200,13 @@ ${content}
             if (dingtalkState.status === 'connected') {
               connectorsPrompt += `\n- 【钉钉连接器 (DingTalk Connector)】：已就绪（${dingtalkState.appKey ? '主体: ' + dingtalkState.appKey : '已连接'}）。
   * 核心能力：已通过钉钉官方工作区生态（dws）授权就绪。支持协同钉钉群聊、文档、日程、待办、多维表与通讯录。
-  * 技能指引：当用户需要与钉钉交互时，可直接使用官方 \`dws\` 钉钉能力套件（如发送消息使用 \`dws chat\`）。`;
+  * 技能指引：当用户需要向钉钉发消息、通知或与钉钉交互时，请使用 \`dingtalk-connector\` 技能，或直接调用标准 \`dws\` 命令。
+  * 常用命令示例（非交互环境请带 --yes）：
+    - 发送私信/单聊（发给自己或指定人）：\`dws chat +dm --to "<姓名/花名>" --content "<内容>" --yes\`
+    - 发送群聊消息：\`dws chat +send-to-group --group "<群名>" --content "<内容>" --yes\`
+    - 查看最近@我：\`dws chat +at-me\`
+    - 查看当前账号身份：\`dws profile list --format json\`
+  * 沙箱注意事项：dws 运行时需读写连接器数据锁文件，若在 workspace-write 沙箱模式下提示文件锁 Access is denied，请指定 sandbox_permissions="danger-full-access"`;
             }
 
             if (connectorsPrompt) {

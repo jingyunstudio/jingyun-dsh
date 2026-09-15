@@ -8,8 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import type { Context } from '@deepseek-ai/cordis';
 
 import { initSystemPromptHook } from './agent/agent-loader';
-import { getDshHome, readDesktopConfig } from './common/paths';
+import {
+  getDingtalkConfigDir,
+  getDshHome,
+  readDesktopConfig,
+} from './common/paths';
 import { Config } from './config/schema';
+import { cliManager } from './connectors';
 import { registerRoutes } from './routes';
 
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
@@ -19,6 +24,20 @@ if (initialData.app_host) {
   console.log(
     `[UIBranding] Top-level pre-injected JINGYUN_APP_HOST: ${initialData.app_host}`
   );
+}
+
+// Inject DSH CLI binaries and connector isolation environments into process.env globally
+try {
+  const envWithCli = cliManager.getEnv();
+  if (envWithCli.PATH) {
+    process.env.PATH = envWithCli.PATH;
+  }
+  const dingtalkConfigDir = getDingtalkConfigDir();
+  if (!process.env.DWS_CONFIG_DIR) {
+    process.env.DWS_CONFIG_DIR = dingtalkConfigDir;
+  }
+} catch (err) {
+  console.warn('[JingyunDsh] Failed to pre-inject connector environment:', err);
 }
 
 export const name = 'jingyun-dsh';
