@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -17,13 +18,24 @@ if (!checkRuntimesExist()) {
   await ensureRuntimes();
 }
 
-// 2. Ensure production dependencies are synchronized and pruned
+// 2. 使用 pnpm 原生官方部署机制 (方案 1: pnpm deploy --prod --node-linker hoisted)
 console.log(
-  '[VendorPrepare] 🔄 Synchronizing production dependencies in resources...'
+  '[VendorPrepare] 🚀 Deploying production dependencies via official pnpm deploy...'
 );
-await import('./build_deps.js');
+if (fs.existsSync(targetJingyun)) {
+  fs.rmSync(targetJingyun, { recursive: true, force: true });
+}
+const pnpmCmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
+execSync(
+  `"${pnpmCmd}" --filter jingyun-dsh deploy --prod --node-linker hoisted "${targetJingyun}"`,
+  {
+    cwd: baseDir,
+    stdio: 'inherit',
+    env: process.env,
+  }
+);
 
-// 2. Sync packages/jingyun-dsh and @jingyun-ai alias
+// 3. Sync compiled packages/jingyun-dsh and @jingyun-ai alias
 const srcPlugin = path.join(baseDir, 'packages', 'jingyun-dsh');
 const dstPlugin = path.join(targetJingyun, 'packages', 'jingyun-dsh');
 const dstAlias = path.join(
@@ -32,6 +44,7 @@ const dstAlias = path.join(
   '@jingyun-ai',
   'jingyun-dsh'
 );
+
 if (fs.existsSync(srcPlugin)) {
   const filter = (src) =>
     !src.includes('node_modules') && !src.includes('.git');
@@ -41,7 +54,15 @@ if (fs.existsSync(srcPlugin)) {
   fs.cpSync(srcPlugin, dstAlias, { recursive: true, filter });
 }
 
-// 3. Ensure frontendDist directory exists for Tauri splash template
+// 4. Sync unified runner script to resources/vendor/jingyun/scripts/run_dsh.js
+const dstScripts = path.join(targetJingyun, 'scripts');
+fs.mkdirSync(dstScripts, { recursive: true });
+fs.copyFileSync(
+  path.join(__dirname, 'run_dsh.js'),
+  path.join(dstScripts, 'run_dsh.js')
+);
+
+// 5. Ensure frontendDist directory exists for Tauri splash template
 const distTauriTemp = path.join(baseDir, 'dist_tauri_temp');
 fs.mkdirSync(distTauriTemp, { recursive: true });
 const splashTemplatePath = path.join(
@@ -55,4 +76,4 @@ if (fs.existsSync(splashTemplatePath)) {
   fs.copyFileSync(splashTemplatePath, path.join(distTauriTemp, 'index.html'));
 }
 
-console.log('[VendorPrepare] 🎉 Resources ready in 0.02s!');
+console.log('[VendorPrepare] 🎉 Resources deployed and ready!');

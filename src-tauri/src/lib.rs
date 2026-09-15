@@ -14,10 +14,39 @@ fn strip_unc(p: &Path) -> PathBuf {
     }
 }
 
+fn find_dsh_runner(jingyun_dir: &Path, vendor_dir: &Path) -> Option<(PathBuf, PathBuf)> {
+    // 1. 优先在打包目录中查找 scripts/run_dsh.js
+    let prod_script = jingyun_dir.join("scripts").join("run_dsh.js");
+    if prod_script.exists() {
+        return Some((prod_script, jingyun_dir.to_path_buf()));
+    }
+
+    // 2. 本地开发环境回退查找
+    let candidates = [
+        std::env::current_dir().unwrap_or_default().join("scripts").join("run_dsh.js"),
+        vendor_dir.join("..").join("..").join("scripts").join("run_dsh.js"),
+        vendor_dir.join("..").join("..").join("..").join("scripts").join("run_dsh.js"),
+    ];
+
+    for c in &candidates {
+        if c.exists() {
+            if let Ok(canon) = c.canonicalize() {
+                let working_dir = canon.parent().and_then(|p| p.parent()).map(|p| p.to_path_buf())
+                    .unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                return Some((canon, working_dir));
+            }
+            return Some((c.clone(), std::env::current_dir().unwrap_or_default()));
+        }
+    }
+
+    None
+}
+
 fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is_portable: bool) {
     let vendor_dir = strip_unc(vendor_dir);
     let jingyun_dir = strip_unc(jingyun_dir);
     let dsh_home = strip_unc(dsh_home);
+
     #[cfg(target_os = "windows")]
     let node_exe = vendor_dir.join("node").join("node.exe");
 
@@ -31,55 +60,25 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
         }
     };
 
-    let dsh_bin = jingyun_dir.join("node_modules/@deepseek-ai/dsh/lib/bin.js");
+    let runner = find_dsh_runner(&jingyun_dir, &vendor_dir);
 
-    if node_exe.exists() && dsh_bin.exists() {
+    if node_exe.exists() && runner.is_some() {
+        let (runner_script, working_dir) = runner.unwrap();
         println!(
-            "[Tauri] Spawning DSH Backend: {} {}",
+            "[Tauri] Spawning Unified DSH Runner: {} {} (cwd: {})",
             node_exe.display(),
-            dsh_bin.display()
+            runner_script.display(),
+            working_dir.display()
         );
+
         let mut cmd = std::process::Command::new(&node_exe);
-        cmd.arg(&dsh_bin);
-        cmd.arg("--profile");
-        cmd.arg("web");
+        cmd.arg(&runner_script);
+        cmd.arg("--tauri");
         cmd.arg("--no-open");
-        cmd.current_dir(jingyun_dir);
+        cmd.current_dir(&working_dir);
 
-        let current_path = std::env::var("PATH").unwrap_or_default();
-
-        #[cfg(target_os = "windows")]
-        let new_path = format!(
-            "{};{};{};{};{}",
-            dsh_home.join("bin").to_string_lossy(),
-            vendor_dir.join("node").to_string_lossy(),
-            vendor_dir.join("python").to_string_lossy(),
-            vendor_dir.join("git/PortableGit/cmd").to_string_lossy(),
-            current_path
-        );
-
-        #[cfg(not(target_os = "windows"))]
-        let new_path = format!(
-            "{}:{}:{}:{}:{}",
-            dsh_home.join("bin").to_string_lossy(),
-            vendor_dir.join("node").join("bin").to_string_lossy(),
-            vendor_dir.join("python").join("bin").to_string_lossy(),
-            vendor_dir.join("node").to_string_lossy(),
-            current_path
-        );
-
-        cmd.env("PATH", &new_path);
         cmd.env("DSH_HOME", dsh_home.to_string_lossy().as_ref());
-        cmd.env("DSH_CONFIG_DIR", dsh_home.to_string_lossy().as_ref());
         cmd.env("DSH_PORTABLE", if is_portable { "1" } else { "0" });
-        cmd.env(
-            "DWS_CONFIG_DIR",
-            dsh_home
-                .join("connectors")
-                .join("dingtalk")
-                .to_string_lossy()
-                .as_ref(),
-        );
 
         #[cfg(target_os = "windows")]
         {
@@ -111,11 +110,11 @@ fn launch_dsh_backend(vendor_dir: &Path, jingyun_dir: &Path, dsh_home: &Path, is
         }
     } else {
         eprintln!(
-            "[Tauri] Sidecar target missing. Node ({:?}): {:?}, Bin ({:?}): {:?}",
+            "[Tauri] Sidecar target missing. Node ({:?}): {:?}, Runner ({:?}): {:?}",
             node_exe,
             node_exe.exists(),
-            dsh_bin,
-            dsh_bin.exists()
+            runner,
+            runner.is_some()
         );
     }
 }
@@ -386,39 +385,6 @@ fn load_tenant_name(dsh_home: &Path) -> String {
     String::new()
 }
 
-fn ensure_profile_bundles(dsh_home: &Path) {
-    let profile_dir = dsh_home.join("profiles").join("web");
-    let pkg_path = profile_dir.join("package.json");
-    let _ = std::fs::create_dir_all(&profile_dir);
-
-    let needs_write = match std::fs::read_to_string(&pkg_path) {
-        Ok(content) => !content.contains("@jingyun-ai/jingyun-dsh"),
-        Err(_) => true,
-    };
-
-    if needs_write {
-        println!(
-            "[Tauri] Initializing web profile package.json: {}",
-            pkg_path.display()
-        );
-        let default_pkg = r#"{
-  "name": "dsh-profile-web",
-  "private": true,
-  "dependencies": {},
-  "dsh": {
-    "profile": {
-      "bundles": [
-        "@deepseek-ai/dsh-base",
-        "@deepseek-ai/dsh-web-app",
-        "@jingyun-ai/jingyun-dsh"
-      ]
-    }
-  }
-}"#;
-        let _ = std::fs::write(&pkg_path, default_pkg);
-    }
-}
-
 fn resolve_dsh_home(app: &tauri::App) -> (PathBuf, bool) {
     let exe_dir = std::env::current_exe()
         .ok()
@@ -430,22 +396,6 @@ fn resolve_dsh_home(app: &tauri::App) -> (PathBuf, bool) {
     } else {
         let home = app.path().home_dir().unwrap_or_default();
         (home.join(".dsh"), false)
-    }
-}
-
-fn ensure_portable_config(data_dir: &Path, vendor_dir: &Path) {
-    let desktop_target = data_dir.join("desktop-config.json");
-    if desktop_target.exists() {
-        return;
-    }
-    let plugin_dir = vendor_dir
-        .join("jingyun")
-        .join("node_modules")
-        .join("@jingyun-ai")
-        .join("jingyun-dsh");
-    let desktop_src = plugin_dir.join("desktop-config.json");
-    if desktop_src.exists() {
-        let _ = std::fs::copy(&desktop_src, &desktop_target);
     }
 }
 
@@ -540,9 +490,6 @@ pub fn run() {
                     resource_dir.join("vendor")
                 };
                 let jingyun_dir = vendor_dir.join("jingyun");
-
-                ensure_profile_bundles(&dsh_home);
-                ensure_portable_config(&dsh_home, &vendor_dir);
 
                 launch_dsh_backend(&vendor_dir, &jingyun_dir, &dsh_home, is_portable);
             });
