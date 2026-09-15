@@ -134,7 +134,7 @@ export function HeroSlotAutoHider() {
   });
 }
 
-export function showToast(message: string) {
+export function showToast(message: string, duration = 3500) {
   if (typeof document === 'undefined') return;
   let toast = document.querySelector(
     '.jy-custom-toast'
@@ -153,20 +153,21 @@ export function showToast(message: string) {
     style.textContent = `
       .jy-custom-toast {
         position: fixed;
-        bottom: 80px;
+        top: 28px;
         left: 50%;
-        transform: translateX(-50%) translateY(20px);
-        background: rgba(24, 24, 27, 0.9) !important;
-        backdrop-filter: blur(8px);
+        transform: translateX(-50%) translateY(-20px);
+        background: rgba(15, 23, 42, 0.95) !important;
+        backdrop-filter: blur(12px);
         color: #ffffff !important;
-        padding: 8px 16px;
+        padding: 10px 20px;
         border-radius: 9999px;
-        font-size: 13px;
+        font-size: 13.5px;
         font-weight: 500;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        z-index: 99999;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+        z-index: 2147483647 !important;
         opacity: 0;
-        transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+        transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
         pointer-events: none;
         -webkit-font-smoothing: antialiased;
       }
@@ -189,7 +190,7 @@ export function showToast(message: string) {
       const t = toast;
       setTimeout(() => t.remove(), 200);
     }
-  }, 3000);
+  }, duration);
 }
 
 export function normalizeUrl(url?: string, defaultUrl = ''): string {

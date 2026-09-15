@@ -43,6 +43,7 @@ export interface LarkAuthStartResult {
 
 export interface CliToolStatus {
   installed: boolean;
+  installing?: boolean;
   version?: string;
   command?: string;
   error?: string;

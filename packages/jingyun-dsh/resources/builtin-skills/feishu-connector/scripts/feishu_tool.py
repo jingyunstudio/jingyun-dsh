@@ -13,7 +13,7 @@ import sys
 
 
 def get_cli_cmd():
-    return shutil.which("lark-cli") or shutil.which("lark-cli.cmd")
+    return shutil.which("lark-cli.cmd") if sys.platform == "win32" else shutil.which("lark-cli")
 
 
 def main():
@@ -26,8 +26,7 @@ def main():
 
     cli_name = get_cli_cmd()
     if not cli_name:
-        print("❌ 未检测到 lark-cli 命令行工具。")
-        print("请在客户端「连接器」中心点击「一键安装 CLI」或确认已全局安装 @larksuite/cli。")
+        print("❌ 未检测到 lark-cli 命令行工具。请先在客户端连接器面板中完成飞书连接与授权。")
         sys.exit(1)
 
     target_id = args.receive_id

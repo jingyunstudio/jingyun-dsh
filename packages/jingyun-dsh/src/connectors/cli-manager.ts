@@ -4,12 +4,14 @@ import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 
-import { getDshHome } from '../common/paths';
+const execAsync = promisify(exec);
+import { getDshHome, getDshBinDir } from '../common/paths';
 import type { AllCliStatus, CliToolStatus } from './types';
 
-const execAsync = promisify(exec);
-
 export class CliManagerService {
+  private installingPromises = new Map<string, Promise<string>>();
+  private versionCache = new Map<string, string>();
+
   private resolveVendorDir(): string | null {
     const isWin = process.platform === 'win32';
     const appDataDir = isWin
@@ -38,13 +40,58 @@ export class CliManagerService {
     return null;
   }
 
+  public resolveNodeDir(): string | null {
+    const vendorDir = this.resolveVendorDir();
+    if (!vendorDir) return null;
+    return path.resolve(vendorDir, 'node');
+  }
+
+  public resolveCliExec(name: 'wecom' | 'lark' | 'dingtalk'): string | null {
+    const isWin = process.platform === 'win32';
+    const baseNames =
+      name === 'wecom'
+        ? ['wecom-cli']
+        : name === 'lark'
+          ? ['lark-cli']
+          : ['dws'];
+
+    const binDir = getDshBinDir();
+    const nodeDir = this.resolveNodeDir();
+    const searchDirs = [binDir, nodeDir].filter(Boolean) as string[];
+
+    for (const dir of searchDirs) {
+      for (const base of baseNames) {
+        if (isWin) {
+          const candidates = [
+            path.resolve(dir, `${base}.cmd`),
+            path.resolve(dir, `${base}.exe`),
+            path.resolve(dir, base),
+          ];
+          for (const candidate of candidates) {
+            if (fs.existsSync(candidate)) return candidate;
+          }
+        } else {
+          const candidates = [
+            path.resolve(dir, 'bin', base),
+            path.resolve(dir, base),
+          ];
+          for (const candidate of candidates) {
+            if (fs.existsSync(candidate)) return candidate;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   public resolveNpmPath(): string | null {
     const isWin = process.platform === 'win32';
-    const vendorDir = this.resolveVendorDir();
-    if (vendorDir) {
-      const vendorNpmWin = path.resolve(vendorDir, 'node', 'npm.cmd');
-      const vendorNpmUnixBin = path.resolve(vendorDir, 'node', 'bin', 'npm');
-      const vendorNpmUnix = path.resolve(vendorDir, 'node', 'npm');
+
+    const nodeDir = this.resolveNodeDir();
+    if (nodeDir) {
+      const vendorNpmWin = path.resolve(nodeDir, 'npm.cmd');
+      const vendorNpmUnixBin = path.resolve(nodeDir, 'bin', 'npm');
+      const vendorNpmUnix = path.resolve(nodeDir, 'npm');
 
       if (isWin && fs.existsSync(vendorNpmWin)) {
         return vendorNpmWin;
@@ -58,30 +105,65 @@ export class CliManagerService {
     }
     return null;
   }
+  public async ensureCliExec(
+    name: 'wecom' | 'lark' | 'dingtalk'
+  ): Promise<string> {
+    const existing = this.resolveCliExec(name);
+    if (existing) {
+      return existing;
+    }
 
+    const pending = this.installingPromises.get(name);
+    if (pending) {
+      return pending;
+    }
+
+    const task = (async () => {
+      try {
+        console.log(
+          `[CliManager] CLI '${name}' 未安装，在使用时自动下载安装...`
+        );
+        const res = await this.installCli(name);
+        if (!res.success) {
+          throw new Error(`自动安装 ${name} CLI 失败: ${res.message}`);
+        }
+        const execPath = this.resolveCliExec(name);
+        if (!execPath) {
+          throw new Error(
+            `自动安装 ${name} CLI 完成，但在便携目录下未能找到可执行文件`
+          );
+        }
+        return execPath;
+      } finally {
+        this.installingPromises.delete(name);
+      }
+    })();
+
+    this.installingPromises.set(name, task);
+    return task;
+  }
   public getEnv(): NodeJS.ProcessEnv {
+    const isWin = process.platform === 'win32';
+    const binDir = getDshBinDir();
     const vendorDir = this.resolveVendorDir();
     const currentPath = process.env.PATH || '';
-    const isWin = process.platform === 'win32';
     const pathParts: string[] = [];
+
+    if (binDir) {
+      pathParts.push(binDir);
+      if (!isWin) {
+        pathParts.push(path.resolve(binDir, 'bin'));
+      }
+    }
 
     if (vendorDir) {
       const nodeDir = isWin
         ? path.resolve(vendorDir, 'node')
         : path.resolve(vendorDir, 'node', 'bin');
       pathParts.push(nodeDir);
-    }
-
-    // 探测本地 WorkBuddy 或全局 node 安装目录中可能存在的 CLI packages
-    const wbCliDir = path.resolve(
-      os.homedir(),
-      '.workbuddy',
-      'binaries',
-      'node',
-      'cli-connector-packages'
-    );
-    if (fs.existsSync(wbCliDir)) {
-      pathParts.push(wbCliDir);
+      if (!isWin) {
+        pathParts.push(path.resolve(vendorDir, 'node'));
+      }
     }
 
     const sep = isWin ? ';' : ':';
@@ -99,50 +181,42 @@ export class CliManagerService {
   public async getSingleCliStatus(
     name: 'wecom' | 'lark' | 'dingtalk'
   ): Promise<CliToolStatus> {
-    const isWin = process.platform === 'win32';
-    let cmdName: string;
-    let fallbackCmd: string;
-
-    if (name === 'wecom') {
-      cmdName = isWin ? 'wecom-cli.cmd' : 'wecom-cli';
-      fallbackCmd = 'wecom-cli';
-    } else if (name === 'lark') {
-      cmdName = isWin ? 'lark-cli.cmd' : 'lark-cli';
-      fallbackCmd = 'lark-cli';
-    } else {
-      cmdName = isWin ? 'dws.cmd' : 'dws';
-      fallbackCmd = 'dws';
+    const cliExec = this.resolveCliExec(name);
+    const isInstalling = this.installingPromises.has(name);
+    if (!cliExec) {
+      this.versionCache.delete(name);
+      return {
+        installed: false,
+        installing: isInstalling,
+        error: isInstalling
+          ? '正在自动下载安装中...'
+          : '便携 Node 运行时尚未安装此 CLI',
+      };
     }
 
-    try {
-      const { stdout } = await execAsync(`${cmdName} --version`, {
-        env: this.getEnv(),
-      });
-      const version = stdout.trim();
-      return {
-        installed: true,
-        version: version.replace(/^.*version\s*/i, '').trim() || version,
-        command: cmdName,
-      };
-    } catch (err: any) {
-      // 尝试不用 .cmd 后缀再探测一次
+    let version = this.versionCache.get(name);
+    if (!version) {
       try {
-        const { stdout } = await execAsync(`${fallbackCmd} --version`, {
+        const { stdout } = await execAsync(`"${cliExec}" --version`, {
           env: this.getEnv(),
+          timeout: 5000,
         });
-        const version = stdout.trim();
-        return {
-          installed: true,
-          version: version.replace(/^.*version\s*/i, '').trim() || version,
-          command: fallbackCmd,
-        };
+        const trimmed = stdout.trim();
+        version = trimmed.replace(/^.*version\s*/i, '').trim() || trimmed;
+        if (version) {
+          this.versionCache.set(name, version);
+        }
       } catch {
-        return {
-          installed: false,
-          error: err?.message || 'Not installed',
-        };
+        version = 'installed';
       }
     }
+
+    return {
+      installed: true,
+      installing: isInstalling,
+      version,
+      command: cliExec,
+    };
   }
 
   public async getAllStatus(): Promise<AllCliStatus> {
@@ -153,16 +227,8 @@ export class CliManagerService {
     ]);
 
     const vendorNpm = this.resolveNpmPath();
-    let npmAvailable = Boolean(vendorNpm);
-    let npmPath = vendorNpm || undefined;
-
-    if (!npmAvailable) {
-      try {
-        await execAsync('npm --version', { env: this.getEnv() });
-        npmAvailable = true;
-        npmPath = 'npm';
-      } catch {}
-    }
+    const npmAvailable = Boolean(vendorNpm);
+    const npmPath = vendorNpm || undefined;
 
     return {
       wecom,
@@ -176,7 +242,15 @@ export class CliManagerService {
   public async installCli(
     name: 'wecom' | 'lark' | 'dingtalk'
   ): Promise<{ success: boolean; message: string; version?: string }> {
-    const npmExec = this.resolveNpmPath() || 'npm';
+    const npmExec = this.resolveNpmPath();
+    const nodeDir = this.resolveNodeDir();
+    if (!npmExec || !nodeDir) {
+      return {
+        success: false,
+        message: '未检测到便携 Node.js 运行时 (vendor/node)，已禁用回退到系统全局环境',
+      };
+    }
+
     let pkgName: string;
     if (name === 'wecom') {
       pkgName = '@wecom/cli';
@@ -186,8 +260,15 @@ export class CliManagerService {
       pkgName = 'dingtalk-workspace-cli';
     }
 
-    const cmd = `"${npmExec}" install -g ${pkgName} --registry=https://registry.npmmirror.com`;
-    console.log(`[CliManager] Executing install: ${cmd}`);
+    const binDir = getDshBinDir();
+    if (!fs.existsSync(binDir)) {
+      try {
+        fs.mkdirSync(binDir, { recursive: true });
+      } catch {}
+    }
+
+    const cmd = `"${npmExec}" install -g ${pkgName} --prefix "${binDir}" --registry=https://registry.npmmirror.com`;
+    console.log(`[CliManager] Executing install to ${binDir}: ${cmd}`);
 
     try {
       const { stdout, stderr } = await execAsync(cmd, {
@@ -200,20 +281,21 @@ export class CliManagerService {
       if (status.installed) {
         return {
           success: true,
-          message: `已成功安装 ${pkgName} (${status.version || 'latest'})`,
+          message: `已成功安装 ${pkgName} (${status.version || 'latest'}) 到便携环境`,
           version: status.version,
         };
       } else {
         return {
           success: false,
-          message: `安装命令已执行，但检测工具未能就绪: ${status.error || 'unknown error'}`,
+          message: `安装命令已执行，但检测便携工具未能就绪: ${status.error || 'unknown error'}`,
         };
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(`[CliManager] Install error:`, err);
+      const message = err instanceof Error ? err.message : String(err);
       return {
         success: false,
-        message: `安装失败: ${err.message}`,
+        message: `安装失败: ${message}`,
       };
     }
   }

@@ -32,9 +32,16 @@ export function registerConnectorsRoutes(ctx: Context) {
     path: '/api/jingyun/connectors/cli/install',
     handler: async (req: IncomingMessage, res: ServerResponse) => {
       try {
-        const body = await parseJsonBody<{ name?: 'wecom' | 'lark' }>(req);
-        if (!body?.name || (body.name !== 'wecom' && body.name !== 'lark')) {
-          return sendError(res, 'name 参数必须为 wecom 或 lark', 400);
+        const body = await parseJsonBody<{
+          name?: 'wecom' | 'lark' | 'dingtalk';
+        }>(req);
+        if (
+          !body?.name ||
+          (body.name !== 'wecom' &&
+            body.name !== 'lark' &&
+            body.name !== 'dingtalk')
+        ) {
+          return sendError(res, 'name 参数必须为 wecom, lark 或 dingtalk', 400);
         }
         const result = await cliManager.installCli(body.name);
         sendJson(res, result);

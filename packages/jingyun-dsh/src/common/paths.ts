@@ -24,6 +24,12 @@ export function getDshHome(): string {
   return path.resolve(os.homedir(), '.dsh');
 }
 /**
+ * 获取 DSH 可执行工具目录 ($DSH_HOME/bin)
+ */
+export function getDshBinDir(): string {
+  return path.join(getDshHome(), 'bin');
+}
+/**
  * 获取连接器存储目录 ($DSH_HOME/connectors)
  */
 export function getConnectorsDir(): string {

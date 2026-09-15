@@ -21,18 +21,17 @@ export class DingtalkConnectorService {
     await this.logoutCli();
   }
 
-  private getDwsCommand(): string {
-    const isWin = process.platform === 'win32';
-    return isWin ? 'dws.cmd' : 'dws';
-  }
 
   public async getCliAuthStatus(): Promise<DingtalkAuthStatus> {
     if (this.cachedCliStatus && Date.now() < this.cachedCliStatus.expiresAt) {
       return this.cachedCliStatus.data;
     }
-    const cmd = this.getDwsCommand();
+    const cmd = cliManager.resolveCliExec('dingtalk');
+    if (!cmd) {
+      return { authenticated: false };
+    }
     try {
-      const { stdout } = await execAsync(`${cmd} auth status --format json`, {
+      const { stdout } = await execAsync(`"${cmd}" auth status --format json`, {
         env: cliManager.getEnv(),
       });
       let parsed: any;
@@ -78,7 +77,7 @@ export class DingtalkConnectorService {
   }> {
     this.cancelCliAuth();
 
-    const cmd = this.getDwsCommand();
+    const cmd = await cliManager.ensureCliExec('dingtalk');
     return new Promise((resolve, reject) => {
       let resolved = false;
       const timer = setTimeout(() => {
@@ -157,16 +156,17 @@ export class DingtalkConnectorService {
   public async logoutCli(): Promise<void> {
     this.cancelCliAuth();
     this.cachedCliStatus = null;
-    const cmd = this.getDwsCommand();
     try {
-      await execAsync(`${cmd} auth logout`, {
-        env: cliManager.getEnv(),
-      });
+      const cmd = cliManager.resolveCliExec('dingtalk');
+      if (cmd) {
+        await execAsync(`"${cmd}" auth logout`, {
+          env: cliManager.getEnv(),
+        });
+      }
     } catch (err) {
       console.warn('[DingtalkConnector] dws auth logout error:', err);
     }
   }
-
   public async getCombinedStatus(): Promise<
     DingtalkState & { cliAuth?: DingtalkAuthStatus; connected: boolean }
   > {

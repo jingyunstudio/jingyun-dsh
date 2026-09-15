@@ -13,14 +13,13 @@ import sys
 
 
 def get_cli_cmd():
-    return shutil.which("wecom-cli") or shutil.which("wecom-cli.cmd")
+    return shutil.which("wecom-cli.cmd") if sys.platform == "win32" else shutil.which("wecom-cli")
 
 
 def get_target_chat_id(cli_name: str, chat_id: str = None) -> str:
     if chat_id:
         return chat_id
 
-    # 1. 尝试从最近会话列表匹配目标
     try:
         out = subprocess.check_output([cli_name, "message", "aibot", "sessions", "list"], text=True)
         data = json.loads(out)
@@ -30,7 +29,6 @@ def get_target_chat_id(cli_name: str, chat_id: str = None) -> str:
     except Exception:
         pass
 
-    # 2. 尝试获取授权人自身 ID
     try:
         out = subprocess.check_output([cli_name, "identity", "whoami"], text=True)
         data = json.loads(out)
@@ -53,8 +51,7 @@ def main():
 
     cli_name = get_cli_cmd()
     if not cli_name:
-        print("❌ 未检测到 wecom-cli 命令行工具。")
-        print("请先在客户端「连接器」面板中点击「一键安装 CLI」完成安装，并完成扫码授权。")
+        print("❌ 未检测到 wecom-cli 命令行工具。请先在客户端连接器面板中完成企业微信连接与授权。")
         sys.exit(1)
 
     target_chat = get_target_chat_id(cli_name, args.chat_id)

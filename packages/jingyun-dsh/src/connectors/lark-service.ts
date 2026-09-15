@@ -6,6 +6,7 @@ import { promisify } from 'util';
 
 import { getLarkConfigDir } from '../common/paths.js';
 import type { LarkAuthStartResult, LarkAuthStatus } from './types.js';
+import { cliManager } from './cli-manager.js';
 const execAsync = promisify(exec);
 
 export class LarkConnectorService {
@@ -21,12 +22,29 @@ export class LarkConnectorService {
       } catch {}
     }
     return {
-      ...process.env,
+      ...cliManager.getEnv(),
       LARKSUITE_CLI_CONFIG_DIR: configDir,
       LARKSUITE_CLI_NO_UPDATE_NOTIFIER: '1',
     };
   }
 
+  private async ensureLarkCliExec(): Promise<string> {
+    return await cliManager.ensureCliExec('lark');
+  }
+
+  private getLarkCliExecIfAvailable(): string | null {
+    return cliManager.resolveCliExec('lark');
+  }
+
+  public getCachedStatus(): LarkAuthStatus | null {
+    if (this.cachedStatus && this.cachedStatus.expiresAt > Date.now()) {
+      return this.cachedStatus.data;
+    }
+    if (this.isConfiguredLocally()) {
+      return { status: 'configured', configuredLocally: true };
+    }
+    return null;
+  }
   private isConfiguredLocally(): boolean {
     try {
       const configDir = getLarkConfigDir();
@@ -47,13 +65,18 @@ export class LarkConnectorService {
       return { status: 'needs_login', error: 'not configured' };
     }
 
+    const cliExec = this.getLarkCliExecIfAvailable();
+    if (!cliExec) {
+      return { status: 'needs_login', error: 'cli not installed' };
+    }
+
     const now = Date.now();
     if (this.cachedStatus && this.cachedStatus.expiresAt > now) {
       return this.cachedStatus.data;
     }
 
     try {
-      const { stdout } = await execAsync('lark-cli auth status --json', {
+      const { stdout } = await execAsync(`"${cliExec}" auth status --json`, {
         env: this.getLarkEnv(),
       });
       const data = JSON.parse(stdout) as LarkAuthStatus;
@@ -73,20 +96,25 @@ export class LarkConnectorService {
     }
   }
 
-  public getCachedStatus(): LarkAuthStatus | null {
-    if (this.cachedStatus && this.cachedStatus.expiresAt > Date.now()) {
-      return this.cachedStatus.data;
+  public async getLocalAppId(): Promise<string | null> {
+    const cliExec = this.getLarkCliExecIfAvailable();
+    if (!cliExec) return null;
+    try {
+      const { stdout } = await execAsync(`"${cliExec}" auth status --json`, {
+        env: this.getLarkEnv(),
+      });
+      const data = JSON.parse(stdout) as { appId?: string };
+      return data?.appId || null;
+    } catch {
+      return null;
     }
-    if (this.isConfiguredLocally()) {
-      return { status: 'configured', configuredLocally: true };
-    }
-    return null;
   }
 
   public async startAuth(): Promise<LarkAuthStartResult> {
     let isConfigured = false;
     try {
-      const { stdout } = await execAsync('lark-cli auth status --json', {
+      const cliExec = await this.ensureLarkCliExec();
+      const { stdout } = await execAsync(`"${cliExec}" auth status --json`, {
         env: this.getLarkEnv(),
       });
       const data = JSON.parse(stdout) as { appId?: string };
@@ -117,8 +145,9 @@ export class LarkConnectorService {
         device_code: userCode,
       };
     } else {
+      const cliExec = await this.ensureLarkCliExec();
       const { stdout } = await execAsync(
-        'lark-cli auth login --no-wait --json --domain all',
+        `"${cliExec}" auth login --no-wait --json --domain all`,
         { env: this.getLarkEnv() }
       );
       const data = JSON.parse(stdout) as {
@@ -150,9 +179,11 @@ export class LarkConnectorService {
     }
 
     try {
-      await execAsync('lark-cli auth logout', { env: this.getLarkEnv() });
+      const cliExec = this.getLarkCliExecIfAvailable();
+      if (cliExec) {
+        await execAsync(`"${cliExec}" auth logout`, { env: this.getLarkEnv() });
+      }
     } catch {}
-
     // 彻底清除本地飞书自建应用配置与缓存，确保完成解绑
     try {
       const configDir = getLarkConfigDir();
@@ -225,11 +256,7 @@ export class LarkConnectorService {
           mode: 'init_done',
         };
       }
-
       if (this.currentPollProcess) {
-        console.log(
-          '[LarkConnector] Killing previous active auth login poll process.'
-        );
         try {
           this.currentPollProcess.kill();
         } catch {}
@@ -238,12 +265,12 @@ export class LarkConnectorService {
       console.log(
         `[LarkConnector] Spawning Phase 2: lark-cli auth login --device-code ${deviceCode}`
       );
+      const cliExec = await this.ensureLarkCliExec();
       const child = spawn(
-        'lark-cli',
+        cliExec,
         ['auth', 'login', '--device-code', deviceCode, '--json'],
         { shell: true, env: this.getLarkEnv() }
       );
-      this.currentPollProcess = child;
       childProcessForLogin = child;
 
       timeoutId = setTimeout(() => {
@@ -292,7 +319,8 @@ export class LarkConnectorService {
     }
   }
 
-  private runConfigInitAndGetUrl(): Promise<{ url: string; mode: string }> {
+  private async runConfigInitAndGetUrl(): Promise<{ url: string; mode: string }> {
+    const cliExec = await this.ensureLarkCliExec();
     return new Promise((resolve, reject) => {
       const tempLogPath = path.join(os.tmpdir(), `lark_init_${Date.now()}.log`);
       console.log(`[LarkConnector] Temp log path: ${tempLogPath}`);
@@ -306,7 +334,7 @@ export class LarkConnectorService {
         } catch {}
       }
 
-      const cmd = `lark-cli config init --new > "${tempLogPath}" 2>&1`;
+      const cmd = `"${cliExec}" config init --new > "${tempLogPath}" 2>&1`;
       console.log(`[LarkConnector] Executing command: ${cmd}`);
 
       const child = exec(cmd, { env: this.getLarkEnv() });

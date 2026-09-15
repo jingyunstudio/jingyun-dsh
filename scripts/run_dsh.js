@@ -1,5 +1,6 @@
 import { execSync, spawn } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -45,10 +46,14 @@ const dshArgs = [
   ...args.filter((arg) => !isNodeOpt(arg)),
 ];
 
-// 将 vendor node/npm 优先置于 PATH 最前列
+// 将 $DSH_HOME/bin 与 vendor node/npm 优先置于 PATH 最前列
+const dshHome = process.env.DSH_HOME?.trim() || path.join(os.homedir(), '.dsh');
+const dshBinDir = path.join(dshHome, 'bin');
 const pathKey =
   Object.keys(process.env).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
 const envPath = [
+  dshBinDir,
+  path.join(dshBinDir, 'bin'),
   vendorNodeDir,
   path.join(vendorNodeDir, 'bin'),
   process.env[pathKey],
