@@ -1,9 +1,16 @@
 import { exec, spawn, type ChildProcess } from 'child_process';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { promisify } from 'util';
 
+import { getDingtalkConfigDir } from '../common/paths';
 import { cliManager } from './cli-manager';
-import type { DingtalkAuthStatus, DingtalkState } from './types';
-
+import type {
+  DingtalkAuthStatus,
+  DingtalkConfig,
+  DingtalkState,
+} from './types';
 const execAsync = promisify(exec);
 
 export class DingtalkConnectorService {
@@ -12,15 +19,99 @@ export class DingtalkConnectorService {
     data: DingtalkAuthStatus;
     expiresAt: number;
   } | null = null;
+  private config: DingtalkConfig | null = null;
+
+  private get configDir(): string {
+    return getDingtalkConfigDir();
+  }
+
+  private get configPath(): string {
+    return path.join(this.configDir, 'config.json');
+  }
+
+  private getDingtalkEnv(): NodeJS.ProcessEnv {
+    const dir = this.configDir;
+    if (!fs.existsSync(dir)) {
+      try {
+        fs.mkdirSync(dir, { recursive: true });
+      } catch {}
+    }
+    return {
+      ...cliManager.getEnv(),
+      DWS_CONFIG_DIR: dir,
+      DINGTALK_CONFIG_DIR: dir,
+    };
+  }
+
+  private migrateLegacyHomeConfig(): void {
+    try {
+      const targetDir = getDingtalkConfigDir();
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      const legacyHome = path.join(os.homedir(), '.dws');
+      if (!fs.existsSync(legacyHome)) return;
+
+      const filesToMigrate = ['identity.json', 'skills-state.json'];
+      for (const file of filesToMigrate) {
+        const src = path.join(legacyHome, file);
+        const dst = path.join(targetDir, file);
+        if (fs.existsSync(src) && !fs.existsSync(dst)) {
+          fs.copyFileSync(src, dst);
+        }
+      }
+    } catch {}
+  }
 
   public async init(): Promise<void> {
+    this.migrateLegacyHomeConfig();
+    await this.loadConfig();
     await this.getCliAuthStatus().catch(() => {});
+  }
+
+  public async loadConfig(): Promise<DingtalkConfig | null> {
+    try {
+      if (!fs.existsSync(this.configPath)) {
+        return null;
+      }
+      const raw = fs.readFileSync(this.configPath, 'utf-8');
+      this.config = JSON.parse(raw);
+      return this.config;
+    } catch {
+      return null;
+    }
+  }
+
+  public async saveConfig(cfg: Partial<DingtalkConfig>): Promise<void> {
+    const current = this.config || {};
+    this.config = {
+      ...current,
+      ...cfg,
+      updatedAt: Date.now(),
+    };
+    if (!fs.existsSync(this.configDir)) {
+      fs.mkdirSync(this.configDir, { recursive: true });
+    }
+    fs.writeFileSync(
+      this.configPath,
+      JSON.stringify(this.config, null, 2),
+      'utf-8'
+    );
   }
 
   public async clearConfig(): Promise<void> {
     await this.logoutCli();
+    this.config = null;
+    try {
+      if (fs.existsSync(this.configPath)) {
+        fs.unlinkSync(this.configPath);
+      }
+      const identityFile = path.join(this.configDir, 'identity.json');
+      if (fs.existsSync(identityFile)) {
+        fs.unlinkSync(identityFile);
+      }
+    } catch {}
   }
-
 
   public async getCliAuthStatus(): Promise<DingtalkAuthStatus> {
     if (this.cachedCliStatus && Date.now() < this.cachedCliStatus.expiresAt) {
@@ -32,7 +123,7 @@ export class DingtalkConnectorService {
     }
     try {
       const { stdout } = await execAsync(`"${cmd}" auth status --format json`, {
-        env: cliManager.getEnv(),
+        env: this.getDingtalkEnv(),
       });
       let parsed: any;
       try {
@@ -51,6 +142,14 @@ export class DingtalkConnectorService {
         corpName: parsed?.org?.corpName || parsed?.corpName,
         message: parsed?.message,
       };
+      if (data.authenticated) {
+        // 同步企业与用户信息到本地 config.json
+        this.saveConfig({
+          corpId: data.corpId,
+          userId: data.userId,
+          userName: data.userName,
+        }).catch(() => {});
+      }
       this.cachedCliStatus = { data, expiresAt: Date.now() + 5000 };
       return data;
     } catch (err: any) {
@@ -88,7 +187,7 @@ export class DingtalkConnectorService {
       }, 15000);
 
       const child = spawn(cmd, ['auth', 'login', '-y', '--no-browser'], {
-        env: cliManager.getEnv(),
+        env: this.getDingtalkEnv(),
         shell: true,
         windowsHide: true,
       });
@@ -160,7 +259,7 @@ export class DingtalkConnectorService {
       const cmd = cliManager.resolveCliExec('dingtalk');
       if (cmd) {
         await execAsync(`"${cmd}" auth logout`, {
-          env: cliManager.getEnv(),
+          env: this.getDingtalkEnv(),
         });
       }
     } catch (err) {
@@ -171,15 +270,24 @@ export class DingtalkConnectorService {
     DingtalkState & { cliAuth?: DingtalkAuthStatus; connected: boolean }
   > {
     const cliAuth = await this.getCliAuthStatus();
+    const cfg = this.config || (await this.loadConfig());
     const isConnected = cliAuth.authenticated === true;
+    const corpId = cliAuth.corpId || cfg?.corpId;
+    const userId = cliAuth.userId || cfg?.userId;
+    const userName = cliAuth.userName || cfg?.userName;
     const displayName = cliAuth.corpName
-      ? `${cliAuth.corpName}${cliAuth.userName ? ' · ' + cliAuth.userName : ''}`
-      : cliAuth.userName || undefined;
+      ? `${cliAuth.corpName}${userName ? ' · ' + userName : ''}`
+      : userName || cfg?.appKey || undefined;
 
     return {
       status: isConnected ? 'connected' : 'disconnected',
       connected: isConnected,
+      hasConfig: Boolean(cfg?.appKey || cfg?.corpId || isConnected),
       appKey: displayName,
+      robotCode: cfg?.robotCode,
+      corpId,
+      userId,
+      userName,
       lastError: cliAuth.error,
       cliAuth,
     };
@@ -187,16 +295,25 @@ export class DingtalkConnectorService {
 
   public getStatus(): DingtalkState {
     const auth = this.cachedCliStatus?.data;
+    const cfg = this.config;
     const isConnected = auth?.authenticated === true;
+    const corpId = auth?.corpId || cfg?.corpId;
+    const userId = auth?.userId || cfg?.userId;
+    const userName = auth?.userName || cfg?.userName;
     const displayName = auth
       ? auth.corpName
-        ? `${auth.corpName}${auth.userName ? ' · ' + auth.userName : ''}`
-        : auth.userName
-      : undefined;
+        ? `${auth.corpName}${userName ? ' · ' + userName : ''}`
+        : userName
+      : cfg?.appKey || undefined;
 
     return {
       status: isConnected ? 'connected' : 'disconnected',
+      hasConfig: Boolean(cfg?.appKey || cfg?.corpId || isConnected),
       appKey: displayName,
+      robotCode: cfg?.robotCode,
+      corpId,
+      userId,
+      userName,
       lastError: auth?.error,
     };
   }

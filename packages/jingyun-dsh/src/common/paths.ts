@@ -51,6 +51,13 @@ export function getWecomConfigDir(): string {
 }
 
 /**
+ * 获取钉钉连接器配置目录 ($DSH_HOME/connectors/dingtalk)
+ */
+export function getDingtalkConfigDir(): string {
+  return path.join(getConnectorsDir(), 'dingtalk');
+}
+
+/**
  * 获取插件包根目录
  */
 export function getPluginDir(): string {

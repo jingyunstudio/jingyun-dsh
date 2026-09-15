@@ -1,8 +1,8 @@
 import { QRCodeSVG } from 'qrcode.react';
 import React, { useState, useEffect, useRef } from 'react';
 
-import { sendPromptToComposer } from '../../dom-helper';
 import { showToast } from '../../components/BrandBranding';
+import { sendPromptToComposer } from '../../dom-helper';
 import {
   ConnectorDetailModal,
   DEFAULT_DINGTALK_SUGGESTIONS,
@@ -343,7 +343,9 @@ export const ConnectorPanel = () => {
   const [showWecomModal, setShowWecomModal] = useState(false);
   const [showWecomDetailModal, setShowWecomDetailModal] = useState(false);
   const [dingtalkStatus, setDingtalkStatus] = useState<any>(null);
-  const [cliStatus, setCliStatus] = useState<Record<string, { installed: boolean; installing?: boolean }>>({});
+  const [cliStatus, setCliStatus] = useState<
+    Record<string, { installed: boolean; installing?: boolean }>
+  >({});
 
   const fetchCliStatus = async () => {
     try {
@@ -1080,7 +1082,6 @@ const ConnectorSpinner = () => (
   </svg>
 );
 
-
 interface AuthModalProps {
   channel: string;
   title: string;
@@ -1174,7 +1175,9 @@ const ConnectorAuthModal = ({
         const json = await res.json();
         if (json.success && json.data) {
           if (loadingPhase === 'downloading') {
-            showToast(`✓ ${connInfo.name} 连接器组件准备就绪，请使用手机客户端扫码`);
+            showToast(
+              `✓ ${connInfo.name} 连接器组件准备就绪，请使用手机客户端扫码`
+            );
           }
           setLoadingPhase('fetching');
           setAuthData(json.data);

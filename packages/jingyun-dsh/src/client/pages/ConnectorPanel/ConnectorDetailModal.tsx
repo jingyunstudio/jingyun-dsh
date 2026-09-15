@@ -518,15 +518,24 @@ export const ConnectorDetailModal = ({
                 {title}
               </h3>
               {(() => {
-                let badgeText = isConnected
-                  ? '已连接到底座'
-                  : '连接异常 / 未就绪';
-                let badgeColor = isConnected ? '#16a34a' : '#d97706';
-                let badgeBg = isConnected
-                  ? 'rgba(34, 197, 94, 0.1)'
-                  : 'rgba(245, 158, 11, 0.1)';
+                let badgeText = '';
+                let badgeColor = '#16a34a';
+                let badgeBg = 'rgba(34, 197, 94, 0.1)';
 
-                if (!isWecom) {
+                if (isDingtalk) {
+                  badgeText = isConnected ? '已授权连接' : '未连接';
+                  badgeColor = isConnected ? '#16a34a' : '#ef4444';
+                  badgeBg = isConnected
+                    ? 'rgba(34, 197, 94, 0.1)'
+                    : 'rgba(239, 68, 68, 0.1)';
+                } else if (isWecom) {
+                  badgeText = isConnected ? '已连接' : '未连接';
+                  badgeColor = isConnected ? '#16a34a' : '#ef4444';
+                  badgeBg = isConnected
+                    ? 'rgba(34, 197, 94, 0.1)'
+                    : 'rgba(239, 68, 68, 0.1)';
+                } else {
+                  // 飞书渠道
                   if (authLevel === 'full' || Boolean(userName)) {
                     badgeText = '已完整授权';
                     badgeColor = '#16a34a';
@@ -541,7 +550,6 @@ export const ConnectorDetailModal = ({
                     badgeBg = 'rgba(239, 68, 68, 0.1)';
                   }
                 }
-
                 return (
                   <span
                     style={{

@@ -5,8 +5,8 @@ import path from 'path';
 import { promisify } from 'util';
 
 import { getLarkConfigDir } from '../common/paths.js';
-import type { LarkAuthStartResult, LarkAuthStatus } from './types.js';
 import { cliManager } from './cli-manager.js';
+import type { LarkAuthStartResult, LarkAuthStatus } from './types.js';
 const execAsync = promisify(exec);
 
 export class LarkConnectorService {
@@ -319,7 +319,10 @@ export class LarkConnectorService {
     }
   }
 
-  private async runConfigInitAndGetUrl(): Promise<{ url: string; mode: string }> {
+  private async runConfigInitAndGetUrl(): Promise<{
+    url: string;
+    mode: string;
+  }> {
     const cliExec = await this.ensureLarkCliExec();
     return new Promise((resolve, reject) => {
       const tempLogPath = path.join(os.tmpdir(), `lark_init_${Date.now()}.log`);

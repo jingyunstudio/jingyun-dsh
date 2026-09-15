@@ -247,7 +247,8 @@ export class CliManagerService {
     if (!npmExec || !nodeDir) {
       return {
         success: false,
-        message: '未检测到便携 Node.js 运行时 (vendor/node)，已禁用回退到系统全局环境',
+        message:
+          '未检测到便携 Node.js 运行时 (vendor/node)，已禁用回退到系统全局环境',
       };
     }
 

@@ -345,4 +345,36 @@ export function registerConnectorsRoutes(ctx: Context) {
       }
     },
   });
+
+  // 获取钉钉配置
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/config`,
+    handler: async (_req, res) => {
+      try {
+        const cfg = await dingtalkConnector.loadConfig();
+        sendJson(res, { success: true, data: cfg });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // 保存钉钉配置
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${prefix}/config/save`,
+    handler: async (req, res) => {
+      try {
+        const body = (req as any).body || {};
+        await dingtalkConnector.saveConfig(body);
+        sendJson(res, {
+          success: true,
+          data: { message: 'Config saved' },
+        });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
 }

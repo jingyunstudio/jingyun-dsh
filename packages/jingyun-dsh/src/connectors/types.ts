@@ -14,6 +14,16 @@ export interface WecomState {
   lastError?: string;
 }
 
+export interface DingtalkConfig {
+  appKey?: string;
+  appSecret?: string;
+  robotCode?: string;
+  corpId?: string;
+  userId?: string;
+  userName?: string;
+  updatedAt?: number;
+}
+
 export type DingtalkStatus =
   | 'disconnected'
   | 'connecting'
@@ -22,8 +32,12 @@ export type DingtalkStatus =
 
 export interface DingtalkState {
   status: DingtalkStatus;
+  hasConfig?: boolean;
   appKey?: string;
   robotCode?: string;
+  corpId?: string;
+  userId?: string;
+  userName?: string;
   connectedAt?: number;
   lastError?: string;
 }
