@@ -99,6 +99,195 @@ const WechatWorkLogo = () => (
   </svg>
 );
 
+interface ConnectorCardProps {
+  name: string;
+  badgeText?: string;
+  icon: React.ReactNode;
+  description: string;
+  titleTooltip?: string;
+  isConnected: boolean;
+  statusBadge?: React.ReactNode;
+  onConnect: () => void;
+  onManage: () => void;
+}
+
+const ConnectorCard: React.FC<ConnectorCardProps> = ({
+  name,
+  badgeText,
+  icon,
+  description,
+  titleTooltip,
+  isConnected,
+  statusBadge,
+  onConnect,
+  onManage,
+}) => (
+  <div
+    className="jy-connector-card"
+    onClick={() => {
+      if (isConnected) {
+        onManage();
+      } else {
+        onConnect();
+      }
+    }}
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '12px',
+      padding: '14px 18px',
+      borderRadius: '12px',
+      border:
+        '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+      background:
+        'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
+      boxSizing: 'border-box',
+      cursor: 'pointer',
+      height: '80px',
+      transition: 'all 0.2s ease',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+    }}
+  >
+    {/* Logo 容器 */}
+    <div
+      className="jy-card-icon-box"
+      style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '8px',
+        background:
+          'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        border:
+          '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+        flexShrink: 0,
+      }}
+    >
+      {icon}
+    </div>
+
+    {/* 中间描述信息 (标题 & 单行描述) */}
+    <div
+      style={{
+        flex: 1,
+        minWidth: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '2px',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <h3
+          style={{
+            margin: 0,
+            fontSize: '13px',
+            fontWeight: 600,
+            color: 'var(--dsw-alias-label-primary, #0f172a)',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {name}
+        </h3>
+
+        {badgeText && (
+          <span
+            className="jy-badge-gray"
+            style={{
+              fontSize: '10px',
+              color: 'var(--dsw-alias-label-tertiary, #64748b)',
+              background:
+                'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f1f5f9))',
+              padding: '1px 6px',
+              borderRadius: '4px',
+            }}
+          >
+            {badgeText}
+          </span>
+        )}
+
+        {isConnected && statusBadge}
+      </div>
+      <p
+        style={{
+          margin: 0,
+          fontSize: '11.5px',
+          color: 'var(--dsw-alias-label-secondary, #64748b)',
+          textOverflow: 'ellipsis',
+          overflow: 'hidden',
+          whiteSpace: 'nowrap',
+        }}
+        title={titleTooltip || description}
+      >
+        {description}
+      </p>
+    </div>
+
+    {/* 右侧 Action (胶囊按钮) */}
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{ flexShrink: 0, marginLeft: '4px' }}
+    >
+      {isConnected ? (
+        <button
+          className="jy-btn-secondary"
+          onClick={onManage}
+          style={{
+            height: '28px',
+            padding: '0 14px',
+            borderRadius: '9999px',
+            border:
+              '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+            background:
+              'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
+            color: 'var(--dsw-alias-label-primary, #0f172a)',
+            fontSize: '12px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          管理
+        </button>
+      ) : (
+        <button
+          className="jy-btn-primary"
+          onClick={onConnect}
+          style={{
+            height: '28px',
+            padding: '0 14px',
+            borderRadius: '9999px',
+            border: 'none',
+            background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
+            color: 'var(--dsw-alias-label-inverse, #ffffff)',
+            fontSize: '12px',
+            fontWeight: 500,
+            cursor: 'pointer',
+            transition: 'opacity 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.9';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
+        >
+          ＋ 连接
+        </button>
+      )}
+    </div>
+  </div>
+);
+
 export const ConnectorPanel = () => {
   const [larkStatus, setLarkStatus] = useState<any>(null);
   const [wecomStatus, setWecomStatus] = useState<any>(null);
@@ -349,561 +538,112 @@ export const ConnectorPanel = () => {
           width: '100%',
         }}
       >
-        {/* 飞书连接器行 */}
-        <div
-          className="jy-connector-card"
-          onClick={() => {
-            if (isLarkConnected) {
-              setShowDetailModal(true);
-            } else {
-              setShowAuthModal(true);
-            }
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            padding: '14px 18px',
-            borderRadius: '12px',
-            border:
-              '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-            background:
-              'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
-            boxSizing: 'border-box',
-            cursor: 'pointer',
-            height: '80px',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          }}
-        >
-          {/* 1. Logo 容器 */}
-          <div
-            className="jy-card-icon-box"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '8px',
-              background:
-                'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border:
-                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-              flexShrink: 0,
-            }}
-          >
-            <FeishuLogo />
-          </div>
-
-          {/* 2. 中间描述信息 (标题 & 单行描述) */}
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '2px',
-            }}
-          >
-            <div
+        <ConnectorCard
+          name="飞书 (Lark)"
+          icon={<FeishuLogo />}
+          description="支持通过飞书账号授权，使 AI 具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。"
+          isConnected={isLarkConnected}
+          statusBadge={
+            <span
               style={{
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
-                flexWrap: 'wrap',
+                gap: '4px',
+                fontSize: '10px',
+                color: larkAuthLevel === 'full' ? '#16a34a' : '#d97706',
+                background:
+                  larkAuthLevel === 'full'
+                    ? 'rgba(34, 197, 94, 0.1)'
+                    : 'rgba(217, 119, 6, 0.1)',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontWeight: 500,
               }}
             >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'var(--dsw-alias-label-primary, #0f172a)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                飞书 (Lark)
-              </h3>
-
               <span
-                className="jy-badge-gray"
                 style={{
-                  fontSize: '10px',
-                  color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                  background:
-                    'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f1f5f9))',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
+                  width: '4px',
+                  height: '4px',
+                  borderRadius: '50%',
+                  background: larkAuthLevel === 'full' ? '#22c55e' : '#f59e0b',
                 }}
-              >
-                官方
-              </span>
+              />
+              {larkAuthLevel === 'full'
+                ? '已完整授权'
+                : '底座就绪 · 待应用授权'}
+            </span>
+          }
+          onConnect={() => setShowAuthModal(true)}
+          onManage={() => setShowDetailModal(true)}
+        />
 
-              {isLarkConnected && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '10px',
-                    color: larkAuthLevel === 'full' ? '#16a34a' : '#d97706',
-                    background:
-                      larkAuthLevel === 'full'
-                        ? 'rgba(34, 197, 94, 0.1)'
-                        : 'rgba(217, 119, 6, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      background:
-                        larkAuthLevel === 'full' ? '#22c55e' : '#f59e0b',
-                    }}
-                  />
-                  {larkAuthLevel === 'full'
-                    ? '已完整授权'
-                    : '底座就绪 · 待应用授权'}
-                </span>
-              )}
-            </div>
-            <p
+        <ConnectorCard
+          name="钉钉 (DingTalk)"
+          icon={<DingtalkLogo />}
+          description="与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。"
+          isConnected={isDingtalkConnected}
+          statusBadge={
+            <span
               style={{
-                margin: 0,
-                fontSize: '11.5px',
-                color: 'var(--dsw-alias-label-secondary, #64748b)',
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '10px',
+                color: '#16a34a',
+                background: 'rgba(34, 197, 94, 0.1)',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontWeight: 500,
               }}
-              title="支持通过飞书账号授权，使 AI 具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。"
             >
-              支持通过飞书账号授权，使 AI
-              具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。
-            </p>
-          </div>
-
-          {/* 3. 右侧 Action (胶囊按钮) */}
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ flexShrink: 0, marginLeft: '4px' }}
-          >
-            {isLarkConnected ? (
-              <button
-                className="jy-btn-secondary"
-                onClick={() => setShowDetailModal(true)}
-                style={{
-                  height: '28px',
-                  padding: '0 14px',
-                  borderRadius: '9999px',
-                  border:
-                    '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-                  background:
-                    'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
-                  color: 'var(--dsw-alias-label-primary, #0f172a)',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                管理
-              </button>
-            ) : (
-              <button
-                className="jy-btn-primary"
-                onClick={() => setShowAuthModal(true)}
-                style={{
-                  height: '28px',
-                  padding: '0 14px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-                  color: 'var(--dsw-alias-label-inverse, #ffffff)',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'opacity 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                ＋ 连接
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* 钉钉列表行 */}
-        <div
-          className="jy-connector-card"
-          onClick={() => {
-            if (isDingtalkConnected) {
-              setShowDingtalkDetailModal(true);
-            } else {
-              setShowDingtalkModal(true);
-            }
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            padding: '14px 18px',
-            borderRadius: '12px',
-            border:
-              '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-            background:
-              'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
-            boxSizing: 'border-box',
-            height: '80px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-          }}
-        >
-          {/* Logo */}
-          <div
-            className="jy-card-icon-box"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '8px',
-              background:
-                'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border:
-                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-              flexShrink: 0,
-            }}
-          >
-            <DingtalkLogo />
-          </div>
-
-          {/* Content */}
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '2px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'var(--dsw-alias-label-primary, #0f172a)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                钉钉 (DingTalk)
-              </h3>
-
               <span
-                className="jy-badge-gray"
                 style={{
-                  fontSize: '10px',
-                  color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                  background:
-                    'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f1f5f9))',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
+                  width: '4px',
+                  height: '4px',
+                  borderRadius: '50%',
+                  background: '#22c55e',
                 }}
-              >
-                官方
-              </span>
+              />
+              已启用
+            </span>
+          }
+          onConnect={() => setShowDingtalkModal(true)}
+          onManage={() => setShowDingtalkDetailModal(true)}
+        />
 
-              {isDingtalkConnected && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '10px',
-                    color: '#16a34a',
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      background: '#22c55e',
-                    }}
-                  />
-                  已启用
-                </span>
-              )}
-            </div>
-            <p
+        <ConnectorCard
+          name="企业微信"
+          icon={<WechatWorkLogo />}
+          description="与企业微信智能机器人深度集成，支持 WebSocket 长连接实时消息收发与协同。"
+          isConnected={isWecomConnected}
+          statusBadge={
+            <span
               style={{
-                margin: 0,
-                fontSize: '11.5px',
-                color: 'var(--dsw-alias-label-secondary, #64748b)',
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '10px',
+                color: '#16a34a',
+                background: 'rgba(34, 197, 94, 0.1)',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontWeight: 500,
               }}
-              title="与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。"
             >
-              与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。
-            </p>
-          </div>
-
-          {/* Action */}
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ flexShrink: 0, marginLeft: '4px' }}
-          >
-            {isDingtalkConnected ? (
-              <button
-                className="jy-btn-secondary"
-                onClick={() => setShowDingtalkDetailModal(true)}
-                style={{
-                  height: '28px',
-                  padding: '0 14px',
-                  borderRadius: '9999px',
-                  border:
-                    '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-                  background:
-                    'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
-                  color: 'var(--dsw-alias-label-primary, #0f172a)',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                管理
-              </button>
-            ) : (
-              <button
-                className="jy-btn-primary"
-                onClick={() => setShowDingtalkModal(true)}
-                style={{
-                  height: '28px',
-                  padding: '0 14px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  background: '#007FFF',
-                  color: '#ffffff',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'opacity 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                ＋ 连接
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* 企业微信列表行 */}
-        <div
-          className="jy-connector-card"
-          onClick={() => {
-            if (isWecomConnected) {
-              setShowWecomDetailModal(true);
-            } else {
-              setShowWecomModal(true);
-            }
-          }}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            padding: '14px 18px',
-            borderRadius: '12px',
-            border:
-              '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-            background:
-              'var(--dsw-alias-bg-layer-2, var(--dsw-alias-bg-card, #ffffff))',
-            boxSizing: 'border-box',
-            height: '80px',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-          }}
-        >
-          {/* Logo */}
-          <div
-            className="jy-card-icon-box"
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '8px',
-              background:
-                'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f8fafc))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border:
-                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-              flexShrink: 0,
-            }}
-          >
-            <WechatWorkLogo />
-          </div>
-
-          {/* Content */}
-          <div
-            style={{
-              flex: 1,
-              minWidth: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '2px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: '13px',
-                  fontWeight: 600,
-                  color: 'var(--dsw-alias-label-primary, #0f172a)',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                企业微信
-              </h3>
-
               <span
-                className="jy-badge-gray"
                 style={{
-                  fontSize: '10px',
-                  color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                  background:
-                    'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card-hover, #f1f5f9))',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
+                  width: '4px',
+                  height: '4px',
+                  borderRadius: '50%',
+                  background: '#22c55e',
                 }}
-              >
-                官方
-              </span>
-
-              {isWecomConnected && (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '10px',
-                    color: '#16a34a',
-                    background: 'rgba(34, 197, 94, 0.1)',
-                    padding: '1px 6px',
-                    borderRadius: '4px',
-                    fontWeight: 500,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      background: '#22c55e',
-                    }}
-                  />
-                  已启用
-                </span>
-              )}
-            </div>
-            <p
-              style={{
-                margin: 0,
-                fontSize: '11.5px',
-                color: 'var(--dsw-alias-label-secondary, #64748b)',
-                textOverflow: 'ellipsis',
-                overflow: 'hidden',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              与企业微信智能机器人深度集成，支持 WebSocket
-              长连接实时消息收发与协同。
-            </p>
-          </div>
-
-          {/* Action */}
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{ flexShrink: 0, marginLeft: '4px' }}
-          >
-            {isWecomConnected ? (
-              <button
-                className="jy-btn-secondary"
-                onClick={() => setShowWecomDetailModal(true)}
-                style={{
-                  height: '28px',
-                  padding: '0 14px',
-                  borderRadius: '9999px',
-                  border:
-                    '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-                  background:
-                    'var(--dsw-alias-bg-layer-3, var(--dsw-alias-bg-card, #ffffff))',
-                  color: 'var(--dsw-alias-label-primary, #0f172a)',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                管理
-              </button>
-            ) : (
-              <button
-                className="jy-btn-primary"
-                onClick={() => setShowWecomModal(true)}
-                style={{
-                  height: '28px',
-                  padding: '0 14px',
-                  borderRadius: '9999px',
-                  border: 'none',
-                  background: 'var(--dsw-alias-bg-button-primary, #0f172a)',
-                  color: 'var(--dsw-alias-label-inverse, #ffffff)',
-                  fontSize: '12px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                  transition: 'opacity 0.15s ease',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = '0.9';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = '1';
-                }}
-              >
-                连接
-              </button>
-            )}
-          </div>
-        </div>
+              />
+              已启用
+            </span>
+          }
+          onConnect={() => setShowWecomModal(true)}
+          onManage={() => setShowWecomDetailModal(true)}
+        />
       </div>
 
       {/* 企业微信授权扫码弹窗 (完全复用飞书 ConnectorAuthModal 组件) */}
