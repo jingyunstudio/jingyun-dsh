@@ -261,5 +261,3 @@ minimumReleaseAgeExclude:
   - '@deepseek-ai/dsh-workflow@0.1.5-rc.2'
   - '@deepseek-ai/dsh-workspace@0.1.5-rc.2'
   - '@deepseek-ai/dsh@0.1.5-rc.2'
-patchedDependencies:
-  '@deepseek-ai/dsh-host-directory-picker-native': patches/@deepseek-ai__dsh-host-directory-picker-native.patch

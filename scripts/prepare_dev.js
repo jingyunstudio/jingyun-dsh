@@ -1,3 +1,6 @@
+// 修复 Node.js 原生 --watch 注入 WATCH_REPORT_DEPENDENCIES 导致 DSH Windows runner IPC 校验失败的 Bug
+delete process.env.WATCH_REPORT_DEPENDENCIES;
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
