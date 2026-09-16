@@ -111,12 +111,10 @@ function syncBuiltinSkills() {
           const srcSkillPath = path.join(srcDir, skillName);
           const targetSkillPath = path.join(targetSkillsDir, skillName);
           if (fs.statSync(srcSkillPath).isDirectory()) {
-            if (!fs.existsSync(targetSkillPath)) {
-              copyFolderRecursiveSync(srcSkillPath, targetSkillPath);
-              console.log(
-                `[UIBranding] Auto-synced builtin skill "${skillName}" to ${targetSkillPath}`
-              );
-            }
+            copyFolderRecursiveSync(srcSkillPath, targetSkillPath);
+            console.log(
+              `[UIBranding] Auto-synced builtin skill "${skillName}" to ${targetSkillPath}`
+            );
           }
         }
         break;

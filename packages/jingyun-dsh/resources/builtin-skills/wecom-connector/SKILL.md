@@ -19,20 +19,21 @@ description: |
 
 AI 请直接调用内置执行脚本向已连接的企业微信服务发送消息：
 
-### 1. 发送 Markdown 富文本消息（推荐格式）
+### 1. 发送多行复杂富文本（推荐）
+当消息较长、包含换行、双引号或特殊格式时，**推荐将正文写入临时文件**，并通过 `--file` 参数传递，可彻底避免命令行引号转义截断：
 ```bash
-python scripts/send_message.py --content "### 📊 本周任务进展汇报\n- **核心功能**：企业微信连接器已打通\n- **状态**：<font color=\"info\">已就绪</font>" --type markdown
+python scripts/send_message.py --file "temp_msg.md" --type markdown
 ```
 
-### 2. 发送纯文本消息
+### 2. 发送单行简短消息
 ```bash
-python scripts/send_message.py --content "各位好，系统已完成部署。" --type text
+python scripts/send_message.py --content "系统部署完成。" --type text
 ```
 
 ### 3. 指定目标会话（可选）
 若用户指定了群聊或用户 ID（`chat_id`）：
 ```bash
-python scripts/send_message.py --content "测试通知" --chat-id "WRK_xxxx"
+python scripts/send_message.py --file "temp_msg.md" --chat-id "woW1SYZwAA-iCyFP5ZLmso8wamfN89Bg"
 ```
 > 注：若不提供 `--chat-id`，系统会自动将消息推送给当前授权绑定人或最近活跃的会话。
 
