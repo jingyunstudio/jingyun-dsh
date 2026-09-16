@@ -194,7 +194,6 @@ export interface DetailModalProps {
   version?: string;
   description?: string;
   suggestions?: Array<{ text: string }>;
-  extraInfo?: Array<{ label: string; value: React.ReactNode }>;
   onClose: () => void;
   onDisconnect: () => void;
   onTryIt?: () => void;
@@ -210,17 +209,13 @@ export const ConnectorDetailModal = ({
   status,
   authLevel,
   userName,
-  appId,
-  botId,
   version = 'v1.0.0',
   description,
   suggestions,
-  extraInfo,
   onClose,
   onDisconnect,
   onTryIt,
   onSendPrompt,
-  onAuthorizeUser,
   onConfigure,
 }: DetailModalProps) => {
   const isWecom = channel === 'wecom';
@@ -247,202 +242,6 @@ export const ConnectorDetailModal = ({
         : isWecom
           ? DEFAULT_WECOM_SUGGESTIONS
           : DEFAULT_LARK_SUGGESTIONS);
-
-  // 默认详细信息列表
-  const infoItems =
-    extraInfo ||
-    (isIma
-      ? [
-          {
-            label: '用户标识',
-            value: (
-              <span style={{ fontWeight: 500 }}>
-                {userName || '腾讯 ima 知识库用户'}
-              </span>
-            ),
-          },
-          {
-            label: '连接模式',
-            value: '官方 OpenAPI 直连 (API Key)',
-          },
-          {
-            label: '运行状态',
-            value: isConnected ? (
-              <span
-                style={{
-                  color: '#16a34a',
-                  fontWeight: 500,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span
-                  style={{
-                    width: '6px',
-                    height: '6px',
-                    borderRadius: '50%',
-                    background: '#22c55e',
-                  }}
-                />
-                正常连接
-              </span>
-            ) : (
-              <span style={{ color: '#ef4444', fontWeight: 500 }}>未连接</span>
-            ),
-          },
-        ]
-      : isDingtalk
-        ? [
-            {
-              label: '组织 / 账号',
-              value: (
-                <span style={{ fontWeight: 500 }}>
-                  {userName || appId || botId || '-'}
-                </span>
-              ),
-            },
-            {
-              label: '连接模式',
-              value: 'DingTalk Workspace CLI (dws)',
-            },
-            {
-              label: '运行状态',
-              value: isConnected ? (
-                <span
-                  style={{
-                    color: '#16a34a',
-                    fontWeight: 500,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '6px',
-                      height: '6px',
-                      borderRadius: '50%',
-                      background: '#22c55e',
-                    }}
-                  />
-                  已授权连接
-                </span>
-              ) : (
-                '未连接'
-              ),
-            },
-          ]
-        : isWecom
-          ? [
-              {
-                label: '机器人 ID (BotId)',
-                value: (
-                  <span style={{ fontFamily: 'monospace' }}>
-                    {botId || appId || '-'}
-                  </span>
-                ),
-              },
-              {
-                label: '连接模式',
-                value: 'WebSocket 长连接',
-              },
-              {
-                label: '运行状态',
-                value: isConnected ? '长连接已就绪' : '连接断开 / 正在重连',
-              },
-            ]
-          : [
-              ...(appId
-                ? [
-                    {
-                      label: '应用 AppID',
-                      value: (
-                        <span style={{ fontFamily: 'monospace' }}>{appId}</span>
-                      ),
-                    },
-                  ]
-                : []),
-              {
-                label: '机器人底座',
-                value: (
-                  <span
-                    style={{
-                      color: '#16a34a',
-                      fontWeight: 500,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        background: '#22c55e',
-                      }}
-                    />
-                    已就绪
-                  </span>
-                ),
-              },
-              {
-                label: '应用授权',
-                value: userName ? (
-                  <strong
-                    style={{
-                      color: 'var(--dsw-alias-label-primary, #0f172a)',
-                    }}
-                  >
-                    已授权 ({userName})
-                  </strong>
-                ) : (
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <span
-                      style={{
-                        color: '#d97706',
-                        fontSize: '12px',
-                        fontWeight: 500,
-                      }}
-                    >
-                      未授权
-                    </span>
-                    {onAuthorizeUser && (
-                      <button
-                        type="button"
-                        onClick={onAuthorizeUser}
-                        style={{
-                          padding: '2px 10px',
-                          fontSize: '11px',
-                          borderRadius: '4px',
-                          border: 'none',
-                          background: '#3370FF',
-                          color: '#ffffff',
-                          cursor: 'pointer',
-                          fontWeight: 500,
-                          transition: 'opacity 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.opacity = '0.9';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.opacity = '1';
-                        }}
-                      >
-                        去授权
-                      </button>
-                    )}
-                  </div>
-                ),
-              },
-            ]);
 
   const handleTryItClick = () => {
     if (onTryIt) {
@@ -699,26 +498,6 @@ export const ConnectorDetailModal = ({
               功能说明：
             </div>
             {description || defaultDesc}
-            {infoItems.length > 0 && (
-              <div
-                style={{
-                  borderTop:
-                    '1px dashed var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
-                  marginTop: '12px',
-                  paddingTop: '12px',
-                  fontSize: '11.5px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                }}
-              >
-                {infoItems.map((item, idx) => (
-                  <div key={idx}>
-                    {item.label}：{item.value}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* 💡 试试这样用 */}

@@ -983,6 +983,20 @@ export const ConnectorPanel = () => {
           }}
         />
       )}
+      {/* 腾讯 ima 知识库连接与管理弹窗 */}
+      {showImaModal && (
+        <ImaConnectorModal
+          isOpen={showImaModal}
+          status={isImaConnected ? 'connected' : 'disconnected'}
+          nickname={imaStatus?.nickname}
+          defaultKbId={imaStatus?.defaultKbId}
+          onClose={() => setShowImaModal(false)}
+          onRefresh={() => fetchImaStatus()}
+          onTryIt={() => handleTryIt('ima')}
+          onSendPrompt={(text: string) => handleSendPrompt(text)}
+        />
+      )}
+
       {/* 腾讯 ima 知识库管理详情弹窗 (复用全站通用的 ConnectorDetailModal) */}
       {showImaDetailModal && (
         <ConnectorDetailModal
@@ -990,35 +1004,6 @@ export const ConnectorPanel = () => {
           title="腾讯 ima 知识库"
           userName={imaStatus?.nickname || '腾讯 ima 知识库用户'}
           status={isImaConnected ? 'connected' : 'disconnected'}
-          extraInfo={[
-            {
-              label: '用户标识',
-              value: (
-                <span style={{ fontWeight: 500 }}>
-                  {imaStatus?.nickname || '腾讯 ima 知识库用户'}
-                </span>
-              ),
-            },
-            {
-              label: 'API Key (已脱敏)',
-              value: (
-                <span
-                  style={{
-                    fontFamily: 'monospace',
-                    color: 'var(--dsw-alias-color-info-base, #1677FF)',
-                  }}
-                >
-                  {imaStatus?.apiKeyMasked || '已配置'}
-                </span>
-              ),
-            },
-            {
-              label: '绑定时间',
-              value: imaStatus?.boundAt
-                ? new Date(imaStatus.boundAt).toLocaleString('zh-CN')
-                : '-',
-            },
-          ]}
           onConfigure={() => {
             setShowImaDetailModal(false);
             setShowImaModal(true);
@@ -1034,20 +1019,6 @@ export const ConnectorPanel = () => {
           onSendPrompt={(text) => {
             handleSendPrompt(text);
           }}
-        />
-      )}
-
-      {/* 腾讯 ima 知识库连接与管理弹窗 */}
-      {showImaModal && (
-        <ImaConnectorModal
-          isOpen={showImaModal}
-          status={isImaConnected ? 'connected' : 'disconnected'}
-          nickname={imaStatus?.nickname}
-          defaultKbId={imaStatus?.defaultKbId}
-          onClose={() => setShowImaModal(false)}
-          onRefresh={() => fetchImaStatus()}
-          onTryIt={() => handleTryIt('ima')}
-          onSendPrompt={(text: string) => handleSendPrompt(text)}
         />
       )}
       {confirmInstallChannel && (
