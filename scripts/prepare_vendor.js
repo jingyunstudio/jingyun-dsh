@@ -76,4 +76,84 @@ if (fs.existsSync(splashTemplatePath)) {
   fs.copyFileSync(splashTemplatePath, path.join(distTauriTemp, 'index.html'));
 }
 
-console.log('[VendorPrepare] 🎉 Resources deployed and ready!');
+// 6. 安全清理生产依赖中无用的调试与文档文件（.map, .d.ts, 测试用例, 文档）
+function pruneVendor(dir) {
+  const nodeMod = path.join(dir, 'node_modules');
+  if (!fs.existsSync(nodeMod)) return;
+
+  const uselessDirs = new Set([
+    'test',
+    'tests',
+    '__tests__',
+    'spec',
+    'docs',
+    'example',
+    'examples',
+  ]);
+  let freedBytes = 0;
+  let freedCount = 0;
+
+  function walk(curr) {
+    let list = [];
+    try {
+      list = fs.readdirSync(curr);
+    } catch {
+      return;
+    }
+    for (const item of list) {
+      const p = path.join(curr, item);
+      let st;
+      try {
+        st = fs.lstatSync(p);
+      } catch {
+        continue;
+      }
+      if (st.isDirectory()) {
+        if (uselessDirs.has(item.toLowerCase())) {
+          freedBytes += getDirSize(p);
+          fs.rmSync(p, { recursive: true, force: true });
+        } else {
+          walk(p);
+        }
+      } else {
+        const lower = item.toLowerCase();
+        if (
+          lower.endsWith('.map') ||
+          lower.endsWith('.d.ts') ||
+          lower.endsWith('.d.ts.map') ||
+          lower.endsWith('.md') ||
+          lower.endsWith('.markdown') ||
+          lower.startsWith('changelog')
+        ) {
+          freedBytes += st.size;
+          freedCount++;
+          try {
+            fs.unlinkSync(p);
+          } catch {}
+        }
+      }
+    }
+  }
+
+  function getDirSize(d) {
+    let sz = 0;
+    try {
+      for (const f of fs.readdirSync(d)) {
+        const p = path.join(d, f);
+        const s = fs.lstatSync(p);
+        if (s.isDirectory()) sz += getDirSize(p);
+        else sz += s.size;
+      }
+    } catch {}
+    return sz;
+  }
+
+  walk(nodeMod);
+  console.log(
+    `[VendorPrepare] 🧹 Pruning finished: freed ${(freedBytes / 1024 / 1024).toFixed(2)} MB across ${freedCount} files!`
+  );
+}
+
+pruneVendor(targetJingyun);
+
+console.log('[VendorPrepare] 🎉 Resources deployed, pruned, and ready!');

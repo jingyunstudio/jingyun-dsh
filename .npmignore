@@ -1,0 +1,12 @@
+# 排除项目自身开发源码与工程配置，防止 pnpm deploy 产生递归嵌套
+src-tauri
+.github
+*.bat
+*.sh
+*.md
+tsconfig.json
+.oxlintrc.json
+.oxfmtrc.json
+dist_tauri_temp
+temp_*
+data

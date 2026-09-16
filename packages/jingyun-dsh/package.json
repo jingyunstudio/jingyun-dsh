@@ -19,6 +19,12 @@
     "url": "git+https://github.com/jingyunstudio/jingyun-dsh.git",
     "directory": "packages/jingyun-dsh"
   },
+  "files": [
+    "lib",
+    "resources",
+    "desktop-config.example.json",
+    "package.json"
+  ],
   "type": "module",
   "main": "lib/index.mjs",
   "exports": {
