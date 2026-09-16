@@ -218,11 +218,12 @@ run_pack.bat
 
 | 技能包 | 说明 |
 |:---|:---|
+| `ima-skill` | 腾讯 ima 官方知识库与笔记技能包（知识库检索、文档/网页导入、笔记读取与写入） |
+| `dingtalk-connector` | 钉钉连接器（多维表、日程、群聊消息、云文档、听记、待办与审批集成） |
 | `wecom-connector` | 企业微信连接器（通过官方 `@wecom/cli` 发送单聊或群聊消息） |
 | `feishu-connector` | 飞书连接器（通过官方 `@larksuite/cli` 发送消息与通知） |
 | `agent-manager` | 智能体包的全生命周期管理（创建 / 修改 / 校验 / 注册） |
 | `skill-creator` | 引导创建自定义技能包 |
-
 ---
 
 ## 📄 许可证

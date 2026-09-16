@@ -6,6 +6,7 @@ import { parseJsonBody, sendError, sendJson } from '../common/http';
 import {
   cliManager,
   dingtalkConnector,
+  imaConnector,
   larkConnector,
   type WecomConfig,
   wecomConnector,
@@ -374,6 +375,74 @@ export function registerConnectorsRoutes(ctx: Context) {
         });
       } catch (err: any) {
         sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // ===================== ima 知识库连接器 =====================
+  // 获取 ima 连接状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/ima/status',
+    handler: async (_req, res) => {
+      try {
+        const result = await imaConnector.getStatus();
+        sendJson(res, { success: true, data: result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
+      }
+    },
+  });
+
+  // 连接 / 绑定 ima
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/ima/connect',
+    handler: async (req, res) => {
+      try {
+        const body = await parseJsonBody<{
+          apiKey: string;
+          clientId?: string;
+          apiBase?: string;
+          defaultKbId?: string;
+          nickname?: string;
+        }>(req);
+        const result = await imaConnector.connect(body || { apiKey: '' });
+        sendJson(res, { success: true, data: result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 400);
+      }
+    },
+  });
+
+  // 解绑 ima
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/ima/disconnect',
+    handler: async (_req, res) => {
+      try {
+        await imaConnector.disconnect();
+        sendJson(res, { success: true, data: { status: 'disconnected' } });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
+      }
+    },
+  });
+
+  // 获取 ima 配置详情
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/ima/config',
+    handler: async (_req, res) => {
+      try {
+        const cfg = await imaConnector.loadConfig();
+        sendJson(res, { success: true, data: cfg });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
       }
     },
   });

@@ -10,6 +10,7 @@ import {
   DEFAULT_WECOM_SUGGESTIONS,
   UnbindIcon,
 } from './ConnectorDetailModal';
+import { ImaCatLogo, ImaConnectorModal } from './ImaConnectorModal';
 const openExternalUrl = (target: string) => {
   if (!target) return;
   try {
@@ -289,8 +290,13 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
     >
       {isConnected ? (
         <button
+          type="button"
           className="jy-btn-secondary"
-          onClick={onManage}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onManage();
+          }}
           style={{
             height: '28px',
             padding: '0 14px',
@@ -310,9 +316,14 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
         </button>
       ) : (
         <button
+          type="button"
           className="jy-btn-primary"
           disabled={isLoading}
-          onClick={isLoading ? undefined : onConnect}
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (!isLoading) onConnect();
+          }}
           style={{
             height: '28px',
             padding: '0 14px',
@@ -373,6 +384,10 @@ export const ConnectorPanel = () => {
   };
   const [showDingtalkModal, setShowDingtalkModal] = useState(false);
   const [showDingtalkDetailModal, setShowDingtalkDetailModal] = useState(false);
+  const [imaStatus, setImaStatus] = useState<any>(null);
+  const [imaLoading, setImaLoading] = useState(true);
+  const [showImaModal, setShowImaModal] = useState(false);
+  const [showImaDetailModal, setShowImaDetailModal] = useState(false);
   const [confirmInstallChannel, setConfirmInstallChannel] = useState<
     'lark' | 'dingtalk' | 'wecom' | null
   >(null);
@@ -432,11 +447,17 @@ export const ConnectorPanel = () => {
   const handleTryIt = (channel: string = 'lark') => {
     // 随机选择一个推荐提示词进行填充，带入新会话中
     const list =
-      channel === 'wecom'
-        ? DEFAULT_WECOM_SUGGESTIONS
-        : channel === 'dingtalk'
-          ? DEFAULT_DINGTALK_SUGGESTIONS
-          : DEFAULT_LARK_SUGGESTIONS;
+      channel === 'ima'
+        ? [
+            { text: '从我的 ima 知识库里找出去年的竞品调研结论' },
+            { text: '把这几个链接都存进我的知识库' },
+            { text: '把我知识库里那篇产品方案的要点讲给我听' },
+          ]
+        : channel === 'wecom'
+          ? DEFAULT_WECOM_SUGGESTIONS
+          : channel === 'dingtalk'
+            ? DEFAULT_DINGTALK_SUGGESTIONS
+            : DEFAULT_LARK_SUGGESTIONS;
     const randomIndex = Math.floor(Math.random() * list.length);
     const randomPrompt = list[randomIndex]?.text || '';
     handleNewChatWithPrompt(randomPrompt);
@@ -559,12 +580,43 @@ export const ConnectorPanel = () => {
       console.error('[ConnectorPanel] Failed to disconnect dingtalk:', err);
     }
   };
+  // 获取 ima 连接状态
+  const fetchImaStatus = async () => {
+    setImaLoading(true);
+    try {
+      const res = await fetch('/api/jingyun/connectors/ima/status');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setImaStatus(json.data);
+        }
+      }
+    } catch (err) {
+      console.error('[ConnectorPanel] Failed to fetch ima status:', err);
+    } finally {
+      setImaLoading(false);
+    }
+  };
+  const handleImaDisconnect = async () => {
+    try {
+      const res = await fetch('/api/jingyun/connectors/ima/disconnect', {
+        method: 'POST',
+      });
+      if (res.ok) {
+        showToast('已断开腾讯 ima 知识库连接');
+        fetchImaStatus();
+      }
+    } catch {
+      showToast('断开连接失败');
+    }
+  };
 
   useEffect(() => {
     queueMicrotask(() => {
       fetchLarkStatus();
       fetchWecomStatus();
       fetchDingtalkStatus();
+      fetchImaStatus();
       fetchCliStatus();
     });
   }, []);
@@ -615,6 +667,7 @@ export const ConnectorPanel = () => {
       : dingtalkStatus?.cliAuth?.userName) ||
     dingtalkStatus?.appKey ||
     '';
+  const isImaConnected = Boolean(imaStatus?.status === 'connected');
 
   return (
     <div
@@ -658,7 +711,7 @@ export const ConnectorPanel = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
           gap: '16px',
           width: '100%',
         }}
@@ -771,6 +824,41 @@ export const ConnectorPanel = () => {
           }
           onConnect={() => handleConnect('wecom')}
           onManage={() => setShowWecomDetailModal(true)}
+        />
+
+        <ConnectorCard
+          name="腾讯 ima 知识库"
+          icon={<ImaCatLogo size={36} />}
+          description="腾讯AI知识管家，连接后支持搜索、读取和写入知识库资料，并可搜索和订阅教育、法律、财经、科技等20+行业专业知识。"
+          isConnected={isImaConnected}
+          isLoading={imaLoading}
+          statusBadge={
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '10px',
+                color: '#16a34a',
+                background: 'rgba(34, 197, 94, 0.1)',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                fontWeight: 500,
+              }}
+            >
+              <span
+                style={{
+                  width: '4px',
+                  height: '4px',
+                  borderRadius: '50%',
+                  background: '#22c55e',
+                }}
+              />
+              已连接
+            </span>
+          }
+          onConnect={() => setShowImaModal(true)}
+          onManage={() => setShowImaDetailModal(true)}
         />
       </div>
 
@@ -895,7 +983,73 @@ export const ConnectorPanel = () => {
           }}
         />
       )}
+      {/* 腾讯 ima 知识库管理详情弹窗 (复用全站通用的 ConnectorDetailModal) */}
+      {showImaDetailModal && (
+        <ConnectorDetailModal
+          channel="ima"
+          title="腾讯 ima 知识库"
+          userName={imaStatus?.nickname || '腾讯 ima 知识库用户'}
+          status={isImaConnected ? 'connected' : 'disconnected'}
+          extraInfo={[
+            {
+              label: '用户标识',
+              value: (
+                <span style={{ fontWeight: 500 }}>
+                  {imaStatus?.nickname || '腾讯 ima 知识库用户'}
+                </span>
+              ),
+            },
+            {
+              label: 'API Key (已脱敏)',
+              value: (
+                <span
+                  style={{
+                    fontFamily: 'monospace',
+                    color: 'var(--dsw-alias-color-info-base, #1677FF)',
+                  }}
+                >
+                  {imaStatus?.apiKeyMasked || '已配置'}
+                </span>
+              ),
+            },
+            {
+              label: '绑定时间',
+              value: imaStatus?.boundAt
+                ? new Date(imaStatus.boundAt).toLocaleString('zh-CN')
+                : '-',
+            },
+          ]}
+          onConfigure={() => {
+            setShowImaDetailModal(false);
+            setShowImaModal(true);
+          }}
+          onClose={() => setShowImaDetailModal(false)}
+          onDisconnect={() => {
+            setShowImaDetailModal(false);
+            handleImaDisconnect();
+          }}
+          onTryIt={() => {
+            handleTryIt('ima');
+          }}
+          onSendPrompt={(text) => {
+            handleSendPrompt(text);
+          }}
+        />
+      )}
 
+      {/* 腾讯 ima 知识库连接与管理弹窗 */}
+      {showImaModal && (
+        <ImaConnectorModal
+          isOpen={showImaModal}
+          status={isImaConnected ? 'connected' : 'disconnected'}
+          nickname={imaStatus?.nickname}
+          defaultKbId={imaStatus?.defaultKbId}
+          onClose={() => setShowImaModal(false)}
+          onRefresh={() => fetchImaStatus()}
+          onTryIt={() => handleTryIt('ima')}
+          onSendPrompt={(text: string) => handleSendPrompt(text)}
+        />
+      )}
       {confirmInstallChannel && (
         <InstallCliConfirmModal
           channel={confirmInstallChannel}

@@ -1923,6 +1923,32 @@ body.jy-resizing-artifact iframe {
   background-color: rgba(255, 255, 255, 0.1) !important;
 }
 
+.jy-btn-primary {
+  background-color: var(--dsw-alias-bg-button-primary, #0f172a);
+  color: var(--dsw-alias-label-inverse, #ffffff);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.15s ease;
+}
+.jy-btn-primary:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.jy-btn-secondary {
+  background-color: var(--dsw-alias-bg-layer-3, #ffffff);
+  color: var(--dsw-alias-label-primary, #334155);
+  border: 1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0));
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.jy-btn-secondary:hover:not(:disabled) {
+  background-color: var(--dsw-alias-bg-subtle, #f8fafc);
+  border-color: var(--dsw-alias-border, #cbd5e1);
+}
+
 .dark .jy-btn-primary,
 [data-ds-dark-theme] .jy-btn-primary,
 [data-theme="dark"] .jy-btn-primary,

@@ -81,3 +81,29 @@ export interface AllCliStatus {
   npmAvailable: boolean;
   npmPath?: string;
 }
+
+export interface ImaConfig {
+  apiKey?: string;
+  clientId?: string;
+  apiBase?: string;
+  defaultKbId?: string;
+  nickname?: string;
+  avatar?: string;
+  validTime?: number;
+  boundAt?: number;
+}
+
+export type ImaStatus = 'disconnected' | 'connected';
+
+export interface ImaState {
+  status: ImaStatus;
+  apiKeyMasked?: string;
+  clientId?: string;
+  nickname?: string;
+  avatar?: string;
+  defaultKbId?: string;
+  validTime?: number;
+  boundAt?: number;
+  hasConfig?: boolean;
+  lastError?: string;
+}

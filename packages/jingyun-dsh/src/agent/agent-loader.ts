@@ -5,6 +5,7 @@ import type { Context } from '@deepseek-ai/cordis';
 
 import {
   dingtalkConnector,
+  imaConnector,
   larkConnector,
   wecomConnector,
 } from '../connectors';
@@ -207,6 +208,13 @@ ${content}
     - 查看最近@我：\`dws chat +at-me\`
     - 查看当前账号身份：\`dws profile list --format json\`
   * 沙箱注意事项：dws 运行时需读写连接器数据锁文件，若在 workspace-write 沙箱模式下提示文件锁 Access is denied，请指定 sandbox_permissions="danger-full-access"`;
+            }
+
+            const imaState = imaConnector.getStatus();
+            if (imaState.status === 'connected') {
+              connectorsPrompt += `\n- 【腾讯 ima 知识库与笔记 (ima-skill)】：已就绪（${imaState.nickname ? '用户: ' + imaState.nickname : '已连接'}）。
+  * 核心能力：腾讯 ima 知识管家，已连接个人知识库与笔记。支持读取/检索知识库资料及笔记管理。
+  * 技能指引：当用户需要检索知识库（“从我的 ima 知识库查找...”）或读取/更新笔记时，请使用 \`ima-skill\` 技能。`;
             }
 
             if (connectorsPrompt) {

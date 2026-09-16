@@ -56,6 +56,12 @@ export function getWecomConfigDir(): string {
 export function getDingtalkConfigDir(): string {
   return path.join(getConnectorsDir(), 'dingtalk');
 }
+/**
+ * 获取 ima 知识库连接器配置目录 ($DSH_HOME/connectors/ima)
+ */
+export function getImaConfigDir(): string {
+  return path.join(getConnectorsDir(), 'ima');
+}
 
 /**
  * 获取插件包根目录

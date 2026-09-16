@@ -37,6 +37,11 @@ export function OnlineWorkspaceOverlay() {
       const target = e.target as HTMLElement;
       if (!target) return;
 
+      // 仅当点击发生在侧边栏 (sidebar) 内部时才检测退出遮罩，严禁响应主工作区、连接器面板或弹窗内的点击
+      const sidebar = document.querySelector('[class*="sidebar"]');
+      if (!sidebar || !sidebar.contains(target)) {
+        return;
+      }
       // 过滤折叠/展开侧边栏按钮，避免误触发退出
       const isToggleBtn =
         target.closest('button[class*="toggle"]') ||
