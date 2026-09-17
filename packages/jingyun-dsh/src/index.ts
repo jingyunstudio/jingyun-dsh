@@ -1,3 +1,5 @@
+delete process.env.WATCH_REPORT_DEPENDENCIES;
+
 import './common/dns';
 import fs from 'fs';
 import path from 'path';

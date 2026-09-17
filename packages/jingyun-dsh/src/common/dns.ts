@@ -1,3 +1,5 @@
+delete process.env.WATCH_REPORT_DEPENDENCIES;
+
 import dns from 'node:dns';
 
 /**
