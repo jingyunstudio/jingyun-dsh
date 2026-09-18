@@ -1,6 +1,7 @@
 import { QRCodeSVG } from 'qrcode.react';
 import React, { useState, useEffect, useRef } from 'react';
 
+import type { WeixinBotStatus } from '../../../connectors/types';
 import { showToast } from '../../components/BrandBranding';
 import { sendPromptToComposer } from '../../dom-helper';
 import {
@@ -11,6 +12,7 @@ import {
   UnbindIcon,
 } from './ConnectorDetailModal';
 import { ImaCatLogo, ImaConnectorModal } from './ImaConnectorModal';
+import { WeixinModal } from './WeixinModal';
 const openExternalUrl = (target: string) => {
   if (!target) return;
   try {
@@ -146,6 +148,33 @@ const WechatWorkLogo = () => (
     />
   </svg>
 );
+
+// 微信官方绿色 SVG 图标
+const WeixinLogo = () => (
+  <svg
+    width="36"
+    height="36"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <rect width="24" height="24" rx="6" fill="#07C160" fillOpacity="0.12" />
+    <path
+      d="M9.5 4.5C5.91 4.5 3 7.02 3 10.13c0 1.74.91 3.32 2.34 4.36l-.59 1.77a.4.4 0 00.51.5l2.1-.7c.66.2 1.36.32 2.1.32.3 0 .59-.02.88-.05-.18-.53-.29-1.09-.29-1.68 0-3 2.82-5.44 6.31-5.44.3 0 .59.02.87.06C16.63 6.56 13.39 4.5 9.5 4.5z"
+      fill="#07C160"
+    />
+    <path
+      d="M15.5 10.13c-3.12 0-5.65 2.14-5.65 4.77 0 1.43.73 2.71 1.89 3.58l-.47 1.42a.35.35 0 00.44.43l1.69-.56c.63.22 1.33.34 2.1.34 3.12 0 5.65-2.14 5.65-4.77s-2.53-4.77-5.65-4.77z"
+      fill="#07C160"
+    />
+    <circle cx="7.3" cy="8.4" r="0.85" fill="#FFFFFF" />
+    <circle cx="11.2" cy="8.4" r="0.85" fill="#FFFFFF" />
+    <circle cx="13.8" cy="14" r="0.75" fill="#FFFFFF" />
+    <circle cx="17.2" cy="14" r="0.75" fill="#FFFFFF" />
+  </svg>
+);
+
+type ConnectorCategory = 'channels' | 'remote_tunnel';
 
 interface ConnectorCardProps {
   name: string;
@@ -336,7 +365,7 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
             cursor: isLoading ? 'not-allowed' : 'pointer',
             opacity: isLoading ? 0.45 : 1,
             pointerEvents: isLoading ? 'none' : 'auto',
-            transition: 'opacity 0.15s ease',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
             if (!isLoading) {
@@ -357,6 +386,8 @@ const ConnectorCard: React.FC<ConnectorCardProps> = ({
 );
 
 export const ConnectorPanel = () => {
+  const [activeCategory, setActiveCategory] =
+    useState<ConnectorCategory>('channels');
   const [larkStatus, setLarkStatus] = useState<any>(null);
   const [wecomStatus, setWecomStatus] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -388,6 +419,11 @@ export const ConnectorPanel = () => {
   const [imaLoading, setImaLoading] = useState(true);
   const [showImaModal, setShowImaModal] = useState(false);
   const [showImaDetailModal, setShowImaDetailModal] = useState(false);
+  const [weixinStatus, setWeixinStatus] = useState<WeixinBotStatus | null>(
+    null
+  );
+  const [weixinLoading, setWeixinLoading] = useState(true);
+  const [showWeixinModal, setShowWeixinModal] = useState(false);
   const [confirmInstallChannel, setConfirmInstallChannel] = useState<
     'lark' | 'dingtalk' | 'wecom' | null
   >(null);
@@ -610,6 +646,23 @@ export const ConnectorPanel = () => {
       showToast('断开连接失败');
     }
   };
+  // 获取微信助理连接状态
+  const fetchWeixinStatus = async () => {
+    setWeixinLoading(true);
+    try {
+      const res = await fetch('/api/jingyun/connectors/weixin/status');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setWeixinStatus(json.data);
+        }
+      }
+    } catch (err) {
+      console.error('[ConnectorPanel] Failed to fetch weixin status:', err);
+    } finally {
+      setWeixinLoading(false);
+    }
+  };
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -617,6 +670,7 @@ export const ConnectorPanel = () => {
       fetchWecomStatus();
       fetchDingtalkStatus();
       fetchImaStatus();
+      fetchWeixinStatus();
       fetchCliStatus();
     });
   }, []);
@@ -668,6 +722,7 @@ export const ConnectorPanel = () => {
     dingtalkStatus?.appKey ||
     '';
   const isImaConnected = Boolean(imaStatus?.status === 'connected');
+  const isWeixinConnected = Boolean(weixinStatus?.connected);
 
   return (
     <div
@@ -685,7 +740,7 @@ export const ConnectorPanel = () => {
       }}
     >
       {/* 头部标题描述 */}
-      <div style={{ marginBottom: '28px' }}>
+      <div style={{ marginBottom: '20px' }}>
         <h2
           style={{
             margin: '0 0 6px 0',
@@ -704,163 +759,313 @@ export const ConnectorPanel = () => {
             lineHeight: '1.6',
           }}
         >
-          配置并绑定第三方协同办公与即时通讯渠道。绑定后，智能体将能够直接在这些渠道中与您互动，执行命令或推送通知。
+          {activeCategory === 'channels'
+            ? '配置并绑定第三方协同办公与即时通讯渠道。绑定后，智能体将能够直接在这些渠道中与您互动，执行命令或推送通知。'
+            : '配置并连接移动端或第三方即时通讯远程通道。连接后，即可随时随地远程向电脑端工作台指派任务，执行进度与结果实时双向同步。'}
         </p>
       </div>
 
+      {/* 分类切换 Tab 栏 */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '16px',
-          width: '100%',
+          display: 'flex',
+          gap: '24px',
+          borderBottom:
+            '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+          marginBottom: '20px',
         }}
       >
-        <ConnectorCard
-          name="飞书 (Lark)"
-          icon={<FeishuLogo />}
-          description="支持通过飞书账号授权，使 AI 具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。"
-          isConnected={isLarkConnected}
-          isLoading={larkLoading}
-          statusBadge={
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '10px',
-                color: larkAuthLevel === 'full' ? '#16a34a' : '#d97706',
-                background:
-                  larkAuthLevel === 'full'
-                    ? 'rgba(34, 197, 94, 0.1)'
-                    : 'rgba(217, 119, 6, 0.1)',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontWeight: 500,
-              }}
-            >
-              <span
-                style={{
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  background: larkAuthLevel === 'full' ? '#22c55e' : '#f59e0b',
-                }}
-              />
-              {larkAuthLevel === 'full'
-                ? '已完整授权'
-                : '底座就绪 · 待应用授权'}
-            </span>
-          }
-          onConnect={() => handleConnect('lark')}
-          onManage={() => setShowDetailModal(true)}
-        />
-
-        <ConnectorCard
-          name="钉钉 (DingTalk)"
-          icon={<DingtalkLogo />}
-          description="与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。"
-          isConnected={isDingtalkConnected}
-          isLoading={dingtalkLoading}
-          statusBadge={
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '10px',
-                color: '#16a34a',
-                background: 'rgba(34, 197, 94, 0.1)',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontWeight: 500,
-              }}
-            >
-              <span
-                style={{
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  background: '#22c55e',
-                }}
-              />
-              已启用
-            </span>
-          }
-          onConnect={() => handleConnect('dingtalk')}
-          onManage={() => setShowDingtalkDetailModal(true)}
-        />
-
-        <ConnectorCard
-          name="企业微信"
-          icon={<WechatWorkLogo />}
-          description="与企业微信智能机器人深度集成，支持 WebSocket 长连接实时消息收发与协同。"
-          isConnected={isWecomConnected}
-          isLoading={wecomLoading}
-          statusBadge={
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '10px',
-                color: '#16a34a',
-                background: 'rgba(34, 197, 94, 0.1)',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontWeight: 500,
-              }}
-            >
-              <span
-                style={{
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  background: '#22c55e',
-                }}
-              />
-              已启用
-            </span>
-          }
-          onConnect={() => handleConnect('wecom')}
-          onManage={() => setShowWecomDetailModal(true)}
-        />
-
-        <ConnectorCard
-          name="腾讯 ima 知识库"
-          icon={<ImaCatLogo size={36} />}
-          description="腾讯AI知识管家，连接后支持搜索、读取和写入知识库资料，并可搜索和订阅教育、法律、财经、科技等20+行业专业知识。"
-          isConnected={isImaConnected}
-          isLoading={imaLoading}
-          statusBadge={
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '10px',
-                color: '#16a34a',
-                background: 'rgba(34, 197, 94, 0.1)',
-                padding: '1px 6px',
-                borderRadius: '4px',
-                fontWeight: 500,
-              }}
-            >
-              <span
-                style={{
-                  width: '4px',
-                  height: '4px',
-                  borderRadius: '50%',
-                  background: '#22c55e',
-                }}
-              />
-              已连接
-            </span>
-          }
-          onConnect={() => setShowImaModal(true)}
-          onManage={() => setShowImaDetailModal(true)}
-        />
+        <button
+          type="button"
+          onClick={() => setActiveCategory('channels')}
+          style={{
+            padding: '8px 4px 12px 4px',
+            background: 'transparent',
+            border: 'none',
+            borderBottom:
+              activeCategory === 'channels'
+                ? '2px solid var(--dsw-alias-label-primary, #0f172a)'
+                : '2px solid transparent',
+            color:
+              activeCategory === 'channels'
+                ? 'var(--dsw-alias-label-primary, #0f172a)'
+                : 'var(--dsw-alias-label-tertiary, #64748b)',
+            fontSize: '14px',
+            fontWeight: activeCategory === 'channels' ? 600 : 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            marginBottom: '-1px',
+          }}
+        >
+          渠道
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveCategory('remote_tunnel')}
+          style={{
+            padding: '8px 4px 12px 4px',
+            background: 'transparent',
+            border: 'none',
+            borderBottom:
+              activeCategory === 'remote_tunnel'
+                ? '2px solid var(--dsw-alias-label-primary, #0f172a)'
+                : '2px solid transparent',
+            color:
+              activeCategory === 'remote_tunnel'
+                ? 'var(--dsw-alias-label-primary, #0f172a)'
+                : 'var(--dsw-alias-label-tertiary, #64748b)',
+            fontSize: '14px',
+            fontWeight: activeCategory === 'remote_tunnel' ? 600 : 500,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+            marginBottom: '-1px',
+          }}
+        >
+          远程通道
+        </button>
       </div>
+
+      {activeCategory === 'channels' && (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '16px',
+            width: '100%',
+          }}
+        >
+          <ConnectorCard
+            name="飞书 (Lark)"
+            icon={<FeishuLogo />}
+            description="支持通过飞书账号授权，使 AI 具备读取及编辑飞书文档、发送即时聊天消息、配置任务、安排日历等多场景协同能力。"
+            isConnected={isLarkConnected}
+            isLoading={larkLoading}
+            statusBadge={
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '10px',
+                  color: larkAuthLevel === 'full' ? '#16a34a' : '#d97706',
+                  background:
+                    larkAuthLevel === 'full'
+                      ? 'rgba(34, 197, 94, 0.1)'
+                      : 'rgba(217, 119, 6, 0.1)',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  fontWeight: 500,
+                }}
+              >
+                <span
+                  style={{
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    background:
+                      larkAuthLevel === 'full' ? '#22c55e' : '#f59e0b',
+                  }}
+                />
+                {larkAuthLevel === 'full'
+                  ? '已完整授权'
+                  : '底座就绪 · 待应用授权'}
+              </span>
+            }
+            onConnect={() => handleConnect('lark')}
+            onManage={() => setShowDetailModal(true)}
+          />
+
+          <ConnectorCard
+            name="钉钉 (DingTalk)"
+            icon={<DingtalkLogo />}
+            description="与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。"
+            isConnected={isDingtalkConnected}
+            isLoading={dingtalkLoading}
+            statusBadge={
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '10px',
+                  color: '#16a34a',
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  fontWeight: 500,
+                }}
+              >
+                <span
+                  style={{
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                  }}
+                />
+                已启用
+              </span>
+            }
+            onConnect={() => handleConnect('dingtalk')}
+            onManage={() => setShowDingtalkDetailModal(true)}
+          />
+
+          <ConnectorCard
+            name="企业微信"
+            icon={<WechatWorkLogo />}
+            description="与企业微信智能机器人深度集成，支持 WebSocket 长连接实时消息收发与协同。"
+            isConnected={isWecomConnected}
+            isLoading={wecomLoading}
+            statusBadge={
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '10px',
+                  color: '#16a34a',
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  fontWeight: 500,
+                }}
+              >
+                <span
+                  style={{
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                  }}
+                />
+                已启用
+              </span>
+            }
+            onConnect={() => handleConnect('wecom')}
+            onManage={() => setShowWecomDetailModal(true)}
+          />
+
+          <ConnectorCard
+            name="腾讯 ima 知识库"
+            icon={<ImaCatLogo size={36} />}
+            description="腾讯AI知识管家，连接后支持搜索、读取和写入知识库资料，并可搜索和订阅教育、法律、财经、科技等20+行业专业知识。"
+            isConnected={isImaConnected}
+            isLoading={imaLoading}
+            statusBadge={
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '10px',
+                  color: '#16a34a',
+                  background: 'rgba(34, 197, 94, 0.1)',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  fontWeight: 500,
+                }}
+              >
+                <span
+                  style={{
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    background: '#22c55e',
+                  }}
+                />
+                已连接
+              </span>
+            }
+            onConnect={() => setShowImaModal(true)}
+            onManage={() => setShowImaDetailModal(true)}
+          />
+        </div>
+      )}
+
+      {activeCategory === 'remote_tunnel' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              background:
+                'var(--dsw-alias-surface-subtle, rgba(0, 0, 0, 0.02))',
+              border:
+                '1px solid var(--dsw-alias-border-l2, var(--dsw-alias-border, #e2e8f0))',
+              fontSize: '13px',
+              color: 'var(--dsw-alias-label-secondary, #475569)',
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="var(--dsw-alias-label-secondary, #64748b)"
+                strokeWidth="2"
+              />
+              <path
+                d="M12 8v4M12 16h.01"
+                stroke="var(--dsw-alias-label-secondary, #64748b)"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+            <span>
+              连接远程消息通道，即可在移动端随时向工作台指派任务并执行自动化流程，结果将实时回传到对应通道会话中。
+            </span>
+          </div>
+
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+              gap: '16px',
+              width: '100%',
+            }}
+          >
+            <ConnectorCard
+              name="微信助理"
+              icon={<WeixinLogo />}
+              description="通过微信直接下发指令，结果实时回传至微信聊天窗口。"
+              isConnected={isWeixinConnected}
+              isLoading={weixinLoading}
+              statusBadge={
+                isWeixinConnected ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '10px',
+                      color: '#16a34a',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '4px',
+                        height: '4px',
+                        borderRadius: '50%',
+                        background: '#22c55e',
+                      }}
+                    />
+                    已连接
+                  </span>
+                ) : undefined
+              }
+              onConnect={() => setShowWeixinModal(true)}
+              onManage={() => setShowWeixinModal(true)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* 企业微信授权扫码弹窗 (完全复用飞书 ConnectorAuthModal 组件) */}
       {showWecomModal && (
@@ -1019,6 +1224,15 @@ export const ConnectorPanel = () => {
           onSendPrompt={(text) => {
             handleSendPrompt(text);
           }}
+        />
+      )}
+
+      {/* 微信助理连接与管理弹窗 */}
+      {showWeixinModal && (
+        <WeixinModal
+          isOpen={showWeixinModal}
+          onClose={() => setShowWeixinModal(false)}
+          onRefresh={() => fetchWeixinStatus()}
         />
       )}
       {confirmInstallChannel && (

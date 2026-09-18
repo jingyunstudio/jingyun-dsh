@@ -1,4 +1,5 @@
 import { brandingManager } from './components/BrandBranding';
+import { globalClientContext } from './index';
 import { styleSheetContent } from './styles';
 
 export function applyThemeMode(mode: 'light' | 'dark') {
@@ -123,6 +124,23 @@ export function initClientBrandingDOM() {
               (el as HTMLElement).style.display = 'none';
             }
           });
+
+        // 修正专属智能助理会话顶部的标题展示，确保固定为“智能助理”
+        const assistantId = localStorage.getItem('dsh_assistant_session_id');
+        const currentSessionId =
+          globalClientContext?.sessions?.list?.getSnapshot()?.current;
+        if (
+          assistantId &&
+          currentSessionId &&
+          currentSessionId === assistantId
+        ) {
+          const crumb = document.querySelector(
+            'nav[class*="crumbs"] [class*="crumbSeg"], [class*="titleRow"] [class*="crumbSeg"]'
+          );
+          if (crumb && crumb.textContent !== '智能助理') {
+            crumb.textContent = '智能助理';
+          }
+        }
       };
 
       hideUnwantedElements();
@@ -140,18 +158,18 @@ export function initClientBrandingDOM() {
           display: none !important;
         }
 
-        /* 隐藏 Hero 标语容器 */
-        div:has(> [class*="heroBrandMark"]),
-        div:has(> #jy-hero-hide-anchor) {
-          display: none !important;
-        }
-
         /* 【三保险机制之三：全局 CSS 条件强制隐藏】 */
         /* 隐藏空白会话中间的原生大引导语与官方标语区域，提供最快的首屏静态规则强稳覆盖 */
         [class*="EmptyHero-module_headline"],
         [class*="EmptyHero_headline"],
         [class*="headlineText"],
         [class*="previewBadge"] {
+          display: none !important;
+        }
+
+        /* 隐藏 Hero 标语容器 */
+        div:has(> [class*="heroBrandMark"]),
+        div:has(> #jy-hero-hide-anchor) {
           display: none !important;
         }
       `;

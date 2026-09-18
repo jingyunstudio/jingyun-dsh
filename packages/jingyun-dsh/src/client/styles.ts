@@ -738,7 +738,13 @@ button[class*="newSession"]:hover {
 
 .jy-sidebar-btn.jy-active,
 button[class*="newSession"].jy-active {
-  background-color: var(--dsw-alias-interactive-bg-hover, rgba(9, 9, 11, 0.05)) !important;
+  background-color: var(--dsw-alias-interactive-bg-active, rgba(9, 9, 11, 0.08)) !important;
+  color: var(--dsw-alias-label-primary, #09090b) !important;
+  font-weight: 500 !important;
+}
+
+.jy-sidebar-btn.jy-active svg {
+  color: var(--dsw-alias-label-primary, #09090b) !important;
 }
 
 .jy-sidebar-btn svg,

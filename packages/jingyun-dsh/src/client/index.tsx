@@ -28,11 +28,124 @@ import {
   MarketplaceCommunityPluginsTab,
 } from './pages/MarketplaceSection';
 
+export interface AssistantSessionsService {
+  readonly list: {
+    getSnapshot(): {
+      current?: string;
+      ids?: string[];
+      byId?: Record<string, { id: string; title?: string }>;
+    };
+    subscribe(fn: () => void): () => void;
+  };
+  create(opts?: {
+    workspaceId?: string;
+    cwd?: string;
+    sessionId?: string;
+  }): Promise<string>;
+  open(id: string): void;
+}
+
+export type CustomClientContext = ClientContext & {
+  sessions?: AssistantSessionsService;
+};
+
 export const inject = ['slots', 'sessions'];
+export let globalClientContext: CustomClientContext | null = null;
+export const ASSISTANT_SESSION_STORAGE_KEY = 'dsh_assistant_session_id';
+
+export async function openAssistantSession(): Promise<void> {
+  if (
+    typeof window !== 'undefined' &&
+    window.location.hash &&
+    window.location.hash !== '#/'
+  ) {
+    window.location.hash = '#/';
+  }
+
+  const resp = await fetch('/api/jingyun/assistant/session/ensure');
+  if (!resp.ok) {
+    throw new Error(
+      `[Assistant] Failed to ensure assistant session: ${resp.statusText}`
+    );
+  }
+  const json = (await resp.json()) as {
+    success?: boolean;
+    data?: { sessionId?: string };
+  };
+  const targetSessionId = json.data?.sessionId;
+  if (!targetSessionId) {
+    throw new Error('[Assistant] ensure API did not return targetSessionId');
+  }
+  localStorage.setItem(ASSISTANT_SESSION_STORAGE_KEY, targetSessionId);
+
+  const sessionRows = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '.YDXeBa_sessionRow, [class*="sessionRow"]'
+    )
+  );
+
+  let matchedRow: HTMLElement | null = null;
+  for (const row of sessionRows) {
+    const reactKey = Object.keys(row).find((k) =>
+      k.startsWith('__reactFiber$')
+    );
+    let fiber = reactKey
+      ? ((row as unknown as Record<string, unknown>)[reactKey] as {
+          memoizedProps?: { node?: { id?: string } };
+          return?: unknown;
+        } | null)
+      : null;
+    while (fiber) {
+      if (fiber.memoizedProps?.node?.id === targetSessionId) {
+        matchedRow = row;
+        break;
+      }
+      fiber = fiber.return as typeof fiber;
+    }
+    if (matchedRow) {
+      break;
+    }
+  }
+
+  if (matchedRow) {
+    matchedRow.click();
+    const input = document.querySelector<HTMLElement>(
+      'div[contenteditable="true"], textarea'
+    );
+    input?.focus();
+    return;
+  }
+
+  const treeEl = document.querySelector('[role="tree"]');
+  const reactKey = treeEl
+    ? Object.keys(treeEl).find((k) => k.startsWith('__reactFiber$'))
+    : null;
+  let fiber = reactKey
+    ? ((treeEl as unknown as Record<string, unknown>)[reactKey] as {
+        memoizedProps?: { open?: (id: string) => void };
+        return?: unknown;
+      } | null)
+    : null;
+  while (fiber) {
+    if (typeof fiber.memoizedProps?.open === 'function') {
+      fiber.memoizedProps.open(targetSessionId);
+      const input = document.querySelector<HTMLElement>(
+        'div[contenteditable="true"], textarea'
+      );
+      input?.focus();
+      return;
+    }
+    fiber = fiber.return as typeof fiber;
+  }
+
+  throw new Error(`[Assistant] Target session ${targetSessionId} not found`);
+}
 
 export function apply(ctx: ClientContext) {
-  console.log('[UIBranding] Launching client brand interfaces mount...');
-
+  globalClientContext = ctx as CustomClientContext;
+  if (typeof window !== 'undefined') {
+    (window as any).__jingyun_client_context__ = ctx;
+  }
   // ==========================================
   // 一、对齐官方 DSH 插槽注册规范：Generator+Yield 嵌套批量原子注入
   // ==========================================
@@ -45,11 +158,11 @@ export function apply(ctx: ClientContext) {
             name: 'sidebar.brand.mark',
             priority: -100,
           },
-          (props: any) =>
+          (props: { size?: number }) =>
             React.createElement(CustomBrandMark, { size: props?.size || 24 })
         );
 
-        // 2. 注册侧边栏产品名称
+        // 2. 注册侧边栏产品名品牌插槽
         yield ctx.slots.register(
           {
             name: 'sidebar.brand.name',
@@ -57,7 +170,6 @@ export function apply(ctx: ClientContext) {
           },
           () => React.createElement(CustomBrandName)
         );
-
         // 3. 注册对话区域 Hero 标题隐藏定位插槽
         yield ctx.slots.register(
           {

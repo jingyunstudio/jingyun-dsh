@@ -8,8 +8,8 @@ import {
   dingtalkConnector,
   imaConnector,
   larkConnector,
-  type WecomConfig,
   wecomConnector,
+  weixinConnector,
 } from '../connectors';
 
 export function registerConnectorsRoutes(ctx: Context) {
@@ -118,119 +118,111 @@ export function registerConnectorsRoutes(ctx: Context) {
     console.warn('[WecomConnector] Failed to initialize:', err);
   });
 
-  // 企微路由（支持 /api/jingyun/connectors/wecom/* 与兼容路径 /api/connectors/wecom/*）
-  const wecomPrefixes = [
-    '/api/jingyun/connectors/wecom',
-    '/api/connectors/wecom',
-  ];
+  // 企微路由（单一标准路径 /api/jingyun/connectors/wecom/*）
+  const wecomPrefix = '/api/jingyun/connectors/wecom';
 
-  for (const prefix of wecomPrefixes) {
-    // 扫码授权发起
-    ctx.webServer.register({
-      kind: 'exact',
-      path: `${prefix}/qr-start`,
-      handler: async (_req, res) => {
-        try {
-          const data = await wecomConnector.getQrCode();
-          sendJson(res, { success: true, data });
-        } catch (err: any) {
-          sendError(res, err.message, 500);
-        }
-      },
-    });
+  // 扫码授权发起
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/qr-start`,
+    handler: async (_req, res) => {
+      try {
+        const data = await wecomConnector.getQrCode();
+        sendJson(res, { success: true, data });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
 
-    // 扫码授权结果轮询
-    ctx.webServer.register({
-      kind: 'exact',
-      path: `${prefix}/query-result`,
-      handler: async (req: IncomingMessage, res: ServerResponse) => {
-        try {
-          const parsedUrl = new URL(req.url || '', 'http://127.0.0.1');
-          const scode = parsedUrl.searchParams.get('scode') || '';
-          if (!scode) {
-            return sendError(res, '缺少 scode 参数', 400);
-          }
-          const result = await wecomConnector.queryQrResult(scode);
-          sendJson(res, result);
-        } catch (err: any) {
-          sendJson(res, {
-            success: false,
-            status: 'error',
-            error: err.message,
-          });
+  // 扫码授权结果轮询
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/query-result`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const parsedUrl = new URL(req.url || '', 'http://127.0.0.1');
+        const scode = parsedUrl.searchParams.get('scode') || '';
+        if (!scode) {
+          return sendError(res, '缺少 scode 参数', 400);
         }
-      },
-    });
+        const result = await wecomConnector.queryQrResult(scode);
+        sendJson(res, result);
+      } catch (err: any) {
+        sendJson(res, {
+          success: false,
+          status: 'error',
+          error: err.message,
+        });
+      }
+    },
+  });
 
-    // 连接器状态
-    ctx.webServer.register({
-      kind: 'exact',
-      path: `${prefix}/status`,
-      handler: async (_req, res) => {
-        try {
-          const status = wecomConnector.getStatus();
-          sendJson(res, { success: true, data: status });
-        } catch (err: any) {
-          sendError(res, err.message, 500);
-        }
-      },
-    });
+  // 企微连接器状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/status`,
+    handler: async (_req, res) => {
+      try {
+        const state = await wecomConnector.getStatus();
+        sendJson(res, { success: true, data: state });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
 
-    // 主动连接
-    ctx.webServer.register({
-      kind: 'exact',
-      path: `${prefix}/connect`,
-      handler: async (req: IncomingMessage, res: ServerResponse) => {
-        try {
-          const config = await parseJsonBody<WecomConfig>(req);
-          if (!config?.botId || !config?.botSecret) {
-            return sendError(res, 'Bot ID and Secret are required', 400);
-          }
-          await wecomConnector.connect(config);
-          sendJson(res, {
-            success: true,
-            data: { message: 'Connected successfully', status: 'connected' },
-          });
-        } catch (err: any) {
-          sendError(res, err.message, 500);
-        }
-      },
-    });
+  // 保存配置
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/config`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = (await parseJsonBody(req)) as any;
+        await wecomConnector.saveConfig(body);
+        sendJson(res, {
+          success: true,
+          data: { message: 'Configuration saved' },
+        });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
 
-    // 断开连接（解绑，清除全部配置）
-    ctx.webServer.register({
-      kind: 'exact',
-      path: `${prefix}/disconnect`,
-      handler: async (_req, res) => {
-        try {
-          await wecomConnector.clearConfig();
-          sendJson(res, {
-            success: true,
-            data: { message: 'Disconnected and cleared' },
-          });
-        } catch (err: any) {
-          sendError(res, err.message, 500);
-        }
-      },
-    });
+  // 断开连接（解绑，清除全部配置）
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/disconnect`,
+    handler: async (_req, res) => {
+      try {
+        await wecomConnector.clearConfig();
+        sendJson(res, {
+          success: true,
+          data: { message: 'Disconnected and cleared' },
+        });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
 
-    // 清除配置
-    ctx.webServer.register({
-      kind: 'exact',
-      path: `${prefix}/clear`,
-      handler: async (_req, res) => {
-        try {
-          await wecomConnector.clearConfig();
-          sendJson(res, {
-            success: true,
-            data: { message: 'Configuration cleared' },
-          });
-        } catch (err: any) {
-          sendError(res, err.message, 500);
-        }
-      },
-    });
-  }
+  // 清除配置
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/clear`,
+    handler: async (_req, res) => {
+      try {
+        await wecomConnector.clearConfig();
+        sendJson(res, {
+          success: true,
+          data: { message: 'Configuration cleared' },
+        });
+      } catch (err: any) {
+        sendError(res, err.message, 500);
+      }
+    },
+  });
 
   // 初始化钉钉连接器服务
   dingtalkConnector.init().catch((err: any) => {
@@ -443,6 +435,122 @@ export function registerConnectorsRoutes(ctx: Context) {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         sendError(res, message, 500);
+      }
+    },
+  });
+
+  // 获取微信助理连接状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/weixin/status',
+    handler: async (_req, res) => {
+      try {
+        const status = weixinConnector.getStatus();
+        sendJson(res, { success: true, data: status });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
+      }
+    },
+  });
+
+  // 获取微信助理登录二维码
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/weixin/qr-start',
+    handler: async (_req, res) => {
+      try {
+        const result = await weixinConnector.getQrCode();
+        sendJson(res, { success: true, data: result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
+      }
+    },
+  });
+
+  // 轮询微信助理登录二维码状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/weixin/qr-poll',
+    handler: async (req, res) => {
+      try {
+        const url = new URL(req.url || '', 'http://localhost');
+        const qrcode = url.searchParams.get('qrcode') || '';
+        if (!qrcode) {
+          sendError(res, '缺少 qrcode 参数', 400);
+          return;
+        }
+        const result = await weixinConnector.pollQrStatus(qrcode);
+        sendJson(res, { success: true, data: result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
+      }
+    },
+  });
+
+  // 断开微信助理连接
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/weixin/disconnect',
+    handler: async (req, res) => {
+      try {
+        let clearCredentials = false;
+        if (req.method === 'POST') {
+          const body = await parseJsonBody<{ clearCredentials?: boolean }>(req);
+          clearCredentials = !!body?.clearCredentials;
+        }
+        await weixinConnector.disconnect(clearCredentials);
+        sendJson(res, {
+          success: true,
+          data: { status: 'disconnected', clearCredentials },
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
+      }
+    },
+  });
+
+  // 保存微信助理配置
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/weixin/config/save',
+    handler: async (req, res) => {
+      try {
+        const body = await parseJsonBody<{
+          baseUrl?: string;
+          autoReconnect?: boolean;
+        }>(req);
+        const saved = await weixinConnector.saveConfig(body || {});
+        sendJson(res, { success: true, data: saved });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 400);
+      }
+    },
+  });
+
+  // 发送微信测试消息
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/weixin/send-test',
+    handler: async (req, res) => {
+      try {
+        const body = await parseJsonBody<{
+          content?: string;
+          toUserId?: string;
+        }>(req);
+        const content = body?.content || '助理测试消息发送成功！';
+        const result = await weixinConnector.sendMessage({
+          content,
+          toUserId: body?.toUserId,
+        });
+        sendJson(res, { success: true, data: result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 400);
       }
     },
   });

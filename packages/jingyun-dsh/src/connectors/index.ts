@@ -7,3 +7,4 @@ export {
 export { LarkConnectorService, larkConnector } from './lark-service';
 export { CliManagerService, cliManager } from './cli-manager';
 export { ImaConnectorService, imaConnector } from './ima-service';
+export { WeixinConnectorService, weixinConnector } from './weixin-service';

@@ -16,7 +16,7 @@ import {
   readDesktopConfig,
 } from './common/paths';
 import { Config } from './config/schema';
-import { cliManager } from './connectors';
+import { cliManager, weixinConnector } from './connectors';
 import { registerRoutes } from './routes';
 
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
@@ -43,7 +43,14 @@ try {
 }
 
 export const name = 'jingyun-dsh';
-export const inject = ['webServer', 'settings', 'commands'];
+export const inject = [
+  'webServer',
+  'settings',
+  'commands',
+  'sessionController',
+  'workspaceRegistry',
+  'sessions',
+];
 export { Config };
 export * from './connectors';
 
@@ -192,4 +199,10 @@ export function apply(ctx: Context, config: Config) {
 
   // 6. 彻底禁用 DSH Web 身份验证机制，无需 token / cookie
   disableBrowserAuth(ctx);
+
+  // 7. 初始化微信助理连接器（注入 Cordis 上下文、自动续连与凭据载入）
+  weixinConnector.setContext(ctx);
+  weixinConnector.init().catch((err) => {
+    console.warn('[JingyunDsh] Failed to initialize Weixin connector:', err);
+  });
 }

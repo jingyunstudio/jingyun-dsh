@@ -107,3 +107,54 @@ export interface ImaState {
   hasConfig?: boolean;
   lastError?: string;
 }
+
+export type WeixinBotType = 'weixin';
+
+export type WeixinStatus =
+  | 'disconnected'
+  | 'connecting'
+  | 'connected'
+  | 'error';
+
+export interface WeixinBotConfig {
+  enabled: boolean;
+  botType: WeixinBotType;
+  baseUrl: string;
+  botToken?: string;
+  accountId?: string;
+  userId?: string;
+  nickName?: string;
+  autoReconnect: boolean;
+  lastConnectedAt?: number;
+}
+
+export interface WeixinBotStatus {
+  connected: boolean;
+  status: WeixinStatus;
+  accountId?: string;
+  userId?: string;
+  nickName?: string;
+  botType: WeixinBotType;
+  baseUrl?: string;
+  lastSyncTime?: number;
+  lastError?: string;
+}
+
+export interface WeixinQrCodeResult {
+  qrcode: string;
+  qrUrl: string;
+  qrcodeImg?: string;
+  botType: WeixinBotType;
+  expiredAt?: number;
+}
+
+export interface WeixinQrPollResult {
+  status: 'wait' | 'scaned' | 'confirmed' | 'expired';
+  botToken?: string;
+  accountId?: string;
+  userId?: string;
+  nickName?: string;
+  baseUrl?: string;
+  connected?: boolean;
+  message?: string;
+}

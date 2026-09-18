@@ -62,6 +62,18 @@ export function getDingtalkConfigDir(): string {
 export function getImaConfigDir(): string {
   return path.join(getConnectorsDir(), 'ima');
 }
+/**
+ * 获取微信助理连接器配置目录 ($DSH_HOME/connectors/weixin)
+ */
+export function getWeixinConfigDir(): string {
+  return path.join(getConnectorsDir(), 'weixin');
+}
+/**
+ * 获取助理会话与消息存储目录 ($DSH_HOME/assistant)
+ */
+export function getAssistantDataDir(): string {
+  return path.join(getDshHome(), 'assistant');
+}
 
 /**
  * 获取插件包根目录

@@ -107,16 +107,13 @@ export function HeroSlotAutoHider() {
   React.useLayoutEffect(() => {
     if (!loaded) return;
     if (ref.current) {
-      if (ref.current.parentElement) {
-        ref.current.parentElement.style.display = 'none';
-        if (ref.current.parentElement.parentElement) {
-          ref.current.parentElement.parentElement.style.display = 'none';
-        }
-      }
-      let current: HTMLElement | null = ref.current;
-      for (let i = 0; i < 5 && current; i++) {
+      let current: HTMLElement | null = ref.current.parentElement;
+      for (let i = 0; i < 4 && current; i++) {
         const cls = current.className || '';
-        if (cls.includes('headline') || cls.includes('EmptyHero')) {
+        if (
+          cls.includes('EmptyHero_headline') ||
+          cls.includes('EmptyHero-module_headline')
+        ) {
           current.style.display = 'none';
           break;
         }

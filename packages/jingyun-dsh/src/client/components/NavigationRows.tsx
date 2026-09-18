@@ -8,7 +8,32 @@ import {
 import React from 'react';
 import { createPortal } from 'react-dom';
 
+import {
+  ASSISTANT_SESSION_STORAGE_KEY,
+  globalClientContext,
+  openAssistantSession,
+} from '../index';
 import { brandingManager, showToast } from './BrandBranding';
+
+const AssistantNavIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    className="link-icon"
+    style={{ flexShrink: 0 }}
+  >
+    <circle cx="12" cy="12" r="9.5" stroke="currentColor" strokeWidth="1.8" />
+    <circle cx="12" cy="9.5" r="3.2" stroke="currentColor" strokeWidth="1.8" />
+    <path
+      d="M6.5 19c1.6-2.8 3.5-3.5 5.5-3.5s3.9.7 5.5 3.5"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+    />
+  </svg>
+);
 
 interface NavigationRowsProps {
   wide?: boolean;
@@ -21,6 +46,7 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
   );
   const [topPortalTarget, setTopPortalTarget] =
     React.useState<HTMLElement | null>(null);
+  const [isAssistantActive, setIsAssistantActive] = React.useState(false);
 
   const handleNavClick = (
     e: React.MouseEvent,
@@ -83,6 +109,13 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
         subtree: true,
         characterData: true,
       });
+      const handleNewChatClick = () => {
+        setIsAssistantActive(false);
+        if (window.location.hash && window.location.hash !== '#/') {
+          window.location.hash = '#/';
+        }
+      };
+      newChatBtn.addEventListener('click', handleNewChatClick);
 
       if (newChatBtn.parentElement) {
         let portalDiv = newChatBtn.parentElement.querySelector(
@@ -105,11 +138,33 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
       }
     }
 
-    const handleHashChange = () => {
-      setCurrentHash(window.location.hash || '');
+    const checkState = () => {
+      const hash = window.location.hash || '';
+      setCurrentHash(hash);
+      if (hash && hash.startsWith('#/jingyun/')) {
+        setIsAssistantActive(false);
+        return;
+      }
+      // 只能通过 sessionId 精准匹配激活状态，绝不爬取 DOM 或做文本模糊猜测
+      const currentId =
+        globalClientContext?.sessions?.list?.getSnapshot()?.current;
+      const assistantId = localStorage.getItem(ASSISTANT_SESSION_STORAGE_KEY);
+
+      setIsAssistantActive(
+        Boolean(currentId && assistantId && currentId === assistantId)
+      );
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+
+    checkState();
+    const timer = setInterval(checkState, 200);
+    window.addEventListener('hashchange', checkState);
+    const unsub = globalClientContext?.sessions?.list?.subscribe(checkState);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('hashchange', checkState);
+      unsub?.();
+    };
   }, []);
 
   const navContent = (
@@ -122,6 +177,20 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
         gap: '2px',
       }}
     >
+      {/* 0. 智能助理 (DSH Assistant) */}
+      <button
+        type="button"
+        className={`jy-sidebar-btn jy-sidebar-link-assistant ${
+          isAssistantActive ? 'jy-active' : ''
+        }`}
+        onClick={async (e) => {
+          e.stopPropagation();
+          await openAssistantSession();
+        }}
+      >
+        <AssistantNavIcon size={16} />
+        {!isCollapsed && <span>助理</span>}
+      </button>
       {/* 1. 应用市场 */}
       <button
         type="button"

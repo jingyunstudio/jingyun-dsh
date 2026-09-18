@@ -8,6 +8,7 @@ import {
   imaConnector,
   larkConnector,
   wecomConnector,
+  weixinConnector,
 } from '../connectors';
 import { baseHome, getSessionAgentsConfig } from './manager';
 
@@ -215,6 +216,13 @@ ${content}
               connectorsPrompt += `\n- 【腾讯 ima 知识库与笔记 (ima-skill)】：已就绪（${imaState.nickname ? '用户: ' + imaState.nickname : '已连接'}）。
   * 核心能力：腾讯 ima 知识管家，已连接个人知识库与笔记。支持读取/检索知识库资料及笔记管理。
   * 技能指引：当用户需要检索知识库（“从我的 ima 知识库查找...”）或读取/更新笔记时，请使用 \`ima-skill\` 技能。`;
+            }
+
+            const weixinState = weixinConnector.getStatus();
+            if (weixinState.connected) {
+              connectorsPrompt += `\n- 【微信助理远程通道 (Weixin Bot Tunnel)】：已就绪（${weixinState.nickName ? '绑定微信: ' + weixinState.nickName : '已连接'}，微信个人助理）。
+  * 核心能力：用户已通过微信扫描绑定 iLink 网关通道。当微信用户发送消息时会直接在电脑端触发处理，结果将实时回传到微信对话框。
+  * 回传与通知指引：若需主动回传微信通知或向绑定的微信用户反馈消息，可通过系统微信通道进行下发。`;
             }
 
             if (connectorsPrompt) {
