@@ -7,7 +7,7 @@ import {
   dingtalkConnector,
   imaConnector,
   larkConnector,
-  wecomConnector,
+  wecomService,
   weixinConnector,
 } from '../connectors';
 import { baseHome, getSessionAgentsConfig } from './manager';
@@ -184,11 +184,11 @@ ${content}
           // 3. 动态扫描并注入已授权连接器状态与操作指引
           try {
             let connectorsPrompt = '';
-            const wecomState = wecomConnector.getStatus();
+            const wecomState = wecomService.getStatus();
             if (wecomState.status === 'connected') {
-              connectorsPrompt += `\n- 【企业微信连接器 (WeCom Connector)】：已就绪（Bot ID: ${wecomState.botId || 'connected'}）。
-  * 核心能力：可向企业微信发送单聊、群聊消息或通知（支持纯文本与 Markdown 格式）。
-  * 技能指引：当用户要求“发到企业微信”、“向企微发送通知/周报/总结”时，请使用 \`wecom-connector\` 技能执行发送。`;
+              connectorsPrompt += `\n- 【企业微信智能助手 (WeCom Bot)】：已就绪（机器人: ${wecomState.botId || '已连接'}）。
+  * 核心能力：用户已通过企业微信绑定智能机器人通道。支持双向协同：当企业微信用户或群聊发送消息时在电脑端触发任务处理并将结果实时回传；同时支持主动向企业微信发送单聊、群聊消息或通知（Markdown 格式）。
+  * 操作指引：若需向企业微信主动反馈或下发通知，可通过企业微信通道执行下发。`;
             }
 
             const larkCached = larkConnector.getCachedStatus();

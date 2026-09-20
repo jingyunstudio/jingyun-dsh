@@ -12,6 +12,7 @@ import {
   UnbindIcon,
 } from './ConnectorDetailModal';
 import { ImaCatLogo, ImaConnectorModal } from './ImaConnectorModal';
+import { WecomModal } from './WecomModal';
 import { WeixinModal } from './WeixinModal';
 const openExternalUrl = (target: string) => {
   if (!target) return;
@@ -394,6 +395,7 @@ export const ConnectorPanel = () => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [showWecomModal, setShowWecomModal] = useState(false);
   const [showWecomDetailModal, setShowWecomDetailModal] = useState(false);
+  const [showWecomAssistantModal, setShowWecomAssistantModal] = useState(false);
   const [dingtalkStatus, setDingtalkStatus] = useState<any>(null);
   const [larkLoading, setLarkLoading] = useState(true);
   const [wecomLoading, setWecomLoading] = useState(true);
@@ -903,7 +905,7 @@ export const ConnectorPanel = () => {
                     background: '#22c55e',
                   }}
                 />
-                已启用
+                已连接
               </span>
             }
             onConnect={() => handleConnect('dingtalk')}
@@ -938,7 +940,7 @@ export const ConnectorPanel = () => {
                     background: '#22c55e',
                   }}
                 />
-                已启用
+                已连接
               </span>
             }
             onConnect={() => handleConnect('wecom')}
@@ -1063,24 +1065,53 @@ export const ConnectorPanel = () => {
               onConnect={() => setShowWeixinModal(true)}
               onManage={() => setShowWeixinModal(true)}
             />
+            <ConnectorCard
+              name="企业微信助理"
+              icon={<WechatWorkLogo />}
+              description="通过企业微信下发指令，结果实时回传至企业微信聊天窗口。"
+              isConnected={isWecomConnected}
+              isLoading={wecomLoading}
+              statusBadge={
+                isWecomConnected ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '10px',
+                      color: '#16a34a',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '4px',
+                        height: '4px',
+                        borderRadius: '50%',
+                        background: '#22c55e',
+                      }}
+                    />
+                    已连接
+                  </span>
+                ) : undefined
+              }
+              onConnect={() => setShowWecomModal(true)}
+              onManage={() => setShowWecomAssistantModal(true)}
+            />
           </div>
         </div>
       )}
 
-      {/* 企业微信授权扫码弹窗 (完全复用飞书 ConnectorAuthModal 组件) */}
+      {/* 企业微信授权扫码弹窗 */}
       {showWecomModal && (
-        <ConnectorAuthModal
-          channel="wecom"
-          title="企业微信授权连接"
-          isCliInstalled={cliStatus?.wecom?.installed}
-          onClose={() => {
-            setShowWecomModal(false);
-            fetchCliStatus();
-          }}
+        <WecomModal
+          onClose={() => setShowWecomModal(false)}
           onSuccess={() => {
             setShowWecomModal(false);
             fetchWecomStatus();
-            fetchCliStatus();
           }}
         />
       )}
@@ -1233,6 +1264,16 @@ export const ConnectorPanel = () => {
           isOpen={showWeixinModal}
           onClose={() => setShowWeixinModal(false)}
           onRefresh={() => fetchWeixinStatus()}
+        />
+      )}
+      {/* 企业微信助理连接与管理弹窗 (复用组件) */}
+      {showWecomAssistantModal && (
+        <WeixinModal
+          channel="wecom"
+          isOpen={showWecomAssistantModal}
+          onClose={() => setShowWecomAssistantModal(false)}
+          onRefresh={() => fetchWecomStatus()}
+          onSuccess={() => fetchWecomStatus()}
         />
       )}
       {confirmInstallChannel && (

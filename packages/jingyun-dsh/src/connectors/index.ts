@@ -1,5 +1,7 @@
 export * from './types';
-export { WecomConnectorService, wecomConnector } from './wecom-service';
+export { WecomService, wecomService } from './wecom-service';
+export { WecomClient, wecomClient } from './wecom-client';
+export { decryptWecomMedia, downloadWecomMedia } from './wecom-media';
 export {
   DingtalkConnectorService,
   dingtalkConnector,

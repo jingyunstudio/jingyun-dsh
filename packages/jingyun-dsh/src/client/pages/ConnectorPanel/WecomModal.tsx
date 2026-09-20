@@ -1,16 +1,11 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
-import { ConnectorDetailModal } from './ConnectorDetailModal';
 export interface WecomConfigData {
   botId: string;
   botSecret: string;
   gatewayUrl?: string;
   autoReconnect?: boolean;
 }
-
-// 腾讯企业微信授权常数
-
-const DEFAULT_GATEWAY_URL = 'wss://openws.work.weixin.qq.com';
 
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -29,36 +24,13 @@ export const WecomModal = ({
   const [authUrl, setAuthUrl] = useState('');
   const pollTimerRef = useRef<any>(null);
 
-  const handleAuthSuccess = useCallback(
-    async (botInfo: any) => {
-      try {
-        setStatusMsg('授权成功，正在连接企业微信机器人网关...');
-        const res = await fetch('/api/jingyun/connectors/wecom/connect', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            botId: botInfo.botid,
-            botSecret: botInfo.secret,
-            gatewayUrl: DEFAULT_GATEWAY_URL,
-            autoReconnect: true,
-          }),
-        });
-        const data = await res.json();
-        if (data && data.success) {
-          setIsSuccess(true);
-          setStatusMsg('企业微信智能机器人连接成功！');
-          setTimeout(() => {
-            onSuccess();
-          }, 1500);
-        } else {
-          setErrorMsg(data?.error || '连接机器人失败');
-        }
-      } catch (e: any) {
-        setErrorMsg(e.message || '连接机器人失败');
-      }
-    },
-    [onSuccess]
-  );
+  const handleAuthSuccess = useCallback(() => {
+    setIsSuccess(true);
+    setStatusMsg('企业微信智能机器人连接成功！');
+    setTimeout(() => {
+      onSuccess();
+    }, 1200);
+  }, [onSuccess]);
 
   const startPolling = useCallback(
     (scode: string) => {
@@ -70,13 +42,13 @@ export const WecomModal = ({
           );
           if (res.ok) {
             const result = await res.json();
-            if (result && result.status === 'success' && result.bot_info) {
+            if (result && result.status === 'success') {
               if (pollTimerRef.current) clearInterval(pollTimerRef.current);
-              handleAuthSuccess(result.bot_info);
+              handleAuthSuccess();
             }
           }
         } catch {
-          // ignore poll errors
+          // 忽略单次网络轮询抖动
         }
       }, 2000);
     },
@@ -95,9 +67,9 @@ export const WecomModal = ({
         }
 
         const json = await res.json();
-        const qrData = json?.data || json;
-        if (!qrData || !qrData.authUrl || !qrData.scode) {
-          throw new Error(json?.error || '返回的二维码授权数据异常');
+        const qrData = json.data;
+        if (!qrData?.authUrl || !qrData?.scode) {
+          throw new Error(json.error || '返回的二维码授权数据异常');
         }
 
         setAuthUrl(qrData.authUrl);
@@ -389,39 +361,5 @@ export const WecomModal = ({
         )}
       </div>
     </div>
-  );
-};
-
-export const WecomConfigModal = WecomModal;
-
-// 企业微信详情管理弹窗 (基于通用 ConnectorDetailModal)
-export const WecomDetailModal = ({
-  botId,
-  status,
-  onClose,
-  onDisconnect,
-  onTryIt,
-  onSendPrompt,
-}: {
-  botId: string;
-  status: string;
-  onClose: () => void;
-  onDisconnect: () => void;
-  onClearConfig?: () => void;
-  onEditConfig?: () => void;
-  onTryIt?: () => void;
-  onSendPrompt?: (text: string) => void;
-}) => {
-  return (
-    <ConnectorDetailModal
-      channel="wecom"
-      title="企业微信 (WeCom)"
-      botId={botId}
-      status={status}
-      onClose={onClose}
-      onDisconnect={onDisconnect}
-      onTryIt={onTryIt}
-      onSendPrompt={onSendPrompt}
-    />
   );
 };

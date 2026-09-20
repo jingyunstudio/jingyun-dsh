@@ -3,6 +3,8 @@ export interface WecomConfig {
   botSecret: string;
   gatewayUrl?: string;
   autoReconnect?: boolean;
+  authorizedUserId?: string;
+  updatedAt?: number;
 }
 
 export type WecomStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -12,6 +14,76 @@ export interface WecomState {
   botId?: string;
   connectedAt?: number;
   lastError?: string;
+}
+
+export interface WecomWsFrame {
+  headers?: {
+    req_id?: string;
+  };
+  errcode?: number;
+  errmsg?: string;
+  cmd?: string;
+  body?: {
+    msgid?: string;
+    aibotid?: string;
+    from?: {
+      userid?: string;
+      name?: string;
+    };
+    chatid?: string;
+    chattype?: 'single' | 'group';
+    msgtype?: 'text' | 'image' | 'voice' | 'file' | 'mixed';
+    text?: { content?: string };
+    image?: { url?: string; aeskey?: string };
+    voice?: {
+      content?: string;
+      text?: string;
+      recognition?: string;
+      url?: string;
+      aeskey?: string;
+    };
+    file?: { url?: string; aeskey?: string; filename?: string };
+    mixed?: {
+      msg_item?: Array<{
+        msgtype: string;
+        text?: { content?: string };
+        image?: { url?: string; aeskey?: string };
+        voice?: {
+          content?: string;
+          text?: string;
+          recognition?: string;
+          url?: string;
+          aeskey?: string;
+        };
+        file?: { url?: string; aeskey?: string; filename?: string };
+      }>;
+    };
+    event?: string;
+    [key: string]: unknown;
+  };
+}
+
+export interface WecomReplyContext {
+  reqId?: string;
+  chatId: string;
+  chattype: 'single' | 'group';
+  msgid: string;
+  aibotid?: string;
+  streamId?: string;
+  timestamp: number;
+}
+
+export interface WecomQrResult {
+  success: boolean;
+  status: string;
+  message?: string;
+  botId?: string;
+  botName?: string;
+  bot_info?: Record<string, unknown>;
+  data?: unknown;
+  errcode?: number;
+  errmsg?: string;
+  error?: string;
 }
 
 export interface DingtalkConfig {

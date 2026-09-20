@@ -43,3 +43,6 @@ python scripts/send_message.py --file "temp_msg.md" --chat-id "woW1SYZwAA-iCyFP5
   - 绿色提示：`<font color="info">成功/正常</font>`
   - 橙色警告：`<font color="warning">待办/警报</font>`
 - 发送完成后，向用户确认消息已送达。
+
+## 底层架构说明
+- 消息发送已统一接入本地 DSH 连接器网关（端口默认 3080），优先通过常驻长连接毫秒级直达；若需要协同文档、日程或表格，DSH 网关将自动调度 `wecom-cli` 并提供凭证自动续期保障。

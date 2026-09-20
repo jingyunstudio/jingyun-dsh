@@ -16,7 +16,7 @@ import {
   readDesktopConfig,
 } from './common/paths';
 import { Config } from './config/schema';
-import { cliManager, weixinConnector } from './connectors';
+import { cliManager, wecomService, weixinConnector } from './connectors';
 import { registerRoutes } from './routes';
 
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
@@ -200,9 +200,14 @@ export function apply(ctx: Context, config: Config) {
   // 6. 彻底禁用 DSH Web 身份验证机制，无需 token / cookie
   disableBrowserAuth(ctx);
 
-  // 7. 初始化微信助理连接器（注入 Cordis 上下文、自动续连与凭据载入）
+  // 7. 初始化移动端与协同办公通道（微信助理、企业微信）
   weixinConnector.setContext(ctx);
   weixinConnector.init().catch((err) => {
     console.warn('[JingyunDsh] Failed to initialize Weixin connector:', err);
+  });
+
+  wecomService.setContext(ctx);
+  wecomService.init().catch((err) => {
+    console.warn('[JingyunDsh] Failed to initialize WeCom service:', err);
   });
 }

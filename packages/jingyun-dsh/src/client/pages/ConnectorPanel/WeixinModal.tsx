@@ -2,6 +2,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 export interface WeixinModalProps {
+  channel?: 'weixin' | 'wecom';
   isOpen?: boolean;
   onClose: () => void;
   onSuccess?: () => void;
@@ -19,10 +20,15 @@ interface WeixinStatusResponse {
 }
 
 export const WeixinModal: React.FC<WeixinModalProps> = ({
+  channel = 'weixin',
+  isOpen = true,
   onClose,
   onSuccess,
   onRefresh,
 }) => {
+  if (isOpen === false) return null;
+
+  const isWecom = channel === 'wecom';
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState<WeixinStatusResponse | null>(null);
   const [qrScanUrl, setQrScanUrl] = useState('');
@@ -44,24 +50,42 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
     }
   }, []);
 
-  // 获取当前微信连接状态
+  // 获取当前连接状态
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/jingyun/connectors/weixin/status');
+      const url = isWecom
+        ? '/api/jingyun/connectors/wecom/status'
+        : '/api/jingyun/connectors/weixin/status';
+      const res = await fetch(url);
       if (res.ok) {
         const json = await res.json();
         if (json && json.data) {
-          setStatus(json.data);
-          return json.data as WeixinStatusResponse;
+          const current: WeixinStatusResponse = isWecom
+            ? {
+                connected:
+                  json.data.status === 'connected' ||
+                  json.data.hasConfig === true,
+                status:
+                  json.data.status === 'connected'
+                    ? 'connected'
+                    : 'disconnected',
+                nickName:
+                  json.data.botName ||
+                  json.data.authorizedUserId ||
+                  '企业微信已授权用户',
+              }
+            : json.data;
+          setStatus(current);
+          return current;
         }
       }
     } catch {
       // 忽略检查异常
     }
     return null;
-  }, []);
+  }, [isWecom]);
 
-  // 开始轮询二维码状态
+  // 开始轮询二维码状态 (仅微信)
   const startPollingQr = useCallback(
     (qrcode: string) => {
       clearPollTimer();
@@ -99,7 +123,7 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
     [clearPollTimer, fetchStatus, onSuccess, onRefresh]
   );
 
-  // 获取二维码
+  // 获取二维码 (仅微信)
   const fetchQrCode = useCallback(async () => {
     setLoading(true);
     setErrorMsg('');
@@ -122,7 +146,6 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
       const json = await res.json();
       const data = json.data;
       if (data?.qrcode) {
-        // qrcode 是轮询 key，qrUrl (即 qrcode_img_content) 是微信扫码的目标地址
         const targetUrl = data.qrUrl ?? data.qrcode;
         setQrScanUrl(targetUrl);
         setStatusMsg('请使用微信“扫一扫”完成绑定');
@@ -147,8 +170,10 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
       if (!mounted) return;
       if (current && current.connected) {
         setLoading(false);
-      } else {
+      } else if (!isWecom) {
         await fetchQrCode();
+      } else {
+        setLoading(false);
       }
     };
     init();
@@ -156,7 +181,7 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
       mounted = false;
       clearPollTimer();
     };
-  }, [clearPollTimer, fetchQrCode, fetchStatus]);
+  }, [clearPollTimer, fetchQrCode, fetchStatus, isWecom]);
 
   // 发送测试消息
   const handleSendTest = async () => {
@@ -164,12 +189,16 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
     setTestSuccess(false);
     setErrorMsg('');
     try {
-      const res = await fetch('/api/jingyun/connectors/weixin/send-test', {
+      const url = isWecom
+        ? '/api/jingyun/connectors/wecom/send'
+        : '/api/jingyun/connectors/weixin/send-test';
+      const content = isWecom
+        ? '企业微信助理通道测试成功！您现在可以随时下发指令。'
+        : '助理远程通道测试成功！您现在可以随时下发指令。';
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          content: '助理远程通道测试成功！您现在可以随时下发指令。',
-        }),
+        body: JSON.stringify({ content }),
       });
       const data = await res.json();
       if (data.success) {
@@ -190,17 +219,26 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
     setDisconnecting(true);
     setErrorMsg('');
     try {
-      const res = await fetch('/api/jingyun/connectors/weixin/disconnect', {
+      const url = isWecom
+        ? '/api/jingyun/connectors/wecom/clear'
+        : '/api/jingyun/connectors/weixin/disconnect';
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clearCredentials: clearCreds }),
+        body: isWecom
+          ? JSON.stringify({})
+          : JSON.stringify({ clearCredentials: clearCreds }),
       });
       const data = await res.json();
       if (data.success) {
         setStatus(null);
-        fetchQrCode();
         onSuccess?.();
         onRefresh?.();
+        if (isWecom) {
+          onClose();
+        } else {
+          fetchQrCode();
+        }
       } else {
         setErrorMsg(data.error || '断开连接失败');
       }
@@ -264,21 +302,31 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                 width: '38px',
                 height: '38px',
                 borderRadius: '10px',
-                background: '#07C160',
+                background: isWecom ? '#1875F0' : '#07C160',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#fff',
+                flexShrink: 0,
               }}
             >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M8.5 3.5C4.91 3.5 2 5.96 2 9c0 1.76.96 3.32 2.45 4.33L3.8 16.2c-.08.26.18.49.43.38l3.18-1.41c.36.06.72.09 1.09.09.31 0 .61-.02.9-.06-.39-.8-.6-1.68-.6-2.6 0-3.41 3.22-6.17 7.2-6.17.17 0 .34.01.5.03C15.54 4.38 12.28 3.5 8.5 3.5zm-2 3.5a1 1 0 110 2 1 1 0 010-2zm4.5 0a1 1 0 110 2 1 1 0 010-2zm4.5 5.1c-3.31 0-6 2.24-6 5s2.69 5 6 5c.34 0 .67-.03 1-.09l2.65 1.18c.21.09.43-.1.36-.32l-.54-2.39C21.2 19.46 22 18.16 22 16.7c0-2.76-2.69-5-6-5zm-2 2.9a.9.9 0 110 1.8.9.9 0 010-1.8zm4 0a.9.9 0 110 1.8.9.9 0 010-1.8z" />
-              </svg>
+              {isWecom ? (
+                <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
+                  <path
+                    d="M24 4C12.95 4 4 12.95 4 24C4 35.05 12.95 44 24 44C35.05 44 44 35.05 44 24C44 12.95 35.05 4 24 4ZM28.5 28.5C28.5 29.33 27.83 30 27 30H21C20.17 30 19.5 29.33 19.5 28.5V25.5H16.5C15.67 25.5 15 24.83 15 24C15 23.17 15.67 22.5 16.5 22.5H19.5V19.5C19.5 18.67 20.17 18 21 18H27C27.83 18 28.5 18.67 28.5 19.5V22.5H31.5C32.33 22.5 33 23.17 33 24C33 24.83 32.33 25.5 31.5 25.5H28.5V28.5Z"
+                    fill="#ffffff"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M8.5 3.5C4.91 3.5 2 5.96 2 9c0 1.76.96 3.32 2.45 4.33L3.8 16.2c-.08.26.18.49.43.38l3.18-1.41c.36.06.72.09 1.09.09.31 0 .61-.02.9-.06-.39-.8-.6-1.68-.6-2.6 0-3.41 3.22-6.17 7.2-6.17.17 0 .34.01.5.03C15.54 4.38 12.28 3.5 8.5 3.5zm-2 3.5a1 1 0 110 2 1 1 0 010-2zm4.5 0a1 1 0 110 2 1 1 0 010-2zm4.5 5.1c-3.31 0-6 2.24-6 5s2.69 5 6 5c.34 0 .67-.03 1-.09l2.65 1.18c.21.09.43-.1.36-.32l-.54-2.39C21.2 19.46 22 18.16 22 16.7c0-2.76-2.69-5-6-5zm-2 2.9a.9.9 0 110 1.8.9.9 0 010-1.8zm4 0a.9.9 0 110 1.8.9.9 0 010-1.8z" />
+                </svg>
+              )}
             </div>
             <div>
               <h3
@@ -289,7 +337,13 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                   color: 'var(--dsw-alias-label-primary, #0f172a)',
                 }}
               >
-                {isConnected ? '微信助理设置与管理' : '连接微信助理 (远程通道)'}
+                {isConnected
+                  ? isWecom
+                    ? '企业微信助理设置与管理'
+                    : '微信助理设置与管理'
+                  : isWecom
+                    ? '连接企业微信助理'
+                    : '连接微信助理 (远程通道)'}
               </h3>
               <p
                 style={{
@@ -298,7 +352,9 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                   color: 'var(--dsw-alias-label-tertiary, #64748b)',
                 }}
               >
-                随时在手机微信上给工作台指派任务，结果实时回传
+                {isWecom
+                  ? '随时在企业微信上给工作台指派任务，结果实时回传'
+                  : '随时在手机微信上给工作台指派任务，结果实时回传'}
               </p>
             </div>
           </div>
@@ -392,9 +448,24 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                       fontSize: '14px',
                       fontWeight: 600,
                       color: '#15803d',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
                     }}
                   >
-                    微信通道已就绪
+                    <span>{isWecom ? '企业微信通道已就绪' : '微信通道已就绪'}</span>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: 500,
+                        color: '#16a34a',
+                        background: '#dcfce7',
+                        padding: '1px 8px',
+                        borderRadius: '9999px',
+                      }}
+                    >
+                      运行中
+                    </span>
                   </div>
                   <div
                     style={{
@@ -403,25 +474,32 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                       marginTop: '2px',
                     }}
                   >
-                    服务网关正在后台保持长轮询，手机微信可随时交互
+                    {isWecom
+                      ? '企业微信可随时交互，AI 任务结果将实时回传'
+                      : '手机微信可随时交互，AI 任务结果将实时回传'}
                   </div>
                 </div>
               </div>
 
-              {/* 账号详情 */}
+              {/* 账号与使用说明 */}
               <div
                 style={{
                   background: 'var(--dsw-alias-layer-secondary, #f8fafc)',
+                  border: '1px solid var(--dsw-alias-border-subtle, #e2e8f0)',
                   borderRadius: '12px',
                   padding: '16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '10px',
+                  gap: '12px',
                   fontSize: '13px',
                 }}
               >
                 <div
-                  style={{ display: 'flex', justifyContent: 'space-between' }}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                  }}
                 >
                   <span
                     style={{
@@ -434,66 +512,9 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                     style={{
                       fontWeight: 500,
                       color: 'var(--dsw-alias-label-primary, #0f172a)',
-                    }}
-                  >
-                    {status.nickName || '已绑定微信用户'}
-                  </span>
-                </div>
-                {status.accountId && (
-                  <div
-                    style={{ display: 'flex', justifyContent: 'space-between' }}
-                  >
-                    <span
-                      style={{
-                        color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                      }}
-                    >
-                      账号标识
-                    </span>
-                    <span
-                      style={{
-                        fontFamily: 'monospace',
-                        color: 'var(--dsw-alias-label-secondary, #334155)',
-                      }}
-                    >
-                      {status.accountId}
-                    </span>
-                  </div>
-                )}
-                <div
-                  style={{ display: 'flex', justifyContent: 'space-between' }}
-                >
-                  <span
-                    style={{
-                      color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                    }}
-                  >
-                    通道类型
-                  </span>
-                  <span
-                    style={{
-                      color: 'var(--dsw-alias-label-secondary, #334155)',
-                    }}
-                  >
-                    微信个人助理 (iLink)
-                  </span>
-                </div>
-                <div
-                  style={{ display: 'flex', justifyContent: 'space-between' }}
-                >
-                  <span
-                    style={{
-                      color: 'var(--dsw-alias-label-tertiary, #64748b)',
-                    }}
-                  >
-                    连接状态
-                  </span>
-                  <span
-                    style={{
-                      color: '#16a34a',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
+                      gap: '6px',
                     }}
                   >
                     <span
@@ -505,8 +526,21 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                         display: 'inline-block',
                       }}
                     />
-                    在线轮询中
+                    {status.nickName || (isWecom ? '企业微信已授权用户' : '已绑定微信用户')}
                   </span>
+                </div>
+
+                <div
+                  style={{
+                    borderTop:
+                      '1px solid var(--dsw-alias-border-subtle, rgba(0, 0, 0, 0.06))',
+                    paddingTop: '10px',
+                    fontSize: '12px',
+                    color: 'var(--dsw-alias-label-secondary, #64748b)',
+                    lineHeight: '1.6',
+                  }}
+                >
+                  💡 在手机{isWecom ? '企业微信' : '微信'}中直接向此助理发送消息指派任务，工作台将实时处理并回传；点击下方「发送测试消息」可验证连通性。
                 </div>
               </div>
 
@@ -516,10 +550,14 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                   style={{
                     fontSize: '12px',
                     color: '#16a34a',
+                    background: '#f0fdf4',
+                    border: '1px solid #bbf7d0',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
                     textAlign: 'center',
                   }}
                 >
-                  测试消息已成功发送至微信！
+                  测试消息已成功发送至手机{isWecom ? '企业微信' : '微信'}，请查收！
                 </div>
               )}
               {errorMsg && (
@@ -527,6 +565,10 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                   style={{
                     fontSize: '12px',
                     color: '#ef4444',
+                    background: '#fef2f2',
+                    border: '1px solid #fee2e2',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
                     textAlign: 'center',
                   }}
                 >
@@ -534,7 +576,7 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
                 <button
                   onClick={handleSendTest}
                   disabled={testSending || disconnecting}
@@ -547,13 +589,27 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                     color: 'var(--dsw-alias-label-primary, #0f172a)',
                     fontSize: '13px',
                     fontWeight: 500,
-                    cursor: 'pointer',
+                    cursor:
+                      testSending || disconnecting ? 'not-allowed' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
                   }}
                 >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
                   {testSending ? '发送中...' : '发送测试消息'}
                 </button>
                 <button
@@ -567,7 +623,8 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                     color: '#dc2626',
                     fontSize: '13px',
                     fontWeight: 500,
-                    cursor: 'pointer',
+                    cursor:
+                      testSending || disconnecting ? 'not-allowed' : 'pointer',
                   }}
                 >
                   {disconnecting ? '处理中...' : '解绑账号'}

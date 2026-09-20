@@ -403,7 +403,7 @@ export const ConnectorDetailModal = ({
                 let badgeBg = 'rgba(34, 197, 94, 0.1)';
 
                 if (isDingtalk) {
-                  badgeText = isConnected ? '已授权连接' : '未连接';
+                  badgeText = isConnected ? '已连接' : '未连接';
                   badgeColor = isConnected ? '#16a34a' : '#ef4444';
                   badgeBg = isConnected
                     ? 'rgba(34, 197, 94, 0.1)'

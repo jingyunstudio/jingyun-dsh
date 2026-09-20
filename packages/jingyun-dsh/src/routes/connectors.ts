@@ -8,7 +8,7 @@ import {
   dingtalkConnector,
   imaConnector,
   larkConnector,
-  wecomConnector,
+  wecomService,
   weixinConnector,
 } from '../connectors';
 
@@ -113,11 +113,6 @@ export function registerConnectorsRoutes(ctx: Context) {
     },
   });
 
-  // 初始化企业微信连接器服务
-  wecomConnector.init().catch((err: any) => {
-    console.warn('[WecomConnector] Failed to initialize:', err);
-  });
-
   // 企微路由（单一标准路径 /api/jingyun/connectors/wecom/*）
   const wecomPrefix = '/api/jingyun/connectors/wecom';
 
@@ -127,10 +122,14 @@ export function registerConnectorsRoutes(ctx: Context) {
     path: `${wecomPrefix}/qr-start`,
     handler: async (_req, res) => {
       try {
-        const data = await wecomConnector.getQrCode();
+        const data = await wecomService.getQrCode();
         sendJson(res, { success: true, data });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'QR start failed',
+          500
+        );
       }
     },
   });
@@ -138,21 +137,22 @@ export function registerConnectorsRoutes(ctx: Context) {
   // 扫码授权结果轮询
   ctx.webServer.register({
     kind: 'exact',
-    path: `${wecomPrefix}/query-result`,
+    path: `${wecomPrefix}/qr-poll`,
     handler: async (req: IncomingMessage, res: ServerResponse) => {
       try {
         const parsedUrl = new URL(req.url || '', 'http://127.0.0.1');
         const scode = parsedUrl.searchParams.get('scode') || '';
         if (!scode) {
-          return sendError(res, '缺少 scode 参数', 400);
+          sendError(res, '缺少 scode 参数', 400);
+          return;
         }
-        const result = await wecomConnector.queryQrResult(scode);
+        const result = await wecomService.queryQrResult(scode);
         sendJson(res, result);
-      } catch (err: any) {
+      } catch (err: unknown) {
         sendJson(res, {
           success: false,
           status: 'error',
-          error: err.message,
+          error: err instanceof Error ? err.message : String(err),
         });
       }
     },
@@ -164,10 +164,14 @@ export function registerConnectorsRoutes(ctx: Context) {
     path: `${wecomPrefix}/status`,
     handler: async (_req, res) => {
       try {
-        const state = await wecomConnector.getStatus();
+        const state = wecomService.getStatus();
         sendJson(res, { success: true, data: state });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Get status failed',
+          500
+        );
       }
     },
   });
@@ -178,48 +182,130 @@ export function registerConnectorsRoutes(ctx: Context) {
     path: `${wecomPrefix}/config`,
     handler: async (req: IncomingMessage, res: ServerResponse) => {
       try {
-        const body = (await parseJsonBody(req)) as any;
-        await wecomConnector.saveConfig(body);
+        const body = (await parseJsonBody(req)) as Record<string, unknown>;
+        await wecomService.saveConfig(body as any);
         sendJson(res, {
           success: true,
           data: { message: 'Configuration saved' },
         });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Save config failed',
+          500
+        );
       }
     },
   });
 
-  // 断开连接（解绑，清除全部配置）
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/disconnect`,
-    handler: async (_req, res) => {
-      try {
-        await wecomConnector.clearConfig();
-        sendJson(res, {
-          success: true,
-          data: { message: 'Disconnected and cleared' },
-        });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // 清除配置
+  // 清除配置（解绑）
   ctx.webServer.register({
     kind: 'exact',
     path: `${wecomPrefix}/clear`,
     handler: async (_req, res) => {
       try {
-        await wecomConnector.clearConfig();
+        await wecomService.clearConfig();
         sendJson(res, {
           success: true,
           data: { message: 'Configuration cleared' },
         });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Clear failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 手动连接 / 重连
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/connect`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = (await parseJsonBody(req).catch(() => ({}))) as Record<
+          string,
+          unknown
+        >;
+        const botId = typeof body?.botId === 'string' ? body.botId : undefined;
+        const botSecret =
+          typeof body?.botSecret === 'string' ? body.botSecret : undefined;
+        if (botId && botSecret) {
+          await wecomService.connect({ botId, botSecret });
+        } else {
+          await wecomService.connect();
+        }
+        sendJson(res, {
+          success: true,
+          data: { message: 'Connection initiated' },
+        });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Connect failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 发送消息
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/send`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = (await parseJsonBody(req)) as Record<string, unknown>;
+        const content = typeof body?.content === 'string' ? body.content : '';
+        if (!content || !content.trim()) {
+          sendError(res, 'Message content is required', 400);
+          return;
+        }
+        const chatId =
+          typeof body?.chatId === 'string' && body.chatId.trim()
+            ? body.chatId.trim()
+            : undefined;
+        const chatType = body?.chatType === 'group' ? 'group' : 'single';
+        const result = await wecomService.sendMessage({
+          chatId,
+          chatType,
+          content,
+        });
+        sendJson(res, { success: true, data: result });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Failed to send message',
+          500
+        );
+      }
+    },
+  });
+
+  // 通用 CLI 指令代理执行（带 853004 Token 自愈）
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${wecomPrefix}/cli`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = (await parseJsonBody(req)) as Record<string, unknown>;
+        const args = Array.isArray(body?.args)
+          ? (body.args as unknown[]).map(String)
+          : [];
+        if (args.length === 0) {
+          sendError(res, 'args array is required', 400);
+          return;
+        }
+        const output = await wecomService.executeCli(args);
+        sendJson(res, { success: true, data: output });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'CLI execution failed',
+          500
+        );
       }
     },
   });
