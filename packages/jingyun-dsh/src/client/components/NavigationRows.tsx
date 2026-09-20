@@ -185,7 +185,11 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
         }`}
         onClick={async (e) => {
           e.stopPropagation();
-          await openAssistantSession();
+          try {
+            await openAssistantSession();
+          } catch (err) {
+            console.error('[Assistant] Failed to open assistant session:', err);
+          }
         }}
       >
         <AssistantNavIcon size={16} />

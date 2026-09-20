@@ -34,6 +34,7 @@ export interface AssistantSessionsService {
       current?: string;
       ids?: string[];
       byId?: Record<string, { id: string; title?: string }>;
+      items?: Array<{ sessionId: string }>;
     };
     subscribe(fn: () => void): () => void;
   };
@@ -43,17 +44,21 @@ export interface AssistantSessionsService {
     sessionId?: string;
   }): Promise<string>;
   open(id: string): void;
+  refresh?: () => Promise<void>;
 }
 
 export type CustomClientContext = ClientContext & {
   sessions?: AssistantSessionsService;
+  layout?: {
+    selectPanel?: (panel: unknown) => void;
+  };
 };
 
-export const inject = ['slots', 'sessions'];
+export const inject = ['slots', 'sessions', 'layout'];
 export let globalClientContext: CustomClientContext | null = null;
 export const ASSISTANT_SESSION_STORAGE_KEY = 'dsh_assistant_session_id';
 
-export async function openAssistantSession(): Promise<void> {
+export async function openAssistantSession(forceNew = false): Promise<void> {
   if (
     typeof window !== 'undefined' &&
     window.location.hash &&
@@ -62,7 +67,16 @@ export async function openAssistantSession(): Promise<void> {
     window.location.hash = '#/';
   }
 
-  const resp = await fetch('/api/jingyun/assistant/session/ensure');
+  try {
+    globalClientContext?.layout?.selectPanel?.(null);
+  } catch {
+    // layout optional
+  }
+
+  const url = forceNew
+    ? '/api/jingyun/assistant/session/ensure?forceNew=true'
+    : '/api/jingyun/assistant/session/ensure';
+  const resp = await fetch(url);
   if (!resp.ok) {
     throw new Error(
       `[Assistant] Failed to ensure assistant session: ${resp.statusText}`
@@ -78,67 +92,42 @@ export async function openAssistantSession(): Promise<void> {
   }
   localStorage.setItem(ASSISTANT_SESSION_STORAGE_KEY, targetSessionId);
 
-  const sessionRows = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      '.YDXeBa_sessionRow, [class*="sessionRow"]'
-    )
-  );
-
-  let matchedRow: HTMLElement | null = null;
-  for (const row of sessionRows) {
-    const reactKey = Object.keys(row).find((k) =>
-      k.startsWith('__reactFiber$')
+  const sessions = globalClientContext?.sessions;
+  if (!sessions) {
+    throw new Error(
+      '[Assistant] sessions service is not available on client context'
     );
-    let fiber = reactKey
-      ? ((row as unknown as Record<string, unknown>)[reactKey] as {
-          memoizedProps?: { node?: { id?: string } };
-          return?: unknown;
-        } | null)
-      : null;
-    while (fiber) {
-      if (fiber.memoizedProps?.node?.id === targetSessionId) {
-        matchedRow = row;
-        break;
-      }
-      fiber = fiber.return as typeof fiber;
-    }
-    if (matchedRow) {
-      break;
-    }
   }
 
-  if (matchedRow) {
-    matchedRow.click();
+  let snapshot = sessions.list?.getSnapshot();
+  const byId = snapshot?.byId as Record<string, unknown> | undefined;
+  let exists = Boolean(
+    byId?.[targetSessionId] ||
+      (snapshot?.ids as string[] | undefined)?.includes(targetSessionId)
+  );
+
+  if (!exists && typeof sessions.refresh === 'function') {
+    await sessions.refresh();
+    snapshot = sessions.list?.getSnapshot();
+    const refreshedById = snapshot?.byId as Record<string, unknown> | undefined;
+    exists = Boolean(
+      refreshedById?.[targetSessionId] ||
+        (snapshot?.ids as string[] | undefined)?.includes(targetSessionId)
+    );
+  }
+
+  if (!exists && !forceNew) {
+    return openAssistantSession(true);
+  }
+
+  sessions.open(targetSessionId as never);
+
+  setTimeout(() => {
     const input = document.querySelector<HTMLElement>(
       'div[contenteditable="true"], textarea'
     );
     input?.focus();
-    return;
-  }
-
-  const treeEl = document.querySelector('[role="tree"]');
-  const reactKey = treeEl
-    ? Object.keys(treeEl).find((k) => k.startsWith('__reactFiber$'))
-    : null;
-  let fiber = reactKey
-    ? ((treeEl as unknown as Record<string, unknown>)[reactKey] as {
-        memoizedProps?: { open?: (id: string) => void };
-        return?: unknown;
-      } | null)
-    : null;
-  while (fiber) {
-    if (typeof fiber.memoizedProps?.open === 'function') {
-      fiber.memoizedProps.open(targetSessionId);
-      const input = document.querySelector<HTMLElement>(
-        'div[contenteditable="true"], textarea'
-      );
-      input?.focus();
-      return;
-    }
-    fiber = fiber.return as typeof fiber;
-  }
-
-  throw new Error(`[Assistant] Target session ${targetSessionId} not found`);
+  }, 100);
 }
 
 export function apply(ctx: ClientContext) {

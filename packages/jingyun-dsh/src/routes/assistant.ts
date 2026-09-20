@@ -102,10 +102,13 @@ export function registerAssistantRoutes(ctx: Context) {
   ctx.webServer.register({
     kind: 'exact',
     path: '/api/jingyun/assistant/session/ensure',
-    handler: async (_req, res) => {
+    handler: async (req, res) => {
       try {
-        const sessionId =
-          await assistantSessionManager.ensureAssistantSession(ctx);
+        const url = new URL(req.url || '', 'http://localhost');
+        const forceNew = url.searchParams.get('forceNew') === 'true';
+        const sessionId = forceNew
+          ? await assistantSessionManager.createAssistantSession(ctx)
+          : await assistantSessionManager.ensureAssistantSession(ctx);
         sendJson(res, {
           success: true,
           data: { sessionId },
