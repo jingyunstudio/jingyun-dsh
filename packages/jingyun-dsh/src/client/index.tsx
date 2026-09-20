@@ -103,7 +103,7 @@ export async function openAssistantSession(forceNew = false): Promise<void> {
   const byId = snapshot?.byId as Record<string, unknown> | undefined;
   let exists = Boolean(
     byId?.[targetSessionId] ||
-      (snapshot?.ids as string[] | undefined)?.includes(targetSessionId)
+    (snapshot?.ids as string[] | undefined)?.includes(targetSessionId)
   );
 
   if (!exists && typeof sessions.refresh === 'function') {
@@ -112,7 +112,7 @@ export async function openAssistantSession(forceNew = false): Promise<void> {
     const refreshedById = snapshot?.byId as Record<string, unknown> | undefined;
     exists = Boolean(
       refreshedById?.[targetSessionId] ||
-        (snapshot?.ids as string[] | undefined)?.includes(targetSessionId)
+      (snapshot?.ids as string[] | undefined)?.includes(targetSessionId)
     );
   }
 
