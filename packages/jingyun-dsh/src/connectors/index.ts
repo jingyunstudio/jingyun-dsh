@@ -10,6 +10,15 @@ export {
 export { LarkConnectorService, larkConnector } from './lark-service';
 export { FeishuService, feishuService } from './feishu-service';
 export { FeishuClient, feishuClient } from './feishu-client';
+export * from './dingtalk-tunnel-types';
+export {
+  DingtalkTunnelService,
+  dingtalkTunnelService,
+} from './dingtalk-tunnel-service';
+export {
+  DingtalkTunnelClient,
+  dingtalkTunnelClient,
+} from './dingtalk-tunnel-client';
 export { CliManagerService, cliManager } from './cli-manager';
 export { ImaConnectorService, imaConnector } from './ima-service';
 export { WeixinConnectorService, weixinConnector } from './weixin-service';

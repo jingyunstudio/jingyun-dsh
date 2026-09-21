@@ -6,6 +6,7 @@ import { parseJsonBody, sendError, sendJson } from '../common/http';
 import {
   cliManager,
   dingtalkConnector,
+  dingtalkTunnelService,
   feishuService,
   imaConnector,
   larkConnector,
@@ -654,6 +655,149 @@ export function registerConnectorsRoutes(ctx: Context) {
         });
       } catch (err: any) {
         sendError(res, err.message, 500);
+      }
+    },
+  });
+
+  // ===================== 钉钉远程通道 (Stream 模式长连接网关) =====================
+  const dingtalkTunnelPrefix = '/api/jingyun/connectors/dingtalk-tunnel';
+
+  // 1. 获取钉钉远程通道状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${dingtalkTunnelPrefix}/status`,
+    handler: async (_req, res) => {
+      try {
+        const status = dingtalkTunnelService.getStatus();
+        sendJson(res, { success: true, data: status });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error
+            ? err.message
+            : 'Get Dingtalk tunnel status failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 2. 启动长连接 / 连接并保存
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${dingtalkTunnelPrefix}/connect`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = (await parseJsonBody(req)) as Record<string, unknown>;
+        const appKey =
+          typeof body?.appKey === 'string' ? body.appKey.trim() : undefined;
+        const appSecret =
+          typeof body?.appSecret === 'string'
+            ? body.appSecret.trim()
+            : undefined;
+
+        if (appKey && appSecret) {
+          await dingtalkTunnelService.connect({
+            appKey,
+            appSecret,
+            robotCode:
+              typeof body?.robotCode === 'string' && body.robotCode.trim()
+                ? body.robotCode.trim()
+                : appKey,
+            requireMention: body?.requireMention !== false,
+          });
+        } else {
+          await dingtalkTunnelService.connect();
+        }
+
+        sendJson(res, {
+          success: true,
+          data: { message: 'Dingtalk stream connection established' },
+        });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error
+            ? err.message
+            : 'Connect to Dingtalk stream failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 4. 断开长连接
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${dingtalkTunnelPrefix}/disconnect`,
+    handler: async (_req: IncomingMessage, res: ServerResponse) => {
+      try {
+        dingtalkTunnelService.disconnect();
+        sendJson(res, {
+          success: true,
+          data: { message: 'Dingtalk stream connection disconnected' },
+        });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Disconnect Dingtalk failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 5. 清除配置并断开
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${dingtalkTunnelPrefix}/clear`,
+    handler: async (_req: IncomingMessage, res: ServerResponse) => {
+      try {
+        await dingtalkTunnelService.clearConfig();
+        sendJson(res, {
+          success: true,
+          data: { message: 'Dingtalk tunnel configuration cleared' },
+        });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error
+            ? err.message
+            : 'Clear Dingtalk tunnel config failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 6. 主动发送测试消息
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${dingtalkTunnelPrefix}/send`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = (await parseJsonBody(req)) as Record<string, unknown>;
+        const content =
+          typeof body?.content === 'string' ? body.content.trim() : '';
+        if (!content) {
+          sendError(res, 'content is required', 400);
+          return;
+        }
+        const title =
+          typeof body?.title === 'string' ? body.title.trim() : undefined;
+        const result = await dingtalkTunnelService.sendMessage({
+          content,
+          title,
+        });
+        sendJson(res, { success: true, data: result });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error
+            ? err.message
+            : 'Failed to send Dingtalk message',
+          500
+        );
       }
     },
   });

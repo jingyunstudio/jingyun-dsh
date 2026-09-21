@@ -45,7 +45,8 @@
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "^3.18.2",
-    "@larksuiteoapi/node-sdk": "^1.74.0"
+    "@larksuiteoapi/node-sdk": "^1.74.0",
+    "dingtalk-stream": "2.1.6-beta.1"
   },
   "devDependencies": {
     "@types/node": "^24",

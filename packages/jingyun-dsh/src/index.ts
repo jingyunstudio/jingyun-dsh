@@ -18,6 +18,7 @@ import {
 import { Config } from './config/schema';
 import {
   cliManager,
+  dingtalkTunnelService,
   feishuService,
   wecomService,
   weixinConnector,
@@ -219,5 +220,13 @@ export function apply(ctx: Context, config: Config) {
   feishuService.setContext(ctx);
   feishuService.init().catch((err) => {
     console.warn('[JingyunDsh] Failed to initialize Feishu service:', err);
+  });
+
+  dingtalkTunnelService.setContext(ctx);
+  dingtalkTunnelService.init().catch((err) => {
+    console.warn(
+      '[JingyunDsh] Failed to initialize Dingtalk tunnel service:',
+      err
+    );
   });
 }

@@ -11,6 +11,7 @@ import {
   DEFAULT_WECOM_SUGGESTIONS,
   UnbindIcon,
 } from './ConnectorDetailModal';
+import { DingtalkTunnelModal } from './DingtalkTunnelModal';
 import { FeishuModal } from './FeishuModal';
 import { ImaCatLogo, ImaConnectorModal } from './ImaConnectorModal';
 import { WecomModal } from './WecomModal';
@@ -434,6 +435,12 @@ export const ConnectorPanel = () => {
   } | null>(null);
   const [feishuTunnelLoading, setFeishuTunnelLoading] = useState(true);
   const [showFeishuTunnelModal, setShowFeishuTunnelModal] = useState(false);
+  const [dingtalkTunnelStatus, setDingtalkTunnelStatus] = useState<{
+    status: string;
+    appKey?: string;
+  } | null>(null);
+  const [dingtalkTunnelLoading, setDingtalkTunnelLoading] = useState(true);
+  const [showDingtalkTunnelModal, setShowDingtalkTunnelModal] = useState(false);
   const [confirmInstallChannel, setConfirmInstallChannel] = useState<
     'lark' | 'dingtalk' | 'wecom' | null
   >(null);
@@ -695,6 +702,27 @@ export const ConnectorPanel = () => {
     }
   };
 
+  // 获取钉钉远程通道状态
+  const fetchDingtalkTunnelStatus = async () => {
+    setDingtalkTunnelLoading(true);
+    try {
+      const res = await fetch('/api/jingyun/connectors/dingtalk-tunnel/status');
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data) {
+          setDingtalkTunnelStatus(json.data);
+        }
+      }
+    } catch (err) {
+      console.warn(
+        '[ConnectorPanel] Failed to fetch dingtalk tunnel status:',
+        err
+      );
+    } finally {
+      setDingtalkTunnelLoading(false);
+    }
+  };
+
   useEffect(() => {
     queueMicrotask(() => {
       fetchLarkStatus();
@@ -703,6 +731,7 @@ export const ConnectorPanel = () => {
       fetchImaStatus();
       fetchWeixinStatus();
       fetchFeishuTunnelStatus();
+      fetchDingtalkTunnelStatus();
       fetchCliStatus();
     });
   }, []);
@@ -1191,6 +1220,42 @@ export const ConnectorPanel = () => {
               onConnect={() => setShowFeishuTunnelModal(true)}
               onManage={() => setShowFeishuTunnelModal(true)}
             />
+            <ConnectorCard
+              name="钉钉助理"
+              icon={<DingtalkLogo />}
+              description="通过钉钉开放平台 Stream 模式长连接下发指令，随时在钉钉给工作台指派任务，结果实时回传。"
+              isConnected={dingtalkTunnelStatus?.status === 'connected'}
+              isLoading={dingtalkTunnelLoading}
+              statusBadge={
+                dingtalkTunnelStatus?.status === 'connected' ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '10px',
+                      color: '#16a34a',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '4px',
+                        height: '4px',
+                        borderRadius: '50%',
+                        background: '#22c55e',
+                      }}
+                    />
+                    已连接
+                  </span>
+                ) : undefined
+              }
+              onConnect={() => setShowDingtalkTunnelModal(true)}
+              onManage={() => setShowDingtalkTunnelModal(true)}
+            />
           </div>
         </div>
       )}
@@ -1373,6 +1438,15 @@ export const ConnectorPanel = () => {
           onClose={() => setShowFeishuTunnelModal(false)}
           onRefresh={() => fetchFeishuTunnelStatus()}
           onSuccess={() => fetchFeishuTunnelStatus()}
+        />
+      )}
+      {/* 钉钉远程通道管理弹窗 */}
+      {showDingtalkTunnelModal && (
+        <DingtalkTunnelModal
+          isOpen={showDingtalkTunnelModal}
+          onClose={() => setShowDingtalkTunnelModal(false)}
+          onRefresh={() => fetchDingtalkTunnelStatus()}
+          onSuccess={() => fetchDingtalkTunnelStatus()}
         />
       )}
       {confirmInstallChannel && (
