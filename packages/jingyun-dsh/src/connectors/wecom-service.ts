@@ -24,7 +24,7 @@ const execFileAsync = promisify(execFile);
  * 1. 管理与企业微信官方网关的 WebSocket 长连接与心跳
  * 2. 消息接收与去重（5分钟滑动窗口）
  * 3. 附件下载与 AES 多模态解密
- * 4. 本地指令拦截 (/clear, /status, /help)
+ * 4. 本地指令拦截 (/new, /help)
  * 5. DSH Agent 任务会话队列派发 (sessionController.prompt)
  * 6. 监听 assistant/message 并通过 Markdown 实时分段回推
  * 7. 支持向指定 chatId / 群聊主动下发通知或报告
@@ -488,7 +488,7 @@ export class WecomService {
     const trimmed = command.trim();
     const lower = trimmed.toLowerCase();
 
-    if (lower === '/clear' || lower === '/reset' || lower === '/new') {
+    if (lower === '/new') {
       if (this.ctx) {
         await assistantSessionManager.createAssistantSession(this.ctx);
       }
@@ -504,31 +504,9 @@ export class WecomService {
       const helpMsg = `🤖 **企业微信 AI 助手**
 
 • 发送任意文本、图片或文件即可与助手对话
-• \`/clear\` 或 \`/reset\` 或 \`/new\` - 重置上下文，开启全新会话
-• \`/status\` - 查看当前连接状态与会话信息
+• \`/new\` - 重置上下文，开启全新会话
 • \`/help\` - 查看本帮助指南`;
       await wecomClient.sendAsyncReply(chatId, chattype, helpMsg);
-      return true;
-    }
-
-    if (lower === '/status') {
-      const state = wecomClient.getStatus();
-      const uptimeSec = state.connectedAt
-        ? Math.floor((Date.now() - state.connectedAt) / 1000)
-        : 0;
-      const uptimeStr =
-        uptimeSec > 3600
-          ? `${Math.floor(uptimeSec / 3600)}小时${Math.floor((uptimeSec % 3600) / 60)}分`
-          : `${Math.floor(uptimeSec / 60)}分${uptimeSec % 60}秒`;
-      const currentSessionId =
-        assistantSessionManager.getSavedSessionId() || '未初始化';
-      const statusMsg = `🤖 **企业微信运行状态**
-
-• **连接状态**: ${state.status === 'connected' ? '🟢 已连接 (Connected)' : '🔴 ' + state.status}
-• **机器人 ID**: \`${state.botId || '未知'}\`
-• **会话 ID**: \`${currentSessionId}\`
-• **在线时长**: ${uptimeStr}`;
-      await wecomClient.sendAsyncReply(chatId, chattype, statusMsg);
       return true;
     }
 

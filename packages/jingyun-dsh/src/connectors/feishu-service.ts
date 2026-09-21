@@ -27,7 +27,7 @@ import type {
  * 2. 消息接收、群聊 @ 机器人过滤与去重
  * 3. 附件与图片下载缓存、引用消息前缀组装
  * 4. 点亮 Typing Reaction 表情
- * 5. 本地快捷指令拦截 (/clear, /reset, /status, /help)
+ * 5. 本地快捷指令拦截 (/new, /help)
  * 6. DSH Agent 任务会话队列派发 (sessionController.prompt)
  * 7. 监听 assistant/message 并通过标准飞书交互式 Markdown 卡片回传
  */
@@ -208,7 +208,7 @@ export class FeishuService {
     const trimmed = command.trim();
     const lower = trimmed.toLowerCase();
 
-    if (lower === '/clear' || lower === '/reset' || lower === '/new') {
+    if (lower === '/new') {
       if (this.ctx) {
         await assistantSessionManager.createAssistantSession(this.ctx);
       }
@@ -233,8 +233,7 @@ export class FeishuService {
       const helpMsg = `🤖 **飞书 AI 智能助理**
 
 • 发送任意文本、图片或文件即可与智能助理对话
-• \`/clear\` 或 \`/reset\` 或 \`/new\` - 重置上下文，开启全新会话
-• \`/status\` - 查看当前通道连接状态与会话信息
+• \`/new\` - 重置上下文，开启全新会话
 • \`/help\` - 查看本使用指南`;
       const config = feishuClient.getConfig();
       if (config) {
@@ -248,41 +247,6 @@ export class FeishuService {
           messageId
         ).catch((err) => {
           console.warn('[FeishuService] Failed to send help response:', err);
-        });
-      }
-      return true;
-    }
-
-    if (lower === '/status') {
-      const state = feishuClient.getStatus();
-      const uptimeSec = state.connectedAt
-        ? Math.floor((Date.now() - state.connectedAt) / 1000)
-        : 0;
-      const uptimeStr =
-        uptimeSec > 3600
-          ? `${Math.floor(uptimeSec / 3600)}小时${Math.floor((uptimeSec % 3600) / 60)}分`
-          : `${Math.floor(uptimeSec / 60)}分${uptimeSec % 60}秒`;
-      const currentSessionId =
-        assistantSessionManager.getSavedSessionId() || '未初始化';
-      const statusMsg = `🤖 **飞书通道运行状态**
-
-• **连接状态**: ${state.status === 'connected' ? '🟢 已连接 (Connected)' : '🔴 ' + state.status}
-• **应用名称**: \`${state.botName || '未知'}\`
-• **机器人 ID**: \`${state.botOpenId || state.appId || '未知'}\`
-• **会话 ID**: \`${currentSessionId}\`
-• **在线时长**: ${uptimeStr}`;
-      const config = feishuClient.getConfig();
-      if (config) {
-        const token = await getTenantAccessToken(config);
-        const baseUrl = getBaseUrl(config.domain, config.customHost);
-        await sendMarkdownCard(
-          baseUrl,
-          token,
-          chatId,
-          statusMsg,
-          messageId
-        ).catch((err) => {
-          console.warn('[FeishuService] Failed to send status response:', err);
         });
       }
       return true;

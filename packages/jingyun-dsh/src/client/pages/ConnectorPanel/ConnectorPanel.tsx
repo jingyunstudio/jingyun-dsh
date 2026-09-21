@@ -1047,7 +1047,31 @@ export const ConnectorPanel = () => {
               />
             </svg>
             <span>
-              连接远程消息通道，即可在移动端随时向工作台指派任务并执行自动化流程，结果将实时回传到对应通道会话中。
+              连接远程消息通道，即可在移动端随时向工作台指派任务并执行自动化流程，结果将实时回传到对应通道会话中。在任一远程通道聊天中发送{' '}
+              <code
+                style={{
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  background:
+                    'var(--dsw-alias-surface-hover, rgba(0,0,0,0.06))',
+                  fontWeight: 600,
+                }}
+              >
+                /new
+              </code>{' '}
+              即可快速重置上下文并开启全新会话，发送{' '}
+              <code
+                style={{
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  background:
+                    'var(--dsw-alias-surface-hover, rgba(0,0,0,0.06))',
+                  fontWeight: 600,
+                }}
+              >
+                /help
+              </code>{' '}
+              可查看使用指南。
             </span>
           </div>
 

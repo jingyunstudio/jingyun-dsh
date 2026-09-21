@@ -461,9 +461,11 @@ export class WeixinConnectorService {
     content: string;
     contextToken?: string;
   }): Promise<void> {
-    // 拦截重置指令：支持在手机微信发送“重置”或“/reset”一键开启新对话
+    // 拦截重置指令：仅支持 /new 开启全新对话
     const trimmed = msg.content.trim();
-    if (trimmed === '/new') {
+    const lower = trimmed.toLowerCase();
+
+    if (lower === '/new') {
       try {
         if (this.ctx) {
           await assistantSessionManager.createAssistantSession(this.ctx);
@@ -479,6 +481,25 @@ export class WeixinConnectorService {
           '[WeixinConnector] Failed to reset assistant session via command:',
           err
         );
+      }
+    }
+
+    // 拦截帮助指令：说明 /new 指令用法
+    if (lower === '/help' || trimmed === '帮助') {
+      try {
+        const helpMsg = `🤖 微信个人助理使用指引
+
+• 发送任意文本即可与电脑端工作台 AI 助理对话
+• /new - 重置上下文，开启全新会话
+• /help - 查看本使用指南`;
+        await this.sendMessage({
+          toUserId: msg.fromUserId,
+          contextToken: msg.contextToken,
+          content: helpMsg,
+        });
+        return;
+      } catch (err: unknown) {
+        console.warn('[WeixinConnector] Failed to send help response:', err);
       }
     }
 
