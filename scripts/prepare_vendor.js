@@ -25,9 +25,8 @@ console.log(
 if (fs.existsSync(targetJingyun)) {
   fs.rmSync(targetJingyun, { recursive: true, force: true });
 }
-const pnpmCmd = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
 execSync(
-  `"${pnpmCmd}" --filter jingyun-dsh deploy --prod --node-linker hoisted "${targetJingyun}"`,
+  `pnpm --filter jingyun-dsh deploy --prod --node-linker hoisted "${targetJingyun}"`,
   {
     cwd: baseDir,
     stdio: 'inherit',

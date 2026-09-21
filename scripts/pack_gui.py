@@ -647,7 +647,7 @@ def run_build_thread(bundle_id, app_version, app_name="Jingyun.Studio", custom_l
         if not os.path.exists(vendor_dir):
             os.makedirs(vendor_dir)
 
-        pnpm_cmd = "pnpm.cmd build" if sys.platform == "win32" else "pnpm build"
+        pnpm_cmd = "pnpm build"
         subprocess.run(pnpm_cmd, shell=True, cwd=base_dir, check=False)
 
         zip_cmd = "node scripts/prepare_vendor.js"
