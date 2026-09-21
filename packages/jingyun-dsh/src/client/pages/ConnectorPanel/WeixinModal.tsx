@@ -453,7 +453,9 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                       gap: '8px',
                     }}
                   >
-                    <span>{isWecom ? '企业微信通道已就绪' : '微信通道已就绪'}</span>
+                    <span>
+                      {isWecom ? '企业微信通道已就绪' : '微信通道已就绪'}
+                    </span>
                     <span
                       style={{
                         fontSize: '11px',
@@ -526,7 +528,8 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                         display: 'inline-block',
                       }}
                     />
-                    {status.nickName || (isWecom ? '企业微信已授权用户' : '已绑定微信用户')}
+                    {status.nickName ||
+                      (isWecom ? '企业微信已授权用户' : '已绑定微信用户')}
                   </span>
                 </div>
 
@@ -540,7 +543,8 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                     lineHeight: '1.6',
                   }}
                 >
-                  💡 在手机{isWecom ? '企业微信' : '微信'}中直接向此助理发送消息指派任务，工作台将实时处理并回传；点击下方「发送测试消息」可验证连通性。
+                  💡 在手机{isWecom ? '企业微信' : '微信'}
+                  中直接向此助理发送消息指派任务，工作台将实时处理并回传；点击下方「发送测试消息」可验证连通性。
                 </div>
               </div>
 
@@ -557,7 +561,8 @@ export const WeixinModal: React.FC<WeixinModalProps> = ({
                     textAlign: 'center',
                   }}
                 >
-                  测试消息已成功发送至手机{isWecom ? '企业微信' : '微信'}，请查收！
+                  测试消息已成功发送至手机{isWecom ? '企业微信' : '微信'}
+                  ，请查收！
                 </div>
               )}
               {errorMsg && (

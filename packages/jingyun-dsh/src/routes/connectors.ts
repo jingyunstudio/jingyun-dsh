@@ -6,6 +6,7 @@ import { parseJsonBody, sendError, sendJson } from '../common/http';
 import {
   cliManager,
   dingtalkConnector,
+  feishuService,
   imaConnector,
   larkConnector,
   wecomService,
@@ -304,6 +305,206 @@ export function registerConnectorsRoutes(ctx: Context) {
         sendError(
           res,
           err instanceof Error ? err.message : 'CLI execution failed',
+          500
+        );
+      }
+    },
+  });
+
+  // ================= 飞书远程通道 (Feishu Remote Channel) =================
+  const feishuPrefix = '/api/jingyun/connectors/feishu';
+
+  // 1. 获取飞书通道状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${feishuPrefix}/status`,
+    handler: async (_req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const state = feishuService.getStatus();
+        sendJson(res, { success: true, data: state });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Get feishu status failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 2. 保存飞书配置
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${feishuPrefix}/config`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = (await parseJsonBody(req)) as Record<string, unknown>;
+        const appId = typeof body?.appId === 'string' ? body.appId.trim() : '';
+        const appSecret =
+          typeof body?.appSecret === 'string' ? body.appSecret.trim() : '';
+        if (!appId || !appSecret) {
+          sendError(res, 'appId and appSecret are required', 400);
+          return;
+        }
+        await feishuService.saveConfig({
+          appId,
+          appSecret,
+          encryptKey:
+            typeof body?.encryptKey === 'string'
+              ? body.encryptKey.trim()
+              : undefined,
+          verificationToken:
+            typeof body?.verificationToken === 'string'
+              ? body.verificationToken.trim()
+              : undefined,
+          domain: body?.domain === 'lark' ? 'lark' : 'feishu',
+          customHost:
+            typeof body?.customHost === 'string'
+              ? body.customHost.trim()
+              : undefined,
+          requireMention: body?.requireMention !== false,
+        });
+        sendJson(res, {
+          success: true,
+          data: { message: 'Feishu configuration saved' },
+        });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Save feishu config failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 3. 清除配置与解绑
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${feishuPrefix}/clear`,
+    handler: async (_req: IncomingMessage, res: ServerResponse) => {
+      try {
+        await feishuService.clearConfig();
+        sendJson(res, {
+          success: true,
+          data: { message: 'Feishu configuration cleared' },
+        });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Clear feishu config failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 4. 启动长连接 / 重连
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${feishuPrefix}/connect`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        let body: Record<string, unknown> | null = null;
+        try {
+          body = (await parseJsonBody(req)) as Record<string, unknown>;
+        } catch {
+          body = null;
+        }
+        const appId =
+          typeof body?.appId === 'string' ? body.appId.trim() : undefined;
+        const appSecret =
+          typeof body?.appSecret === 'string'
+            ? body.appSecret.trim()
+            : undefined;
+
+        if (appId && appSecret) {
+          await feishuService.connect({
+            appId,
+            appSecret,
+            encryptKey:
+              typeof body?.encryptKey === 'string'
+                ? body.encryptKey.trim()
+                : undefined,
+            verificationToken:
+              typeof body?.verificationToken === 'string'
+                ? body.verificationToken.trim()
+                : undefined,
+            domain: body?.domain === 'lark' ? 'lark' : 'feishu',
+            customHost:
+              typeof body?.customHost === 'string'
+                ? body.customHost.trim()
+                : undefined,
+            requireMention: body?.requireMention !== false,
+          });
+        } else {
+          await feishuService.connect();
+        }
+
+        sendJson(res, {
+          success: true,
+          data: { message: 'Feishu connection established' },
+        });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Connect to Feishu failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 5. 断开连接
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${feishuPrefix}/disconnect`,
+    handler: async (_req: IncomingMessage, res: ServerResponse) => {
+      try {
+        feishuService.disconnect();
+        sendJson(res, {
+          success: true,
+          data: { message: 'Feishu connection disconnected' },
+        });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Disconnect Feishu failed',
+          500
+        );
+      }
+    },
+  });
+
+  // 6. 发送主动消息 / 测试消息
+  ctx.webServer.register({
+    kind: 'exact',
+    path: `${feishuPrefix}/send`,
+    handler: async (req: IncomingMessage, res: ServerResponse) => {
+      try {
+        const body = (await parseJsonBody(req)) as Record<string, unknown>;
+        const content = typeof body?.content === 'string' ? body.content : '';
+        if (!content || !content.trim()) {
+          sendError(res, 'content is required', 400);
+          return;
+        }
+        const chatId =
+          typeof body?.chatId === 'string' && body.chatId.trim()
+            ? body.chatId.trim()
+            : undefined;
+        const result = await feishuService.sendMessage({
+          chatId,
+          content,
+          replyToMessageId:
+            typeof body?.replyToMessageId === 'string'
+              ? body.replyToMessageId.trim()
+              : undefined,
+        });
+        sendJson(res, { success: true, data: result });
+      } catch (err: unknown) {
+        sendError(
+          res,
+          err instanceof Error ? err.message : 'Failed to send Feishu message',
           500
         );
       }

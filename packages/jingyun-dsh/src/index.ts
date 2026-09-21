@@ -16,7 +16,12 @@ import {
   readDesktopConfig,
 } from './common/paths';
 import { Config } from './config/schema';
-import { cliManager, wecomService, weixinConnector } from './connectors';
+import {
+  cliManager,
+  feishuService,
+  wecomService,
+  weixinConnector,
+} from './connectors';
 import { registerRoutes } from './routes';
 
 // Synchronously inject environment variables at top-level on module import to support pre-apply bootstrap mapping
@@ -200,7 +205,7 @@ export function apply(ctx: Context, config: Config) {
   // 6. 彻底禁用 DSH Web 身份验证机制，无需 token / cookie
   disableBrowserAuth(ctx);
 
-  // 7. 初始化移动端与协同办公通道（微信助理、企业微信）
+  // 7. 初始化移动端与协同办公通道（微信助理、企业微信、飞书）
   weixinConnector.setContext(ctx);
   weixinConnector.init().catch((err) => {
     console.warn('[JingyunDsh] Failed to initialize Weixin connector:', err);
@@ -209,5 +214,10 @@ export function apply(ctx: Context, config: Config) {
   wecomService.setContext(ctx);
   wecomService.init().catch((err) => {
     console.warn('[JingyunDsh] Failed to initialize WeCom service:', err);
+  });
+
+  feishuService.setContext(ctx);
+  feishuService.init().catch((err) => {
+    console.warn('[JingyunDsh] Failed to initialize Feishu service:', err);
   });
 }

@@ -11,6 +11,7 @@ import {
   DEFAULT_WECOM_SUGGESTIONS,
   UnbindIcon,
 } from './ConnectorDetailModal';
+import { FeishuModal } from './FeishuModal';
 import { ImaCatLogo, ImaConnectorModal } from './ImaConnectorModal';
 import { WecomModal } from './WecomModal';
 import { WeixinModal } from './WeixinModal';
@@ -426,6 +427,13 @@ export const ConnectorPanel = () => {
   );
   const [weixinLoading, setWeixinLoading] = useState(true);
   const [showWeixinModal, setShowWeixinModal] = useState(false);
+  const [feishuTunnelStatus, setFeishuTunnelStatus] = useState<{
+    status: string;
+    botName?: string;
+    appId?: string;
+  } | null>(null);
+  const [feishuTunnelLoading, setFeishuTunnelLoading] = useState(true);
+  const [showFeishuTunnelModal, setShowFeishuTunnelModal] = useState(false);
   const [confirmInstallChannel, setConfirmInstallChannel] = useState<
     'lark' | 'dingtalk' | 'wecom' | null
   >(null);
@@ -666,6 +674,27 @@ export const ConnectorPanel = () => {
     }
   };
 
+  // 获取飞书远程通道状态
+  const fetchFeishuTunnelStatus = async () => {
+    setFeishuTunnelLoading(true);
+    try {
+      const res = await fetch('/api/jingyun/connectors/feishu/status');
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data) {
+          setFeishuTunnelStatus(json.data);
+        }
+      }
+    } catch (err) {
+      console.warn(
+        '[ConnectorPanel] Failed to fetch feishu tunnel status:',
+        err
+      );
+    } finally {
+      setFeishuTunnelLoading(false);
+    }
+  };
+
   useEffect(() => {
     queueMicrotask(() => {
       fetchLarkStatus();
@@ -673,6 +702,7 @@ export const ConnectorPanel = () => {
       fetchDingtalkStatus();
       fetchImaStatus();
       fetchWeixinStatus();
+      fetchFeishuTunnelStatus();
       fetchCliStatus();
     });
   }, []);
@@ -1101,6 +1131,42 @@ export const ConnectorPanel = () => {
               onConnect={() => setShowWecomModal(true)}
               onManage={() => setShowWecomAssistantModal(true)}
             />
+            <ConnectorCard
+              name="飞书助理"
+              icon={<FeishuLogo />}
+              description="通过飞书开放平台 WebSocket 长连接下发指令，结果实时回传至飞书聊天窗口（支持群聊及单聊）。"
+              isConnected={feishuTunnelStatus?.status === 'connected'}
+              isLoading={feishuTunnelLoading}
+              statusBadge={
+                feishuTunnelStatus?.status === 'connected' ? (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      fontSize: '10px',
+                      color: '#16a34a',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: '4px',
+                        height: '4px',
+                        borderRadius: '50%',
+                        background: '#22c55e',
+                      }}
+                    />
+                    已连接
+                  </span>
+                ) : undefined
+              }
+              onConnect={() => setShowFeishuTunnelModal(true)}
+              onManage={() => setShowFeishuTunnelModal(true)}
+            />
           </div>
         </div>
       )}
@@ -1274,6 +1340,15 @@ export const ConnectorPanel = () => {
           onClose={() => setShowWecomAssistantModal(false)}
           onRefresh={() => fetchWecomStatus()}
           onSuccess={() => fetchWecomStatus()}
+        />
+      )}
+      {/* 飞书远程通道管理弹窗 */}
+      {showFeishuTunnelModal && (
+        <FeishuModal
+          isOpen={showFeishuTunnelModal}
+          onClose={() => setShowFeishuTunnelModal(false)}
+          onRefresh={() => fetchFeishuTunnelStatus()}
+          onSuccess={() => fetchFeishuTunnelStatus()}
         />
       )}
       {confirmInstallChannel && (

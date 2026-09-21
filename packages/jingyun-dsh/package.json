@@ -44,7 +44,8 @@
     "dev": "tsdown --watch"
   },
   "dependencies": {
-    "@deepseek-ai/schemastery": "^3.18.2"
+    "@deepseek-ai/schemastery": "^3.18.2",
+    "@larksuiteoapi/node-sdk": "^1.74.0"
   },
   "devDependencies": {
     "@types/node": "^24",
