@@ -14,6 +14,11 @@ import {
 import { DingtalkTunnelModal } from './DingtalkTunnelModal';
 import { FeishuModal } from './FeishuModal';
 import { ImaCatLogo, ImaConnectorModal } from './ImaConnectorModal';
+import {
+  MobileBrandIcon,
+  MobileConnectorModal,
+  type MobileStatusData,
+} from './MobileConnectorModal';
 import { WecomModal } from './WecomModal';
 import { WeixinModal } from './WeixinModal';
 const openExternalUrl = (target: string) => {
@@ -441,6 +446,11 @@ export const ConnectorPanel = () => {
   } | null>(null);
   const [dingtalkTunnelLoading, setDingtalkTunnelLoading] = useState(true);
   const [showDingtalkTunnelModal, setShowDingtalkTunnelModal] = useState(false);
+  const [mobileStatus, setMobileStatus] = useState<MobileStatusData | null>(
+    null
+  );
+  const [mobileLoading, setMobileLoading] = useState(true);
+  const [showMobileModal, setShowMobileModal] = useState(false);
   const [confirmInstallChannel, setConfirmInstallChannel] = useState<
     'lark' | 'dingtalk' | 'wecom' | null
   >(null);
@@ -723,6 +733,24 @@ export const ConnectorPanel = () => {
     }
   };
 
+  // 获取移动端设备连接状态
+  const fetchMobileStatus = async () => {
+    setMobileLoading(true);
+    try {
+      const res = await fetch('/api/jingyun/connectors/mobile/status');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          setMobileStatus(json.data);
+        }
+      }
+    } catch (err) {
+      console.warn('[ConnectorPanel] Failed to fetch mobile status:', err);
+    } finally {
+      setMobileLoading(false);
+    }
+  };
+
   useEffect(() => {
     queueMicrotask(() => {
       fetchLarkStatus();
@@ -733,6 +761,7 @@ export const ConnectorPanel = () => {
       fetchFeishuTunnelStatus();
       fetchDingtalkTunnelStatus();
       fetchCliStatus();
+      fetchMobileStatus();
     });
   }, []);
 
@@ -784,6 +813,10 @@ export const ConnectorPanel = () => {
     '';
   const isImaConnected = Boolean(imaStatus?.status === 'connected');
   const isWeixinConnected = Boolean(weixinStatus?.connected);
+  const mobileDevices = mobileStatus
+    ? mobileStatus.devices.filter((d) => d.state === 'device')
+    : [];
+  const isMobileConnected = mobileDevices.length > 0;
 
   return (
     <div
@@ -1039,6 +1072,45 @@ export const ConnectorPanel = () => {
             }
             onConnect={() => setShowImaModal(true)}
             onManage={() => setShowImaDetailModal(true)}
+          />
+
+          <ConnectorCard
+            name="移动终端 (Android)"
+            icon={<MobileBrandIcon size={36} />}
+            description="与 Android 移动设备深度集成，支持 ADB 无线局域网配对、多模态实时屏幕快照、无障碍语义树操作与自动化任务控制。"
+            isConnected={isMobileConnected}
+            isLoading={mobileLoading}
+            statusBadge={
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '10px',
+                  color: isMobileConnected ? '#10B981' : '#64748b',
+                  background: isMobileConnected
+                    ? 'rgba(16, 185, 129, 0.1)'
+                    : 'rgba(100, 116, 139, 0.1)',
+                  padding: '1px 6px',
+                  borderRadius: '4px',
+                  fontWeight: 500,
+                }}
+              >
+                <span
+                  style={{
+                    width: '4px',
+                    height: '4px',
+                    borderRadius: '50%',
+                    background: isMobileConnected ? '#10B981' : '#94a3b8',
+                  }}
+                />
+                {isMobileConnected
+                  ? `已连接 (${mobileDevices.length}台)`
+                  : '未连接设备'}
+              </span>
+            }
+            onConnect={() => setShowMobileModal(true)}
+            onManage={() => setShowMobileModal(true)}
           />
         </div>
       )}
@@ -1419,6 +1491,14 @@ export const ConnectorPanel = () => {
           isOpen={showWeixinModal}
           onClose={() => setShowWeixinModal(false)}
           onRefresh={() => fetchWeixinStatus()}
+        />
+      )}
+      {/* 移动设备连接与管理弹窗 */}
+      {showMobileModal && (
+        <MobileConnectorModal
+          isOpen={showMobileModal}
+          onClose={() => setShowMobileModal(false)}
+          onRefresh={() => fetchMobileStatus()}
         />
       )}
       {/* 企业微信助理连接与管理弹窗 (复用组件) */}

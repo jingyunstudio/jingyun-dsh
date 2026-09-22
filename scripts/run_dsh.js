@@ -80,6 +80,7 @@ export function prepareDshEnvironment() {
   // 注入便携与基础环境变量
   process.env.DSH_HOME = dshHome;
   process.env.DSH_CONFIG_DIR = dshHome;
+  process.env.ADB_MDNS_AUTO_CONNECT = '0';
   if (isPortable) {
     process.env.DSH_PORTABLE = '1';
   }
@@ -205,6 +206,7 @@ export function prepareDshEnvironment() {
     path.join(vendorNodeDir, 'bin'),
     path.join(vendorDir, 'python'),
     path.join(vendorDir, 'python', 'bin'),
+    path.join(vendorDir, 'adb'),
     path.join(vendorDir, 'git', 'PortableGit', 'cmd'),
   ].filter((p) => fs.existsSync(p));
 
@@ -216,6 +218,23 @@ export function prepareDshEnvironment() {
 }
 
 export async function launchDsh() {
+  const downloadScriptPath = path.join(
+    rootDir,
+    'scripts',
+    'download_runtimes.js'
+  );
+  if (fs.existsSync(downloadScriptPath)) {
+    const { checkRuntimesExist, ensureRuntimes } = await import(
+      pathToFileURL(downloadScriptPath).href
+    );
+    if (!checkRuntimesExist()) {
+      console.log(
+        '[DSH Runner] ⚠️ 检测到必要运行时环境缺失，正在自动准备 (Node/Python/ADB)...'
+      );
+      await ensureRuntimes();
+    }
+  }
+
   prepareDshEnvironment();
 
   const rawArgs = process.argv.slice(2).filter((a) => a !== '--tauri');

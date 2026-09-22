@@ -145,7 +145,44 @@ export function getRuntimeConfig(platform, arch) {
     };
   }
 
-  return { node: nodeConfig, python: pythonConfig, platform, arch };
+  // 3. ADB 运行时配置
+  let adbConfig;
+  if (isWin) {
+    adbConfig = {
+      name: `ADB (win)`,
+      targetDir: path.join(targetVendorDir, 'adb'),
+      expectedFile: 'adb.exe',
+      urls: [
+        'https://dl.google.com/android/repository/platform-tools-latest-windows.zip',
+      ],
+    };
+  } else if (isMac) {
+    adbConfig = {
+      name: `ADB (darwin)`,
+      targetDir: path.join(targetVendorDir, 'adb'),
+      expectedFile: 'adb',
+      urls: [
+        'https://dl.google.com/android/repository/platform-tools-latest-darwin.zip',
+      ],
+    };
+  } else {
+    adbConfig = {
+      name: `ADB (linux)`,
+      targetDir: path.join(targetVendorDir, 'adb'),
+      expectedFile: 'adb',
+      urls: [
+        'https://dl.google.com/android/repository/platform-tools-latest-linux.zip',
+      ],
+    };
+  }
+
+  return {
+    node: nodeConfig,
+    python: pythonConfig,
+    adb: adbConfig,
+    platform,
+    arch,
+  };
 }
 
 export function checkRuntimesExist(platform, arch) {
@@ -157,6 +194,10 @@ export function checkRuntimesExist(platform, arch) {
   const pythonExpected = path.join(
     configs.python.targetDir,
     configs.python.expectedFile
+  );
+  const adbExpected = path.join(
+    configs.adb.targetDir,
+    configs.adb.expectedFile
   );
 
   const hasNodeBinary =
@@ -177,7 +218,9 @@ export function checkRuntimesExist(platform, arch) {
     fs.existsSync(path.join(configs.python.targetDir, 'python.exe')) ||
     fs.existsSync(path.join(configs.python.targetDir, 'python3'));
 
-  return nodeOk && pythonOk;
+  const adbOk = fs.existsSync(adbExpected);
+
+  return nodeOk && pythonOk && adbOk;
 }
 
 function formatBytes(bytes) {
@@ -517,6 +560,66 @@ async function processPythonRuntime(config, force = false) {
   );
 }
 
+async function processAdbRuntime(config, force = false) {
+  const targetExpected = path.join(config.targetDir, config.expectedFile);
+
+  if (!force && fs.existsSync(targetExpected)) {
+    console.log(
+      `[RuntimeDownload] 💡 ${config.name} (${config.expectedFile}) 已存在，跳过处理。`
+    );
+    return;
+  }
+
+  console.log(`[RuntimeDownload] 🚀 开始准备 ${config.name}...`);
+  const rawArchivePath = path.join(tempDir, `raw_adb.zip`);
+  const extractTempDir = path.join(tempDir, 'extracted_adb');
+
+  // 1. 下载原始包
+  await downloadWithFallback(config.urls, rawArchivePath);
+
+  // 2. 解压
+  console.log(`[RuntimeDownload] 📦 正在解压 ADB...`);
+  if (fs.existsSync(extractTempDir)) {
+    fs.rmSync(extractTempDir, { recursive: true, force: true });
+  }
+
+  await decompress(rawArchivePath, extractTempDir);
+
+  // 3. 校验解压出的 platform-tools 根目录（Google 官方 zip 压缩包顶层目录为 platform-tools）
+  const adbDir = path.join(extractTempDir, 'platform-tools');
+  const adbBinary = path.join(adbDir, config.expectedFile);
+  if (!fs.existsSync(adbBinary)) {
+    throw new Error(`解压后的目录中未能找到期望的可执行文件: ${adbBinary}`);
+  }
+
+  // 4. 清理旧 targetDir 并移入文件到 vendor/adb
+  if (fs.existsSync(config.targetDir)) {
+    fs.rmSync(config.targetDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(config.targetDir, { recursive: true });
+
+  for (const item of fs.readdirSync(adbDir)) {
+    const srcItem = path.join(adbDir, item);
+    const destItem = path.join(config.targetDir, item);
+    fs.cpSync(srcItem, destItem, { recursive: true });
+  }
+
+  // 5. Unix 赋权
+  if (process.platform !== 'win32') {
+    const unixAdb = path.join(config.targetDir, 'adb');
+    if (fs.existsSync(unixAdb)) {
+      fs.chmodSync(unixAdb, 0o755);
+    }
+  }
+
+  // 6. 清理临时文件
+  fs.rmSync(rawArchivePath, { force: true });
+  fs.rmSync(extractTempDir, { recursive: true, force: true });
+  console.log(
+    `[RuntimeDownload] 🎉 ${config.name} 准备完成: ${config.targetDir}`
+  );
+}
+
 export async function ensureRuntimes(
   force = false,
   targetPlatform,
@@ -530,6 +633,7 @@ export async function ensureRuntimes(
   try {
     await processNodeRuntime(runtimes.node, force);
     await processPythonRuntime(runtimes.python, force);
+    await processAdbRuntime(runtimes.adb, force);
     console.log('[RuntimeDownload] ✨ 所有运行时环境准备完毕！');
   } finally {
     if (fs.existsSync(tempDir)) {

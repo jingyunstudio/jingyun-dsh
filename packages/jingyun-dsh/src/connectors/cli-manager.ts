@@ -46,6 +46,24 @@ export class CliManagerService {
     return path.resolve(vendorDir, 'node');
   }
 
+  public resolveAdbExec(): string | null {
+    const vendorDir = this.resolveVendorDir();
+    if (!vendorDir) return null;
+    const isWin = process.platform === 'win32';
+    const cand = path.resolve(vendorDir, 'adb', isWin ? 'adb.exe' : 'adb');
+    return fs.existsSync(cand) ? cand : null;
+  }
+
+  public ensureAdbExec(): string {
+    const adbExec = this.resolveAdbExec();
+    if (!adbExec) {
+      throw new Error(
+        '未检测到便携 ADB 可执行文件，请确认已在 vendor/adb 部署 ADB 运行时'
+      );
+    }
+    return adbExec;
+  }
+
   public resolveCliExec(name: 'wecom' | 'lark' | 'dingtalk'): string | null {
     const isWin = process.platform === 'win32';
     const baseNames =
@@ -105,6 +123,7 @@ export class CliManagerService {
     }
     return null;
   }
+
   public async ensureCliExec(
     name: 'wecom' | 'lark' | 'dingtalk'
   ): Promise<string> {
@@ -142,6 +161,7 @@ export class CliManagerService {
     this.installingPromises.set(name, task);
     return task;
   }
+
   public getEnv(): NodeJS.ProcessEnv {
     const isWin = process.platform === 'win32';
     const binDir = getDshBinDir();
@@ -157,12 +177,27 @@ export class CliManagerService {
     }
 
     if (vendorDir) {
+      // 1. 便携 Node.js 及 npx/npm
       const nodeDir = isWin
         ? path.resolve(vendorDir, 'node')
         : path.resolve(vendorDir, 'node', 'bin');
       pathParts.push(nodeDir);
       if (!isWin) {
         pathParts.push(path.resolve(vendorDir, 'node'));
+      }
+
+      // 2. 便携 Python
+      const pyDir = isWin
+        ? path.resolve(vendorDir, 'python')
+        : path.resolve(vendorDir, 'python', 'bin');
+      if (fs.existsSync(pyDir)) {
+        pathParts.push(pyDir);
+      }
+
+      // 3. 便携 ADB
+      const adbDir = path.resolve(vendorDir, 'adb');
+      if (fs.existsSync(adbDir)) {
+        pathParts.push(adbDir);
       }
     }
 
@@ -174,6 +209,7 @@ export class CliManagerService {
 
     return {
       ...process.env,
+      ADB_MDNS_AUTO_CONNECT: '0',
       PATH: newPath,
     };
   }

@@ -10,6 +10,7 @@ import {
   feishuService,
   imaConnector,
   larkConnector,
+  mobileService,
   wecomService,
   weixinConnector,
 } from '../connectors';
@@ -982,6 +983,132 @@ export function registerConnectorsRoutes(ctx: Context) {
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         sendError(res, message, 400);
+      }
+    },
+  });
+
+  // 12. 移动端 (Android/ADB) 控制器路由
+  // 12.1 获取移动设备连接与 ADB 运行状态
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/mobile/status',
+    handler: async (_req, res) => {
+      try {
+        const status = await mobileService.getStatus();
+        sendJson(res, { success: true, data: status });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
+      }
+    },
+  });
+
+  // 12.2 一键无线配对连接 (WiFi Connect)
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/mobile/connect',
+    handler: async (req, res) => {
+      try {
+        const body = await parseJsonBody<{ host: string; port?: number }>(req);
+        if (!body.host || typeof body.host !== 'string') {
+          return sendError(res, '参数 host 不能为空', 400);
+        }
+        const port = body.port !== undefined ? Number(body.port) : 5555;
+        const result = await mobileService.connectWifi(body.host, port);
+        sendJson(res, { success: true, ...result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 400);
+      }
+    },
+  });
+
+  // 12.3 Android 11+ 无线配对 (WiFi Pair)
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/mobile/pair',
+    handler: async (req, res) => {
+      try {
+        const body = await parseJsonBody<{
+          host: string;
+          port: number;
+          code: string;
+        }>(req);
+        if (!body.host || !body.port || !body.code) {
+          return sendError(res, '参数 host、port 和 code 均为必填项', 400);
+        }
+        const result = await mobileService.pairWifi(
+          body.host,
+          Number(body.port),
+          body.code
+        );
+        sendJson(res, { success: true, ...result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 400);
+      }
+    },
+  });
+
+  // 12.4 一键开启 USB 设备无线调试端口 (adb tcpip 5555)
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/mobile/tcpip',
+    handler: async (req, res) => {
+      try {
+        const body = await parseJsonBody<{
+          deviceId?: string;
+          port?: number;
+        }>(req);
+        const port = body.port !== undefined ? Number(body.port) : 5555;
+        const result = await mobileService.enableTcpIp(body.deviceId, port);
+        sendJson(res, { success: true, ...result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 400);
+      }
+    },
+  });
+
+  // 12.5 断开设备连接
+  ctx.webServer.register({
+    kind: 'exact',
+    path: '/api/jingyun/connectors/mobile/disconnect',
+    handler: async (req, res) => {
+      try {
+        const body = await parseJsonBody<{
+          target: string;
+        }>(req);
+        if (!body.target) {
+          return sendError(res, '参数 target 不能为空', 400);
+        }
+        const result = await mobileService.disconnect(body.target);
+        sendJson(res, { success: true, ...result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 400);
+      }
+    },
+  });
+
+  // 12.6 获取实时手机屏幕快照 (PNG 图片流)
+  ctx.webServer.register({
+    kind: 'prefix',
+    path: '/api/jingyun/connectors/mobile/screenshot',
+    handler: async (req, res) => {
+      try {
+        const url = new URL(req.url!, 'http://localhost');
+        const deviceId = url.searchParams.get('deviceId') || undefined;
+        const buf = await mobileService.screenshot(deviceId);
+        res.writeHead(200, {
+          'Content-Type': 'image/png',
+          'Content-Length': buf.length,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        });
+        res.end(buf);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        sendError(res, message, 500);
       }
     },
   });

@@ -1,3 +1,15 @@
 - insert:
     - id: jingyun-dsh-backend
       name: '@jingyun-ai/jingyun-dsh'
+    - id: mobile-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        transport: stdio
+        serverName: mobile
+        command: npx
+        args:
+          - '-y'
+          - '@mobilenext/mobile-mcp@latest'
+        env:
+          MOBILEMCP_DISABLE_TELEMETRY: 'true'
+          ADB_MDNS_AUTO_CONNECT: '0'

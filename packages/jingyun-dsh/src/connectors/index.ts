@@ -22,3 +22,9 @@ export {
 export { CliManagerService, cliManager } from './cli-manager';
 export { ImaConnectorService, imaConnector } from './ima-service';
 export { WeixinConnectorService, weixinConnector } from './weixin-service';
+export {
+  MobileService,
+  mobileService,
+  type MobileDeviceInfo,
+  type MobileStatusResult,
+} from './mobile-service';
