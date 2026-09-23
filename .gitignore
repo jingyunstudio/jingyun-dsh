@@ -48,3 +48,4 @@ __pycache__/
 
 tsconfig.tsbuildinfo
 /data
+vendor

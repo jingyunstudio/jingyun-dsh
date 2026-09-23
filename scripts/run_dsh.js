@@ -206,6 +206,7 @@ export function prepareDshEnvironment() {
     path.join(vendorNodeDir, 'bin'),
     path.join(vendorDir, 'python'),
     path.join(vendorDir, 'python', 'bin'),
+    path.join(vendorDir, 'uv'),
     path.join(vendorDir, 'adb'),
     path.join(vendorDir, 'git', 'PortableGit', 'cmd'),
   ].filter((p) => fs.existsSync(p));

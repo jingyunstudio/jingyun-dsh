@@ -13,3 +13,47 @@
         env:
           MOBILEMCP_DISABLE_TELEMETRY: 'true'
           ADB_MDNS_AUTO_CONNECT: '0'
+    - id: desktop-control-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        transport: stdio
+        serverName: desktop
+        command: node
+        args:
+          - '-e'
+          - |
+            const { spawn } = require('node:child_process');
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const p = process.platform;
+            let cmd, args;
+            if (p === 'win32') {
+              const candidateUvx = [
+                path.resolve(process.cwd(), 'src-tauri/resources/vendor/uv/uvx.exe'),
+                path.resolve(process.cwd(), 'resources/vendor/uv/uvx.exe'),
+              ].find((file) => fs.existsSync(file));
+              cmd = candidateUvx || 'uvx.exe';
+              const candidatePy = [
+                path.resolve(process.cwd(), 'src-tauri/resources/vendor/python/python.exe'),
+                path.resolve(process.cwd(), 'resources/vendor/python/python.exe'),
+              ].find((file) => fs.existsSync(file));
+              args = candidatePy
+                ? ['--python', candidatePy, 'windows-mcp', 'serve', '--transport', 'stdio']
+                : ['windows-mcp', 'serve', '--transport', 'stdio'];
+            } else if (p === 'darwin') {
+              const candidateNpx = [
+                path.resolve(process.cwd(), 'src-tauri/resources/vendor/node/bin/npx'),
+                path.resolve(process.cwd(), 'resources/vendor/node/bin/npx'),
+              ].find((file) => fs.existsSync(file));
+              cmd = candidateNpx || 'npx';
+              args = ['-y', '@steipete/peekaboo', 'mcp'];
+            } else {
+              console.error('Desktop control is not supported on platform: ' + p);
+              process.exit(1);
+            }
+            const child = spawn(cmd, args, { stdio: 'inherit' });
+            child.on('exit', (code) => process.exit(code ?? 0));
+            child.on('error', (err) => {
+              console.error('[Desktop MCP] spawn error:', err);
+              process.exit(1);
+            });

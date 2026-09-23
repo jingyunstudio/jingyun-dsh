@@ -101,8 +101,9 @@ export function getRuntimeConfig(platform, arch) {
     };
   }
 
-  // 2. Python 配置 (3.11.9)
-  const pyVersion = '3.11.9';
+  // 2. Python 配置 (全平台统一 3.12.8)
+  const pyVersion = '3.12.8';
+  const pyTag = '20241206';
   let pythonConfig;
   if (isWin) {
     pythonConfig = {
@@ -117,14 +118,14 @@ export function getRuntimeConfig(platform, arch) {
   } else if (isMac) {
     const targetTriple =
       arch === 'arm64' ? 'aarch64-apple-darwin' : 'x86_64-apple-darwin';
-    const filename = `cpython-${pyVersion}+20240415-${targetTriple}-install_only.tar.gz`;
+    const filename = `cpython-${pyVersion}+${pyTag}-${targetTriple}-install_only.tar.gz`;
     pythonConfig = {
       name: `Python (${pyVersion} standalone-${arch}-darwin)`,
       targetDir: path.join(targetVendorDir, 'python'),
       expectedFile: path.join('bin', 'python3'),
       urls: [
-        `https://github.com/astral-sh/python-build-standalone/releases/download/20240415/${filename}`,
-        `https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download/20240415/${filename}`,
+        `https://github.com/astral-sh/python-build-standalone/releases/download/${pyTag}/${filename}`,
+        `https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download/${pyTag}/${filename}`,
       ],
     };
   } else {
@@ -133,14 +134,14 @@ export function getRuntimeConfig(platform, arch) {
       arch === 'arm64'
         ? 'aarch64-unknown-linux-gnu'
         : 'x86_64-unknown-linux-gnu';
-    const filename = `cpython-${pyVersion}+20240415-${targetTriple}-install_only.tar.gz`;
+    const filename = `cpython-${pyVersion}+${pyTag}-${targetTriple}-install_only.tar.gz`;
     pythonConfig = {
       name: `Python (${pyVersion} standalone-${arch}-linux)`,
       targetDir: path.join(targetVendorDir, 'python'),
       expectedFile: path.join('bin', 'python3'),
       urls: [
-        `https://github.com/astral-sh/python-build-standalone/releases/download/20240415/${filename}`,
-        `https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download/20240415/${filename}`,
+        `https://github.com/astral-sh/python-build-standalone/releases/download/${pyTag}/${filename}`,
+        `https://ghfast.top/https://github.com/astral-sh/python-build-standalone/releases/download/${pyTag}/${filename}`,
       ],
     };
   }
@@ -176,10 +177,53 @@ export function getRuntimeConfig(platform, arch) {
     };
   }
 
+  // 4. uv 运行时配置 (v0.6.5)
+  const uvVersion = '0.6.5';
+  let uvConfig;
+  if (isWin) {
+    uvConfig = {
+      name: `uv (${uvVersion} win-${arch})`,
+      targetDir: path.join(targetVendorDir, 'uv'),
+      expectedFile: 'uvx.exe',
+      urls: [
+        `https://ghfast.top/https://github.com/astral-sh/uv/releases/download/${uvVersion}/uv-${arch === 'arm64' ? 'aarch64' : 'x86_64'}-pc-windows-msvc.zip`,
+        `https://github.com/astral-sh/uv/releases/download/${uvVersion}/uv-${arch === 'arm64' ? 'aarch64' : 'x86_64'}-pc-windows-msvc.zip`,
+      ],
+    };
+  } else if (isMac) {
+    const targetTriple =
+      arch === 'arm64' ? 'aarch64-apple-darwin' : 'x86_64-apple-darwin';
+    uvConfig = {
+      name: `uv (${uvVersion} darwin-${arch})`,
+      targetDir: path.join(targetVendorDir, 'uv'),
+      expectedFile: 'uvx',
+      urls: [
+        `https://ghfast.top/https://github.com/astral-sh/uv/releases/download/${uvVersion}/uv-${targetTriple}.tar.gz`,
+        `https://github.com/astral-sh/uv/releases/download/${uvVersion}/uv-${targetTriple}.tar.gz`,
+      ],
+    };
+  } else {
+    // Linux
+    const targetTriple =
+      arch === 'arm64'
+        ? 'aarch64-unknown-linux-gnu'
+        : 'x86_64-unknown-linux-gnu';
+    uvConfig = {
+      name: `uv (${uvVersion} linux-${arch})`,
+      targetDir: path.join(targetVendorDir, 'uv'),
+      expectedFile: 'uvx',
+      urls: [
+        `https://ghfast.top/https://github.com/astral-sh/uv/releases/download/${uvVersion}/uv-${targetTriple}.tar.gz`,
+        `https://github.com/astral-sh/uv/releases/download/${uvVersion}/uv-${targetTriple}.tar.gz`,
+      ],
+    };
+  }
+
   return {
     node: nodeConfig,
     python: pythonConfig,
     adb: adbConfig,
+    uv: uvConfig,
     platform,
     arch,
   };
@@ -199,6 +243,7 @@ export function checkRuntimesExist(platform, arch) {
     configs.adb.targetDir,
     configs.adb.expectedFile
   );
+  const uvExpected = path.join(configs.uv.targetDir, configs.uv.expectedFile);
 
   const hasNodeBinary =
     fs.existsSync(nodeExpected) ||
@@ -220,7 +265,12 @@ export function checkRuntimesExist(platform, arch) {
 
   const adbOk = fs.existsSync(adbExpected);
 
-  return nodeOk && pythonOk && adbOk;
+  const uvOk =
+    fs.existsSync(uvExpected) ||
+    fs.existsSync(path.join(configs.uv.targetDir, 'uvx')) ||
+    fs.existsSync(path.join(configs.uv.targetDir, 'uvx.exe'));
+
+  return nodeOk && pythonOk && adbOk && uvOk;
 }
 
 function formatBytes(bytes) {
@@ -620,6 +670,75 @@ async function processAdbRuntime(config, force = false) {
   );
 }
 
+async function processUvRuntime(config, force = false) {
+  const targetExpected = path.join(config.targetDir, config.expectedFile);
+
+  if (!force && fs.existsSync(targetExpected)) {
+    console.log(
+      `[RuntimeDownload] 💡 ${config.name} (${config.expectedFile}) 已存在，跳过处理。`
+    );
+    return;
+  }
+
+  console.log(`[RuntimeDownload] 🚀 开始准备 ${config.name}...`);
+  const rawArchivePath = path.join(tempDir, `raw_uv_archive`);
+  const extractTempDir = path.join(tempDir, 'extracted_uv');
+
+  // 1. 下载原始包
+  await downloadWithFallback(config.urls, rawArchivePath);
+
+  // 2. 解压
+  console.log(`[RuntimeDownload] 📦 正在解压 uv...`);
+  if (fs.existsSync(extractTempDir)) {
+    fs.rmSync(extractTempDir, { recursive: true, force: true });
+  }
+
+  await decompress(rawArchivePath, extractTempDir);
+
+  // 3. 寻找 uv 和 uvx 可执行文件（Windows 平铺在根目录，Unix 顶层可能包含子目录）
+  let contentDir = extractTempDir;
+  const subEntries = fs.readdirSync(extractTempDir);
+  for (const entry of subEntries) {
+    const full = path.join(extractTempDir, entry);
+    if (fs.statSync(full).isDirectory()) {
+      if (
+        fs.existsSync(path.join(full, config.expectedFile)) ||
+        fs.existsSync(path.join(full, 'uv')) ||
+        fs.existsSync(path.join(full, 'uv.exe'))
+      ) {
+        contentDir = full;
+        break;
+      }
+    }
+  }
+
+  // 4. 平铺放置到目标目录
+  if (fs.existsSync(config.targetDir)) {
+    fs.rmSync(config.targetDir, { recursive: true, force: true });
+  }
+  fs.mkdirSync(config.targetDir, { recursive: true });
+  fs.cpSync(contentDir, config.targetDir, { recursive: true });
+
+  // 5. Unix 赋权
+  if (process.platform !== 'win32') {
+    for (const name of ['uv', 'uvx']) {
+      const p = path.join(config.targetDir, name);
+      if (fs.existsSync(p)) {
+        try {
+          fs.chmodSync(p, 0o755);
+        } catch {}
+      }
+    }
+  }
+
+  // 6. 清理临时文件
+  fs.rmSync(rawArchivePath, { force: true });
+  fs.rmSync(extractTempDir, { recursive: true, force: true });
+  console.log(
+    `[RuntimeDownload] 🎉 ${config.name} 准备完成: ${config.targetDir}`
+  );
+}
+
 export async function ensureRuntimes(
   force = false,
   targetPlatform,
@@ -634,6 +753,7 @@ export async function ensureRuntimes(
     await processNodeRuntime(runtimes.node, force);
     await processPythonRuntime(runtimes.python, force);
     await processAdbRuntime(runtimes.adb, force);
+    await processUvRuntime(runtimes.uv, force);
     console.log('[RuntimeDownload] ✨ 所有运行时环境准备完毕！');
   } finally {
     if (fs.existsSync(tempDir)) {
