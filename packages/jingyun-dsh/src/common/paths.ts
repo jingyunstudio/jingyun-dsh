@@ -74,6 +74,18 @@ export function getWeixinConfigDir(): string {
 export function getAssistantDataDir(): string {
   return path.join(getDshHome(), 'assistant');
 }
+/**
+ * 获取自动化任务与历史记录存储目录 ($DSH_HOME/automation)
+ */
+export function getAutomationDir(): string {
+  return path.join(getDshHome(), 'automation');
+}
+/**
+ * 获取自动化专属工作区目录 ($DSH_HOME/automation/workspace)
+ */
+export function getAutomationWorkspaceDir(): string {
+  return path.join(getAutomationDir(), 'workspace');
+}
 
 /**
  * 获取插件包根目录

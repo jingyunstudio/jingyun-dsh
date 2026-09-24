@@ -10,6 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 import type { Context } from '@deepseek-ai/cordis';
 
 import { initSystemPromptHook } from './agent/agent-loader';
+import { automationSchedulerService } from './automation';
 import {
   getDingtalkConfigDir,
   getDshHome,
@@ -59,6 +60,7 @@ export const inject = [
 ];
 export { Config };
 export * from './connectors';
+export * from './automation';
 
 function installSettingsSection(
   ctx: Context,
@@ -229,4 +231,7 @@ export function apply(ctx: Context, config: Config) {
       err
     );
   });
+
+  // 8. 启动自动化调度与执行引擎
+  automationSchedulerService.start(ctx);
 }

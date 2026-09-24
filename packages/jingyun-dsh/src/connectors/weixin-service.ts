@@ -12,7 +12,10 @@ declare module '@deepseek-ai/cordis' {
     ): void;
   }
 }
-import { assistantSessionManager } from '../agent/assistant-session-manager';
+import {
+  assistantSessionManager,
+  onSessionTurnEnd,
+} from '../agent/assistant-session-manager';
 import { getWeixinConfigDir } from '../common/paths';
 import type {
   WeixinBotConfig,
@@ -51,54 +54,26 @@ export class WeixinConnectorService {
     this.ctx = ctx;
 
     // 监听会话日志追加事件：当 DSH Agent 回复生成 (assistant/message) 时，回推给手机微信
-    ctx.on(
-      'session/event',
-      async (
-        session: { id: string },
-        event: { type: string; data?: unknown }
-      ) => {
-        try {
-          if (event.type === 'assistant/message') {
-            const pending = this.pendingReplies.get(session.id);
-            if (pending) {
-              this.pendingReplies.delete(session.id);
-              const content = (
-                event.data as {
-                  message?: {
-                    content?: Array<{ type: string; text?: string }>;
-                  };
-                }
-              )?.message?.content;
-
-              const textParts: string[] = [];
-              if (Array.isArray(content)) {
-                for (const part of content) {
-                  if (part.type === 'text' && typeof part.text === 'string') {
-                    textParts.push(part.text);
-                  }
-                }
-              }
-              const replyText = textParts.join('\n').trim();
-              if (replyText) {
-                await this.sendMessage({
-                  toUserId: pending.toUserId,
-                  contextToken: pending.contextToken,
-                  content: replyText,
-                });
-                console.log(
-                  `[WeixinConnector] Successfully forwarded DSH reply to WeChat user: ${pending.toUserId}`
-                );
-              }
-            }
-          }
-        } catch (err: unknown) {
-          console.warn(
-            '[WeixinConnector] Failed to forward assistant reply to WeChat:',
-            err
-          );
-        }
+    onSessionTurnEnd(ctx, async (sid, replyText) => {
+      try {
+        const pending = this.pendingReplies.get(sid);
+        if (!pending) return;
+        this.pendingReplies.delete(sid);
+        await this.sendMessage({
+          toUserId: pending.toUserId,
+          contextToken: pending.contextToken,
+          content: replyText,
+        });
+        console.log(
+          `[WeixinConnector] Successfully forwarded DSH reply to WeChat user: ${pending.toUserId}`
+        );
+      } catch (err: unknown) {
+        console.warn(
+          '[WeixinConnector] Failed to forward assistant reply to WeChat:',
+          err
+        );
       }
-    );
+    });
   }
 
   public async resolveAssistantSessionId(): Promise<string | undefined> {

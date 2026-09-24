@@ -5,7 +5,10 @@ import { promisify } from 'node:util';
 
 import type { Context } from '@deepseek-ai/cordis';
 
-import { assistantSessionManager } from '../agent/assistant-session-manager';
+import {
+  assistantSessionManager,
+  onSessionTurnEnd,
+} from '../agent/assistant-session-manager';
 import { cliManager } from './cli-manager';
 import type {
   WecomConfig,
@@ -37,80 +40,28 @@ export class WecomService {
   public setContext(ctx: Context): void {
     this.ctx = ctx;
 
-    ctx.on(
-      'session/event',
-      async (
-        session: { id: string },
-        event: { type: string; data?: unknown }
-      ) => {
-        try {
-          if (event.type === 'assistant/message') {
-            const pending = this.pendingReplies.get(session.id);
-            if (!pending) return;
+    onSessionTurnEnd(ctx, async (sid, text) => {
+      try {
+        const pending = this.pendingReplies.get(sid);
+        if (!pending) return;
+        this.pendingReplies.delete(sid);
+        console.info(
+          `[WecomService] Forwarding assistant reply to WeCom (chatId: ${pending.chatId}, reqId: ${pending.reqId || 'none'}, len: ${text.length})`
+        );
 
-            const text = this.extractReplyText(event.data);
-            if (!text) {
-              console.warn(
-                `[WecomService] assistant/message received but extracted empty text for session ${session.id}`
-              );
-              return;
-            }
-
-            this.pendingReplies.delete(session.id);
-
-            console.info(
-              `[WecomService] Forwarding assistant reply to WeCom (chatId: ${pending.chatId}, reqId: ${pending.reqId || 'none'}, len: ${text.length})`
-            );
-
-            await wecomClient.sendReply({
-              reqId: pending.reqId,
-              chatId: pending.chatId,
-              chatType: pending.chattype,
-              content: text,
-            });
-          }
-        } catch (err: unknown) {
-          console.error(
-            '[WecomService] Failed to deliver assistant reply to WeCom:',
-            err
-          );
-        }
+        await wecomClient.sendReply({
+          reqId: pending.reqId,
+          chatId: pending.chatId,
+          chatType: pending.chattype,
+          content: text,
+        });
+      } catch (err: unknown) {
+        console.error(
+          '[WecomService] Failed to deliver assistant reply to WeCom:',
+          err
+        );
       }
-    );
-  }
-
-  private extractReplyText(data: unknown): string {
-    if (!data) return '';
-    if (typeof data === 'string') return data.trim();
-
-    const dataObj = data as Record<string, unknown>;
-    const msgObj = dataObj.message as Record<string, unknown> | undefined;
-    const content = msgObj?.content || dataObj.content;
-
-    if (Array.isArray(content)) {
-      const textParts: string[] = [];
-      for (const part of content) {
-        if (typeof part === 'string') {
-          textParts.push(part);
-        } else if (part && typeof part === 'object') {
-          const item = part as { type?: string; text?: string };
-          if (item.type === 'text' && typeof item.text === 'string') {
-            textParts.push(item.text);
-          }
-        }
-      }
-      const combined = textParts.join('\n').trim();
-      if (combined) return combined;
-    }
-
-    if (typeof msgObj?.text === 'string' && msgObj.text.trim()) {
-      return msgObj.text.trim();
-    }
-    if (typeof dataObj.text === 'string' && dataObj.text.trim()) {
-      return dataObj.text.trim();
-    }
-
-    return '';
+    });
   }
 
   public async init(): Promise<void> {

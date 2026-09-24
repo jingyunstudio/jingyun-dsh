@@ -233,6 +233,11 @@ ${connectorsPrompt}
             }
           } catch {}
 
+          agentsPrompt += `\n\n<automation_engine>
+### 【内置自动化任务调度引擎】
+- 当用户要求“创建/修改/管理自动化任务（定时任务）”时，请直接读取并更新 JSON 文件：\`${path.join(baseHome, 'automation', 'tasks.json')}\`（切勿使用系统 schtasks 或 crontab）。
+- 任务对象结构：\`{ "id": "task_时间戳", "name": "任务名", "workspace": "自动化工作区 (默认)", "prompt": "执行内容", "connectors": ["lark"|"wecom"|"weixin"|"dingtalk"], "frequencyType": "cycle"|"interval"|"once", "frequencyDetail": "每天 08:30", "frequencyConfig": { "cycleType": "everyday"|"everyweek"|"everymonth", "cycleDay": 1, "cycleTime": "08:30", "intervalValue": 2, "intervalUnit": "hour" }, "enabled": true, "createdAt": 1790000000000, "updatedAt": 1790000000000 }\`。
+</automation_engine>\n`;
           return agentsPrompt;
         },
       });

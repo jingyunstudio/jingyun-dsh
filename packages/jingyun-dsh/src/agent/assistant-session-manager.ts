@@ -169,3 +169,62 @@ export class AssistantSessionManager {
 }
 
 export const assistantSessionManager = new AssistantSessionManager();
+
+export function extractAssistantReplyText(data: unknown): string {
+  if (!data || typeof data !== 'object') return '';
+
+  const dataObj = data as {
+    message?: {
+      stopReason?: string;
+      content?: Array<{ type?: string; text?: string }>;
+    };
+  };
+
+  const message = dataObj.message;
+  if (!message) return '';
+
+  if (message.stopReason === 'toolUse' || message.stopReason === 'tool_calls') {
+    return '';
+  }
+
+  const content = message.content;
+  if (!Array.isArray(content)) return '';
+
+  const hasToolCall = content.some(
+    (p) => p?.type === 'toolCall' || p?.type === 'tool_use'
+  );
+  if (hasToolCall) return '';
+
+  const textParts: string[] = [];
+  for (const part of content) {
+    if (
+      part?.type === 'text' &&
+      typeof part.text === 'string' &&
+      part.text.trim()
+    ) {
+      textParts.push(part.text);
+    }
+  }
+  return textParts.join('\n').trim();
+}
+
+export function onSessionTurnEnd(
+  ctx: Context,
+  onComplete: (sessionId: string, finalText: string) => void | Promise<void>
+): () => void {
+  const latestTexts = new Map<string, string>();
+  return ctx.on(
+    'session/event',
+    (session: { id: string }, event: { type: string; data?: unknown }) => {
+      const sid = session.id;
+      if (event.type === 'assistant/message') {
+        const text = extractAssistantReplyText(event.data);
+        if (text) latestTexts.set(sid, text);
+      } else if (event.type === 'turn/end') {
+        const finalText = latestTexts.get(sid);
+        latestTexts.delete(sid);
+        if (finalText) void onComplete(sid, finalText);
+      }
+    }
+  );
+}

@@ -5,6 +5,7 @@ import { registerAgentRoutes } from './agent';
 import { registerArtifactRoutes } from './artifact';
 import { registerAssetsRoutes } from './assets';
 import { registerAssistantRoutes } from './assistant';
+import { registerAutomationRoutes } from './automation';
 import { registerBrandingRoutes } from './branding';
 import { registerConnectorsRoutes } from './connectors';
 import { registerPluginsRoutes } from './plugins';
@@ -22,4 +23,5 @@ export function registerRoutes(ctx: Context, config: Config) {
   registerArtifactRoutes(ctx);
   registerSystemRoutes(ctx);
   registerAssistantRoutes(ctx);
+  registerAutomationRoutes(ctx);
 }

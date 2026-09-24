@@ -2,7 +2,10 @@ import crypto from 'node:crypto';
 
 import type { Context } from '@deepseek-ai/cordis';
 
-import { assistantSessionManager } from '../agent/assistant-session-manager';
+import {
+  assistantSessionManager,
+  onSessionTurnEnd,
+} from '../agent/assistant-session-manager';
 import { dingtalkTunnelClient } from './dingtalk-tunnel-client';
 import {
   sendDingtalkMarkdown,
@@ -31,75 +34,22 @@ export class DingtalkTunnelService {
   public setContext(ctx: Context): void {
     this.ctx = ctx;
 
-    ctx.on(
-      'session/event',
-      async (
-        session: { id: string },
-        event: { type: string; data?: unknown }
-      ) => {
-        try {
-          if (event.type === 'assistant/message') {
-            const queue = this.pendingReplies.get(session.id);
-            if (!queue || queue.length === 0) return;
-
-            // 先行出队，防止空消息或异常导致队列卡死阻塞后续请求
-            const pending = queue.shift()!;
-            if (queue.length === 0) {
-              this.pendingReplies.delete(session.id);
-            }
-
-            const text = this.extractReplyText(event.data);
-            if (!text) {
-              console.warn(
-                `[DingtalkTunnelService] assistant/message received but extracted empty text for session ${session.id}`
-              );
-              return;
-            }
-
-            await this.deliverReply(pending, text);
-          }
-        } catch (err: unknown) {
-          console.error(
-            '[DingtalkTunnelService] Failed to deliver assistant reply to DingTalk:',
-            err
-          );
+    onSessionTurnEnd(ctx, async (sid, text) => {
+      try {
+        const queue = this.pendingReplies.get(sid);
+        if (!queue || queue.length === 0) return;
+        const pending = queue.shift()!;
+        if (queue.length === 0) {
+          this.pendingReplies.delete(sid);
         }
+        await this.deliverReply(pending, text);
+      } catch (err: unknown) {
+        console.error(
+          '[DingtalkTunnelService] Failed to deliver assistant reply to DingTalk:',
+          err
+        );
       }
-    );
-  }
-
-  private extractReplyText(data: unknown): string {
-    if (!data) return '';
-    if (typeof data === 'string') return data.trim();
-
-    const dataObj = data as Record<string, unknown>;
-    const msgObj = dataObj.message as Record<string, unknown> | undefined;
-    const content = msgObj ? msgObj.content : dataObj.content;
-
-    if (Array.isArray(content)) {
-      const textParts: string[] = [];
-      for (const part of content) {
-        if (typeof part === 'string') {
-          textParts.push(part);
-        } else if (part && typeof part === 'object') {
-          const item = part as { type?: string; text?: string };
-          if (item.type === 'text' && typeof item.text === 'string') {
-            textParts.push(item.text);
-          }
-        }
-      }
-      const combined = textParts.join('\n').trim();
-      if (combined) return combined;
-    }
-
-    if (msgObj && typeof msgObj.text === 'string') {
-      return msgObj.text.trim();
-    }
-    if (typeof dataObj.text === 'string') {
-      return dataObj.text.trim();
-    }
-
-    return '';
+    });
   }
 
   private async deliverReply(

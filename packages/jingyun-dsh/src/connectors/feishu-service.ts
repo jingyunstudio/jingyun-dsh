@@ -2,7 +2,10 @@ import crypto from 'node:crypto';
 
 import type { Context } from '@deepseek-ai/cordis';
 
-import { assistantSessionManager } from '../agent/assistant-session-manager';
+import {
+  assistantSessionManager,
+  onSessionTurnEnd,
+} from '../agent/assistant-session-manager';
 import { feishuClient } from './feishu-client';
 import {
   addTypingReaction,
@@ -38,108 +41,56 @@ export class FeishuService {
   public setContext(ctx: Context): void {
     this.ctx = ctx;
 
-    ctx.on(
-      'session/event',
-      async (
-        session: { id: string },
-        event: { type: string; data?: unknown }
-      ) => {
-        try {
-          if (event.type === 'assistant/message') {
-            const pending = this.pendingReplies.get(session.id);
-            if (!pending) return;
-
-            const text = this.extractReplyText(event.data);
-            if (!text) {
-              console.warn(
-                `[FeishuService] assistant/message received but extracted empty text for session ${session.id}`
-              );
-              return;
-            }
-
-            this.pendingReplies.delete(session.id);
-
-            const config = feishuClient.getConfig();
-            if (!config) {
-              console.warn(
-                '[FeishuService] Feishu config missing when delivering reply'
-              );
-              return;
-            }
-
-            const token = await getTenantAccessToken(config);
-            const baseUrl = getBaseUrl(config.domain, config.customHost);
-
-            // 清理 Typing reaction
-            if (pending.reactionId) {
-              removeTypingReaction(
-                baseUrl,
-                token,
-                pending.messageId,
-                pending.reactionId
-              ).catch((reactionErr) => {
-                console.warn(
-                  '[FeishuService] Failed to clean up typing reaction:',
-                  reactionErr
-                );
-              });
-            }
-
-            console.info(
-              `[FeishuService] Forwarding assistant reply to Feishu (chatId: ${pending.chatId}, msgId: ${pending.messageId}, len: ${text.length})`
-            );
-
-            // 标准下发 Markdown 交互卡片
-            await sendMarkdownCard(
-              baseUrl,
-              token,
-              pending.chatId,
-              text,
-              pending.messageId
-            );
-          }
-        } catch (err: unknown) {
-          console.error(
-            '[FeishuService] Failed to deliver assistant reply to Feishu:',
-            err
+    onSessionTurnEnd(ctx, async (sid, text) => {
+      try {
+        const pending = this.pendingReplies.get(sid);
+        if (!pending) return;
+        this.pendingReplies.delete(sid);
+        const config = feishuClient.getConfig();
+        if (!config) {
+          console.warn(
+            '[FeishuService] Feishu config missing when delivering reply'
           );
+          return;
         }
-      }
-    );
-  }
 
-  private extractReplyText(data: unknown): string {
-    if (!data) return '';
-    if (typeof data === 'string') return data.trim();
+        const token = await getTenantAccessToken(config);
+        const baseUrl = getBaseUrl(config.domain, config.customHost);
 
-    const dataObj = data as Record<string, unknown>;
-    const msgObj = dataObj.message as Record<string, unknown> | undefined;
-    const content = msgObj?.content || dataObj.content;
-
-    if (Array.isArray(content)) {
-      const textParts: string[] = [];
-      for (const part of content) {
-        if (typeof part === 'string') {
-          textParts.push(part);
-        } else if (part && typeof part === 'object') {
-          const item = part as { type?: string; text?: string };
-          if (item.type === 'text' && typeof item.text === 'string') {
-            textParts.push(item.text);
-          }
+        // 清理 Typing reaction
+        if (pending.reactionId) {
+          removeTypingReaction(
+            baseUrl,
+            token,
+            pending.messageId,
+            pending.reactionId
+          ).catch((reactionErr) => {
+            console.warn(
+              '[FeishuService] Failed to clean up typing reaction:',
+              reactionErr
+            );
+          });
         }
+
+        console.info(
+          `[FeishuService] Forwarding assistant reply to Feishu (chatId: ${pending.chatId}, msgId: ${pending.messageId}, len: ${text.length})`
+        );
+
+        // 标准下发 Markdown 交互卡片
+        await sendMarkdownCard(
+          baseUrl,
+          token,
+          pending.chatId,
+          text,
+          pending.messageId
+        );
+      } catch (err: unknown) {
+        console.error(
+          '[FeishuService] Failed to deliver assistant reply to Feishu:',
+          err
+        );
       }
-      const combined = textParts.join('\n').trim();
-      if (combined) return combined;
-    }
-
-    if (typeof msgObj?.text === 'string' && msgObj.text.trim()) {
-      return msgObj.text.trim();
-    }
-    if (typeof dataObj.text === 'string' && dataObj.text.trim()) {
-      return dataObj.text.trim();
-    }
-
-    return '';
+    });
   }
 
   public async init(): Promise<void> {

@@ -315,8 +315,8 @@ export class WecomClient {
   ): Promise<boolean> {
     if (!this.ws || this.status !== 'connected') return false;
     const chatTypeNum = chatType === 'group' ? 2 : 1;
-    const MAX_CHUNK = 2000;
-    if (content.length <= MAX_CHUNK) {
+    const MAX_BYTES = 3900;
+    if (Buffer.byteLength(content, 'utf8') <= MAX_BYTES) {
       return this.sendFrame({
         cmd: 'aibot_send_msg',
         headers: { req_id: generateReqId('send') },
@@ -328,9 +328,25 @@ export class WecomClient {
         },
       });
     }
+
+    const chunks: string[] = [];
+    let current = '';
+    for (const line of content.split('\n')) {
+      const candidate = current ? `${current}\n${line}` : line;
+      if (Buffer.byteLength(candidate, 'utf8') > MAX_BYTES && current) {
+        chunks.push(current);
+        current = line;
+      } else {
+        current = candidate;
+      }
+    }
+    if (current) chunks.push(current);
+
     let ok = true;
-    for (let i = 0; i < content.length; i += MAX_CHUNK) {
-      const chunk = content.slice(i, i + MAX_CHUNK);
+    for (let i = 0; i < chunks.length; i++) {
+      if (i > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
       const sent = this.sendFrame({
         cmd: 'aibot_send_msg',
         headers: { req_id: generateReqId('send') },
@@ -338,7 +354,7 @@ export class WecomClient {
           chatid: chatId,
           chat_type: chatTypeNum,
           msgtype: 'markdown',
-          markdown: { content: chunk },
+          markdown: { content: chunks[i] },
         },
       });
       if (!sent) ok = false;

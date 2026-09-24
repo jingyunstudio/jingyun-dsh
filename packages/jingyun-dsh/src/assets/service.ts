@@ -74,9 +74,14 @@ export async function getInstalledAssets(sessionId?: string): Promise<any> {
                 skillName = matched;
               }
             }
-            const descMatch = content.match(/description:\s*([^\r\n]+)/);
+            const descMatch = content.match(
+              /description:\s*(?:[|>][-+]?\s*[\r\n]+\s+)?([^\r\n]+)/
+            );
             if (descMatch && descMatch[1] && !desc) {
-              desc = descMatch[1].replace(/^['"]|['"]$/g, '').trim();
+              const matched = descMatch[1].replace(/^['"]|['"]$/g, '').trim();
+              if (matched && !/^[|>][-+]?$/.test(matched)) {
+                desc = matched;
+              }
             }
             const sourceMatch = content.match(/source:\s*([^\r\n]+)/);
             if (sourceMatch && sourceMatch[1]) {
@@ -93,25 +98,32 @@ export async function getInstalledAssets(sessionId?: string): Promise<any> {
             ) {
               source = 'custom';
             }
-          } catch {}
+          } catch (err) {
+            console.error(
+              `[AssetsService] 读取技能文档异常 (${skillMd}):`,
+              err
+            );
+          }
         }
 
-        if (name === 'skill-creator' || name === 'agent-manager') {
+        const builtinTitleMap: Record<string, string> = {
+          'skill-creator': 'AI 技能生成器',
+          'agent-manager': '智能体包管理器',
+          'desktop-control': '桌面与浏览器控制',
+          'dingtalk-connector': '钉钉协同连接器',
+          'feishu-connector': '飞书协同连接器',
+          'wecom-connector': '企微机器人连接器',
+          'ima-skill': '腾讯 ima 知识库',
+        };
+        if (builtinTitleMap[name]) {
           source = 'builtin';
           author = 'system';
-          if (name === 'skill-creator') skillName = 'AI技能生成器';
-          if (name === 'agent-manager') skillName = '智能体包管理器';
+          if (!skillName || skillName === name) {
+            skillName = builtinTitleMap[name];
+          }
         }
-
         if (!desc) {
-          if (name === 'skill-creator')
-            desc = 'AI技能生成器：根据需求自动编写新技能';
-          else if (name === 'agent-manager')
-            desc = '智能体包管理器：自动创建/转化/审查AI智能体与工作流';
-          else if (name === 'fec-image-generation')
-            desc = '图片生成与创意作图工具';
-          else if (name === 'word-docx-1') desc = 'Word 文档读写与样式排版工具';
-          else desc = '本地已启用的扩展技能';
+          desc = '';
         }
 
         skillsDetail.push({
