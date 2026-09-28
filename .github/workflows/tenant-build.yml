@@ -169,8 +169,8 @@ jobs:
         run: |
           # 1. 若提供 Logo，支持多种格式（SVG, PNG, JPG, WEBP, ICO 等）并自动生成全套客户端图标
           if [ -n "${{ env.LOGO_URL }}" ]; then
-            python3 -m pip install pillow --quiet || python -m pip install pillow --quiet || pip install pillow --quiet || true
-            python3 scripts/process_icon.py "${{ env.LOGO_URL }}" || python scripts/process_icon.py "${{ env.LOGO_URL }}"
+            PIP_BREAK_SYSTEM_PACKAGES=1 python3 -m pip install pillow --quiet
+            python3 scripts/process_icon.py "${{ env.LOGO_URL }}"
           fi
 
           # 2. 写入 desktop-config.json

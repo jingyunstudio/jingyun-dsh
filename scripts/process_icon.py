@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.parse
 import urllib.request
 
 def ensure_pillow():
@@ -20,8 +21,8 @@ def ensure_pillow():
         from PIL import Image  # noqa: F401
     except ImportError:
         print("[Icon] Pillow not found. Attempting to install pillow...")
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pillow", "--quiet"])
-
+        env = {**os.environ, "PIP_BREAK_SYSTEM_PACKAGES": "1"}
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pillow", "--quiet"], env=env)
 
 def is_svg_file(file_path: str) -> bool:
     """Detect if file is an SVG by checking its content."""
@@ -153,8 +154,16 @@ def process_icon(source: str, output_dir: str = None, cwd: str = None) -> bool:
         # Step 1: Obtain source file (download if URL, otherwise copy)
         if source.startswith("http://") or source.startswith("https://"):
             print(f"[Icon] Downloading logo from URL: {source}")
+            parts = urllib.parse.urlsplit(source)
+            safe_url = urllib.parse.urlunsplit((
+                parts.scheme,
+                parts.netloc.encode("idna").decode("ascii"),
+                urllib.parse.quote(parts.path, safe="/:@!$&'()*+,;=-._~%"),
+                urllib.parse.quote(parts.query, safe="=/:@!$&'()*+,;?-._~%"),
+                urllib.parse.quote(parts.fragment, safe="/:@!$&'()*+,;=?-._~%"),
+            ))
             req = urllib.request.Request(
-                source,
+                safe_url,
                 headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
             )
             with urllib.request.urlopen(req, timeout=30) as resp, open(downloaded_file, "wb") as out_file:
