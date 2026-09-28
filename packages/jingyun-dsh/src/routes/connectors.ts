@@ -1,8 +1,11 @@
-import type { IncomingMessage, ServerResponse } from 'http';
-
 import type { Context } from '@deepseek-ai/cordis';
 
-import { parseJsonBody, sendError, sendJson } from '../common/http';
+import {
+  defineRoute,
+  HttpError,
+  parseJsonBody,
+  sendJson,
+} from '../common/http';
 import {
   cliManager,
   dingtalkConnector,
@@ -15,1101 +18,447 @@ import {
   weixinConnector,
 } from '../connectors';
 
+function parseFeishuConfigBody(body: Record<string, unknown> | null) {
+  const appId = typeof body?.appId === 'string' ? body.appId.trim() : '';
+  const appSecret =
+    typeof body?.appSecret === 'string' ? body.appSecret.trim() : '';
+  if (!appId || !appSecret) return null;
+  return {
+    appId,
+    appSecret,
+    encryptKey:
+      typeof body?.encryptKey === 'string' ? body.encryptKey.trim() : undefined,
+    verificationToken:
+      typeof body?.verificationToken === 'string'
+        ? body.verificationToken.trim()
+        : undefined,
+    domain: (body?.domain === 'lark' ? 'lark' : 'feishu') as 'lark' | 'feishu',
+    customHost:
+      typeof body?.customHost === 'string' ? body.customHost.trim() : undefined,
+    requireMention: body?.requireMention !== false,
+  };
+}
+
 export function registerConnectorsRoutes(ctx: Context) {
-  // 0.1 获取所有 CLI 工具状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/cli/status',
-    handler: async (_req, res) => {
-      try {
-        const result = await cliManager.getAllStatus();
-        sendJson(res, { success: true, data: result });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
+  // ================= CLI 工具管理 =================
+  defineRoute(ctx, '/api/jingyun/connectors/cli/status', () =>
+    cliManager.getAllStatus()
+  );
 
-  // 0.2 一键安装 CLI 工具
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/cli/install',
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = await parseJsonBody<{
-          name?: 'wecom' | 'lark' | 'dingtalk';
-        }>(req);
-        if (
-          !body?.name ||
-          (body.name !== 'wecom' &&
-            body.name !== 'lark' &&
-            body.name !== 'dingtalk')
-        ) {
-          return sendError(res, 'name 参数必须为 wecom, lark 或 dingtalk', 400);
-        }
-        const result = await cliManager.installCli(body.name);
-        sendJson(res, result);
-      } catch (err: any) {
-        sendError(res, err.message, 500);
+  defineRoute(
+    ctx,
+    '/api/jingyun/connectors/cli/install',
+    async (req) => {
+      const body = await parseJsonBody<{
+        name?: 'wecom' | 'lark' | 'dingtalk';
+      }>(req);
+      if (
+        !body?.name ||
+        (body.name !== 'wecom' &&
+          body.name !== 'lark' &&
+          body.name !== 'dingtalk')
+      ) {
+        throw new HttpError('name 参数必须为 wecom, lark 或 dingtalk', 400);
       }
+      return cliManager.installCli(body.name);
     },
-  });
-  // 1. 飞书认证状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/lark/status',
-    handler: async (_req, res) => {
-      try {
-        const result = await larkConnector.getStatus();
-        sendJson(res, { success: true, data: result });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
+    { rawResult: true }
+  );
 
-  // 2. 飞书发起认证
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/lark/auth-start',
-    handler: async (_req, res) => {
-      try {
-        const result = await larkConnector.startAuth();
-        sendJson(res, { success: true, data: result });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
+  // ================= 飞书 CLI 连接器 (Lark CLI) =================
+  const larkPrefix = '/api/jingyun/connectors/lark';
+  defineRoute(ctx, `${larkPrefix}/status`, () => larkConnector.getStatus());
+  defineRoute(ctx, `${larkPrefix}/auth-start`, () => larkConnector.startAuth());
+  defineRoute(ctx, `${larkPrefix}/auth-logout`, () => larkConnector.logout());
+  defineRoute(
+    ctx,
+    `${larkPrefix}/auth-poll`,
+    async (req) => {
+      const { device_code: deviceCode } = await parseJsonBody<{
+        device_code?: string;
+      }>(req);
+      if (!deviceCode) {
+        throw new HttpError('缺少 device_code 参数', 400);
       }
+      return larkConnector.pollAuth(deviceCode);
     },
-  });
+    { rawResult: true, errorStatus: 400 }
+  );
 
-  // 3. 飞书退出登录
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/lark/auth-logout',
-    handler: async (_req, res) => {
-      try {
-        const result = await larkConnector.logout();
-        sendJson(res, { success: true, data: result });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // 4. 轮询飞书认证结果
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/lark/auth-poll',
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const { device_code: deviceCode } = await parseJsonBody<{
-          device_code?: string;
-        }>(req);
-        if (!deviceCode) {
-          return sendError(res, '缺少 device_code 参数', 400);
-        }
-        const result = await larkConnector.pollAuth(deviceCode);
-        sendJson(res, result);
-      } catch (err: any) {
-        sendError(res, err.message, 400);
-      }
-    },
-  });
-
-  // 企微路由（单一标准路径 /api/jingyun/connectors/wecom/*）
+  // ================= 企微连接器 (WeCom) =================
   const wecomPrefix = '/api/jingyun/connectors/wecom';
-
-  // 扫码授权发起
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/qr-start`,
-    handler: async (_req, res) => {
-      try {
-        const data = await wecomService.getQrCode();
-        sendJson(res, { success: true, data });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'QR start failed',
-          500
-        );
+  defineRoute(ctx, `${wecomPrefix}/qr-start`, () => wecomService.getQrCode());
+  defineRoute(
+    ctx,
+    `${wecomPrefix}/qr-poll`,
+    async (req, res) => {
+      const parsedUrl = new URL(req.url || '', 'http://127.0.0.1');
+      const scode = parsedUrl.searchParams.get('scode') || '';
+      if (!scode) {
+        throw new HttpError('缺少 scode 参数', 400);
       }
-    },
-  });
-
-  // 扫码授权结果轮询
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/qr-poll`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
       try {
-        const parsedUrl = new URL(req.url || '', 'http://127.0.0.1');
-        const scode = parsedUrl.searchParams.get('scode') || '';
-        if (!scode) {
-          sendError(res, '缺少 scode 参数', 400);
-          return;
-        }
-        const result = await wecomService.queryQrResult(scode);
-        sendJson(res, result);
+        return await wecomService.queryQrResult(scode);
       } catch (err: unknown) {
         sendJson(res, {
           success: false,
           status: 'error',
           error: err instanceof Error ? err.message : String(err),
         });
+        return undefined;
       }
     },
-  });
+    { rawResult: true }
+  );
 
-  // 企微连接器状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/status`,
-    handler: async (_req, res) => {
-      try {
-        const state = wecomService.getStatus();
-        sendJson(res, { success: true, data: state });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Get status failed',
-          500
-        );
-      }
-    },
+  defineRoute(ctx, `${wecomPrefix}/status`, () => wecomService.getStatus());
+  defineRoute(ctx, `${wecomPrefix}/config`, async (req) => {
+    const body = (await parseJsonBody(req)) as Record<string, unknown>;
+    await wecomService.saveConfig(body as any);
+    return { message: 'Configuration saved' };
   });
-
-  // 保存配置
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/config`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = (await parseJsonBody(req)) as Record<string, unknown>;
-        await wecomService.saveConfig(body as any);
-        sendJson(res, {
-          success: true,
-          data: { message: 'Configuration saved' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Save config failed',
-          500
-        );
-      }
-    },
+  defineRoute(ctx, `${wecomPrefix}/clear`, async () => {
+    await wecomService.clearConfig();
+    return { message: 'Configuration cleared' };
   });
-
-  // 清除配置（解绑）
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/clear`,
-    handler: async (_req, res) => {
-      try {
-        await wecomService.clearConfig();
-        sendJson(res, {
-          success: true,
-          data: { message: 'Configuration cleared' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Clear failed',
-          500
-        );
-      }
-    },
+  defineRoute(ctx, `${wecomPrefix}/connect`, async (req) => {
+    const body = (await parseJsonBody(req).catch(() => ({}))) as Record<
+      string,
+      unknown
+    >;
+    const botId = typeof body?.botId === 'string' ? body.botId : undefined;
+    const botSecret =
+      typeof body?.botSecret === 'string' ? body.botSecret : undefined;
+    await wecomService.connect(
+      botId && botSecret ? { botId, botSecret } : undefined
+    );
+    return { message: 'Connection initiated' };
   });
-
-  // 手动连接 / 重连
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/connect`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = (await parseJsonBody(req).catch(() => ({}))) as Record<
-          string,
-          unknown
-        >;
-        const botId = typeof body?.botId === 'string' ? body.botId : undefined;
-        const botSecret =
-          typeof body?.botSecret === 'string' ? body.botSecret : undefined;
-        if (botId && botSecret) {
-          await wecomService.connect({ botId, botSecret });
-        } else {
-          await wecomService.connect();
-        }
-        sendJson(res, {
-          success: true,
-          data: { message: 'Connection initiated' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Connect failed',
-          500
-        );
-      }
-    },
+  defineRoute(ctx, `${wecomPrefix}/send`, async (req) => {
+    const body = (await parseJsonBody(req)) as Record<string, unknown>;
+    const content = typeof body?.content === 'string' ? body.content : '';
+    if (!content.trim()) {
+      throw new HttpError('Message content is required', 400);
+    }
+    const chatId =
+      typeof body?.chatId === 'string' && body.chatId.trim()
+        ? body.chatId.trim()
+        : undefined;
+    const chatType = body?.chatType === 'group' ? 'group' : 'single';
+    return wecomService.sendMessage({ chatId, chatType, content });
   });
-
-  // 发送消息
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/send`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = (await parseJsonBody(req)) as Record<string, unknown>;
-        const content = typeof body?.content === 'string' ? body.content : '';
-        if (!content || !content.trim()) {
-          sendError(res, 'Message content is required', 400);
-          return;
-        }
-        const chatId =
-          typeof body?.chatId === 'string' && body.chatId.trim()
-            ? body.chatId.trim()
-            : undefined;
-        const chatType = body?.chatType === 'group' ? 'group' : 'single';
-        const result = await wecomService.sendMessage({
-          chatId,
-          chatType,
-          content,
-        });
-        sendJson(res, { success: true, data: result });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Failed to send message',
-          500
-        );
-      }
-    },
-  });
-
-  // 通用 CLI 指令代理执行（带 853004 Token 自愈）
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${wecomPrefix}/cli`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = (await parseJsonBody(req)) as Record<string, unknown>;
-        const args = Array.isArray(body?.args)
-          ? (body.args as unknown[]).map(String)
-          : [];
-        if (args.length === 0) {
-          sendError(res, 'args array is required', 400);
-          return;
-        }
-        const output = await wecomService.executeCli(args);
-        sendJson(res, { success: true, data: output });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'CLI execution failed',
-          500
-        );
-      }
-    },
+  defineRoute(ctx, `${wecomPrefix}/cli`, async (req) => {
+    const body = (await parseJsonBody(req)) as Record<string, unknown>;
+    const args = Array.isArray(body?.args)
+      ? (body.args as unknown[]).map(String)
+      : [];
+    if (args.length === 0) {
+      throw new HttpError('args array is required', 400);
+    }
+    return wecomService.executeCli(args);
   });
 
   // ================= 飞书远程通道 (Feishu Remote Channel) =================
   const feishuPrefix = '/api/jingyun/connectors/feishu';
-
-  // 1. 获取飞书通道状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${feishuPrefix}/status`,
-    handler: async (_req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const state = feishuService.getStatus();
-        sendJson(res, { success: true, data: state });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Get feishu status failed',
-          500
-        );
-      }
-    },
+  defineRoute(ctx, `${feishuPrefix}/status`, () => feishuService.getStatus());
+  defineRoute(ctx, `${feishuPrefix}/config`, async (req) => {
+    const body = (await parseJsonBody(req)) as Record<string, unknown>;
+    const cfg = parseFeishuConfigBody(body);
+    if (!cfg) {
+      throw new HttpError('appId and appSecret are required', 400);
+    }
+    await feishuService.saveConfig(cfg);
+    return { message: 'Feishu configuration saved' };
+  });
+  defineRoute(ctx, `${feishuPrefix}/clear`, async () => {
+    await feishuService.clearConfig();
+    return { message: 'Feishu configuration cleared' };
+  });
+  defineRoute(ctx, `${feishuPrefix}/connect`, async (req) => {
+    const body = (await parseJsonBody(req).catch(() => null)) as Record<
+      string,
+      unknown
+    > | null;
+    const cfg = parseFeishuConfigBody(body);
+    await feishuService.connect(cfg ?? undefined);
+    return { message: 'Feishu connection established' };
+  });
+  defineRoute(ctx, `${feishuPrefix}/disconnect`, () => {
+    feishuService.disconnect();
+    return { message: 'Feishu connection disconnected' };
+  });
+  defineRoute(ctx, `${feishuPrefix}/send`, async (req) => {
+    const body = (await parseJsonBody(req)) as Record<string, unknown>;
+    const content = typeof body?.content === 'string' ? body.content : '';
+    if (!content.trim()) {
+      throw new HttpError('content is required', 400);
+    }
+    const chatId =
+      typeof body?.chatId === 'string' && body.chatId.trim()
+        ? body.chatId.trim()
+        : undefined;
+    return feishuService.sendMessage({
+      chatId,
+      content,
+      replyToMessageId:
+        typeof body?.replyToMessageId === 'string'
+          ? body.replyToMessageId.trim()
+          : undefined,
+    });
   });
 
-  // 2. 保存飞书配置
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${feishuPrefix}/config`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = (await parseJsonBody(req)) as Record<string, unknown>;
-        const appId = typeof body?.appId === 'string' ? body.appId.trim() : '';
-        const appSecret =
-          typeof body?.appSecret === 'string' ? body.appSecret.trim() : '';
-        if (!appId || !appSecret) {
-          sendError(res, 'appId and appSecret are required', 400);
-          return;
-        }
-        await feishuService.saveConfig({
-          appId,
-          appSecret,
-          encryptKey:
-            typeof body?.encryptKey === 'string'
-              ? body.encryptKey.trim()
-              : undefined,
-          verificationToken:
-            typeof body?.verificationToken === 'string'
-              ? body.verificationToken.trim()
-              : undefined,
-          domain: body?.domain === 'lark' ? 'lark' : 'feishu',
-          customHost:
-            typeof body?.customHost === 'string'
-              ? body.customHost.trim()
-              : undefined,
-          requireMention: body?.requireMention !== false,
-        });
-        sendJson(res, {
-          success: true,
-          data: { message: 'Feishu configuration saved' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Save feishu config failed',
-          500
-        );
-      }
-    },
-  });
-
-  // 3. 清除配置与解绑
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${feishuPrefix}/clear`,
-    handler: async (_req: IncomingMessage, res: ServerResponse) => {
-      try {
-        await feishuService.clearConfig();
-        sendJson(res, {
-          success: true,
-          data: { message: 'Feishu configuration cleared' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Clear feishu config failed',
-          500
-        );
-      }
-    },
-  });
-
-  // 4. 启动长连接 / 重连
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${feishuPrefix}/connect`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        let body: Record<string, unknown> | null = null;
-        try {
-          body = (await parseJsonBody(req)) as Record<string, unknown>;
-        } catch {
-          body = null;
-        }
-        const appId =
-          typeof body?.appId === 'string' ? body.appId.trim() : undefined;
-        const appSecret =
-          typeof body?.appSecret === 'string'
-            ? body.appSecret.trim()
-            : undefined;
-
-        if (appId && appSecret) {
-          await feishuService.connect({
-            appId,
-            appSecret,
-            encryptKey:
-              typeof body?.encryptKey === 'string'
-                ? body.encryptKey.trim()
-                : undefined,
-            verificationToken:
-              typeof body?.verificationToken === 'string'
-                ? body.verificationToken.trim()
-                : undefined,
-            domain: body?.domain === 'lark' ? 'lark' : 'feishu',
-            customHost:
-              typeof body?.customHost === 'string'
-                ? body.customHost.trim()
-                : undefined,
-            requireMention: body?.requireMention !== false,
-          });
-        } else {
-          await feishuService.connect();
-        }
-
-        sendJson(res, {
-          success: true,
-          data: { message: 'Feishu connection established' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Connect to Feishu failed',
-          500
-        );
-      }
-    },
-  });
-
-  // 5. 断开连接
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${feishuPrefix}/disconnect`,
-    handler: async (_req: IncomingMessage, res: ServerResponse) => {
-      try {
-        feishuService.disconnect();
-        sendJson(res, {
-          success: true,
-          data: { message: 'Feishu connection disconnected' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Disconnect Feishu failed',
-          500
-        );
-      }
-    },
-  });
-
-  // 6. 发送主动消息 / 测试消息
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${feishuPrefix}/send`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = (await parseJsonBody(req)) as Record<string, unknown>;
-        const content = typeof body?.content === 'string' ? body.content : '';
-        if (!content || !content.trim()) {
-          sendError(res, 'content is required', 400);
-          return;
-        }
-        const chatId =
-          typeof body?.chatId === 'string' && body.chatId.trim()
-            ? body.chatId.trim()
-            : undefined;
-        const result = await feishuService.sendMessage({
-          chatId,
-          content,
-          replyToMessageId:
-            typeof body?.replyToMessageId === 'string'
-              ? body.replyToMessageId.trim()
-              : undefined,
-        });
-        sendJson(res, { success: true, data: result });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Failed to send Feishu message',
-          500
-        );
-      }
-    },
-  });
-
-  // 初始化钉钉连接器服务
-  dingtalkConnector.init().catch((err: any) => {
+  // ================= 钉钉 CLI 连接器 (DingTalk CLI) =================
+  dingtalkConnector.init().catch((err: unknown) => {
     console.warn('[DingtalkConnector] Failed to initialize:', err);
   });
 
-  // 钉钉路由（标准路径 /api/jingyun/connectors/dingtalk/*）
-  const prefix = '/api/jingyun/connectors/dingtalk';
-
-  // 钉钉连接器状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/status`,
-    handler: async (_req, res) => {
-      try {
-        const status = await dingtalkConnector.getCombinedStatus();
-        sendJson(res, { success: true, data: status });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
+  const dingtalkPrefix = '/api/jingyun/connectors/dingtalk';
+  defineRoute(ctx, `${dingtalkPrefix}/status`, () =>
+    dingtalkConnector.getCombinedStatus()
+  );
+  defineRoute(ctx, `${dingtalkPrefix}/auth-start`, () =>
+    dingtalkConnector.startCliAuth()
+  );
+  defineRoute(
+    ctx,
+    `${dingtalkPrefix}/auth-poll`,
+    async () => {
+      const cliAuth = await dingtalkConnector.getCliAuthStatus();
+      return {
+        success: Boolean(cliAuth.authenticated),
+        data: cliAuth,
+        authenticated: Boolean(cliAuth.authenticated),
+      };
     },
+    { rawResult: true }
+  );
+  defineRoute(ctx, `${dingtalkPrefix}/auth-cancel`, () => {
+    dingtalkConnector.cancelCliAuth();
+    return { message: 'Cancelled' };
+  });
+  defineRoute(ctx, `${dingtalkPrefix}/auth-logout`, async () => {
+    await dingtalkConnector.logoutCli();
+    return { message: 'Logged out' };
+  });
+  defineRoute(ctx, `${dingtalkPrefix}/disconnect`, async () => {
+    await dingtalkConnector.clearConfig();
+    return { message: 'Disconnected and cleared' };
+  });
+  defineRoute(ctx, `${dingtalkPrefix}/clear`, async () => {
+    await dingtalkConnector.clearConfig();
+    return { message: 'Configuration cleared' };
+  });
+  defineRoute(ctx, `${dingtalkPrefix}/config`, () =>
+    dingtalkConnector.loadConfig()
+  );
+  defineRoute(ctx, `${dingtalkPrefix}/config/save`, async (req) => {
+    const body = (req as any).body || {};
+    await dingtalkConnector.saveConfig(body);
+    return { message: 'Config saved' };
   });
 
-  // 启动钉钉 CLI OAuth2 网页/扫码授权流程
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/auth-start`,
-    handler: async (_req, res) => {
-      try {
-        const data = await dingtalkConnector.startCliAuth();
-        sendJson(res, { success: true, data });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // 轮询钉钉 CLI 授权状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/auth-poll`,
-    handler: async (_req, res) => {
-      try {
-        const cliAuth = await dingtalkConnector.getCliAuthStatus();
-        sendJson(res, {
-          success: Boolean(cliAuth.authenticated),
-          data: cliAuth,
-          authenticated: Boolean(cliAuth.authenticated),
-        });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // 取消钉钉 CLI 登录流程
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/auth-cancel`,
-    handler: async (_req, res) => {
-      try {
-        dingtalkConnector.cancelCliAuth();
-        sendJson(res, { success: true, data: { message: 'Cancelled' } });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // 退出钉钉 CLI 登录
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/auth-logout`,
-    handler: async (_req, res) => {
-      try {
-        await dingtalkConnector.logoutCli();
-        sendJson(res, { success: true, data: { message: 'Logged out' } });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // 断开连接 / 清除配置
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/disconnect`,
-    handler: async (_req, res) => {
-      try {
-        await dingtalkConnector.clearConfig();
-        sendJson(res, {
-          success: true,
-          data: { message: 'Disconnected and cleared' },
-        });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/clear`,
-    handler: async (_req, res) => {
-      try {
-        await dingtalkConnector.clearConfig();
-        sendJson(res, {
-          success: true,
-          data: { message: 'Configuration cleared' },
-        });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // 获取钉钉配置
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/config`,
-    handler: async (_req, res) => {
-      try {
-        const cfg = await dingtalkConnector.loadConfig();
-        sendJson(res, { success: true, data: cfg });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // 保存钉钉配置
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${prefix}/config/save`,
-    handler: async (req, res) => {
-      try {
-        const body = (req as any).body || {};
-        await dingtalkConnector.saveConfig(body);
-        sendJson(res, {
-          success: true,
-          data: { message: 'Config saved' },
-        });
-      } catch (err: any) {
-        sendError(res, err.message, 500);
-      }
-    },
-  });
-
-  // ===================== 钉钉远程通道 (Stream 模式长连接网关) =====================
+  // ================= 钉钉远程通道 (DingTalk Stream Tunnel) =================
   const dingtalkTunnelPrefix = '/api/jingyun/connectors/dingtalk-tunnel';
+  defineRoute(ctx, `${dingtalkTunnelPrefix}/status`, () =>
+    dingtalkTunnelService.getStatus()
+  );
+  defineRoute(ctx, `${dingtalkTunnelPrefix}/connect`, async (req) => {
+    const body = (await parseJsonBody(req)) as Record<string, unknown>;
+    const appKey =
+      typeof body?.appKey === 'string' ? body.appKey.trim() : undefined;
+    const appSecret =
+      typeof body?.appSecret === 'string' ? body.appSecret.trim() : undefined;
 
-  // 1. 获取钉钉远程通道状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${dingtalkTunnelPrefix}/status`,
-    handler: async (_req, res) => {
-      try {
-        const status = dingtalkTunnelService.getStatus();
-        sendJson(res, { success: true, data: status });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error
-            ? err.message
-            : 'Get Dingtalk tunnel status failed',
-          500
-        );
-      }
-    },
+    if (appKey && appSecret) {
+      await dingtalkTunnelService.connect({
+        appKey,
+        appSecret,
+        robotCode:
+          typeof body?.robotCode === 'string' && body.robotCode.trim()
+            ? body.robotCode.trim()
+            : appKey,
+        requireMention: body?.requireMention !== false,
+      });
+    } else {
+      await dingtalkTunnelService.connect();
+    }
+    return { message: 'Dingtalk stream connection established' };
+  });
+  defineRoute(ctx, `${dingtalkTunnelPrefix}/disconnect`, () => {
+    dingtalkTunnelService.disconnect();
+    return { message: 'Dingtalk stream connection disconnected' };
+  });
+  defineRoute(ctx, `${dingtalkTunnelPrefix}/clear`, async () => {
+    await dingtalkTunnelService.clearConfig();
+    return { message: 'Dingtalk tunnel configuration cleared' };
+  });
+  defineRoute(ctx, `${dingtalkTunnelPrefix}/send`, async (req) => {
+    const body = (await parseJsonBody(req)) as Record<string, unknown>;
+    const content =
+      typeof body?.content === 'string' ? body.content.trim() : '';
+    if (!content) {
+      throw new HttpError('content is required', 400);
+    }
+    const title =
+      typeof body?.title === 'string' ? body.title.trim() : undefined;
+    return dingtalkTunnelService.sendMessage({ content, title });
   });
 
-  // 2. 启动长连接 / 连接并保存
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${dingtalkTunnelPrefix}/connect`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = (await parseJsonBody(req)) as Record<string, unknown>;
-        const appKey =
-          typeof body?.appKey === 'string' ? body.appKey.trim() : undefined;
-        const appSecret =
-          typeof body?.appSecret === 'string'
-            ? body.appSecret.trim()
-            : undefined;
-
-        if (appKey && appSecret) {
-          await dingtalkTunnelService.connect({
-            appKey,
-            appSecret,
-            robotCode:
-              typeof body?.robotCode === 'string' && body.robotCode.trim()
-                ? body.robotCode.trim()
-                : appKey,
-            requireMention: body?.requireMention !== false,
-          });
-        } else {
-          await dingtalkTunnelService.connect();
-        }
-
-        sendJson(res, {
-          success: true,
-          data: { message: 'Dingtalk stream connection established' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error
-            ? err.message
-            : 'Connect to Dingtalk stream failed',
-          500
-        );
-      }
+  // ================= ima 知识库连接器 =================
+  const imaPrefix = '/api/jingyun/connectors/ima';
+  defineRoute(ctx, `${imaPrefix}/status`, () => imaConnector.getStatus());
+  defineRoute(
+    ctx,
+    `${imaPrefix}/connect`,
+    async (req) => {
+      const body = await parseJsonBody<{
+        apiKey: string;
+        clientId?: string;
+        apiBase?: string;
+        defaultKbId?: string;
+        nickname?: string;
+      }>(req);
+      return imaConnector.connect(body || { apiKey: '' });
     },
+    { errorStatus: 400 }
+  );
+  defineRoute(ctx, `${imaPrefix}/disconnect`, async () => {
+    await imaConnector.disconnect();
+    return { status: 'disconnected' };
   });
+  defineRoute(ctx, `${imaPrefix}/config`, () => imaConnector.loadConfig());
 
-  // 4. 断开长连接
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${dingtalkTunnelPrefix}/disconnect`,
-    handler: async (_req: IncomingMessage, res: ServerResponse) => {
-      try {
-        dingtalkTunnelService.disconnect();
-        sendJson(res, {
-          success: true,
-          data: { message: 'Dingtalk stream connection disconnected' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error ? err.message : 'Disconnect Dingtalk failed',
-          500
-        );
-      }
-    },
+  // ================= 微信助理连接器 (Weixin) =================
+  const weixinPrefix = '/api/jingyun/connectors/weixin';
+  defineRoute(ctx, `${weixinPrefix}/status`, () => weixinConnector.getStatus());
+  defineRoute(ctx, `${weixinPrefix}/qr-start`, () =>
+    weixinConnector.getQrCode()
+  );
+  defineRoute(ctx, `${weixinPrefix}/qr-poll`, async (req) => {
+    const url = new URL(req.url || '', 'http://localhost');
+    const qrcode = url.searchParams.get('qrcode') || '';
+    if (!qrcode) {
+      throw new HttpError('缺少 qrcode 参数', 400);
+    }
+    return weixinConnector.pollQrStatus(qrcode);
   });
+  defineRoute(ctx, `${weixinPrefix}/disconnect`, async (req) => {
+    let clearCredentials = false;
+    if (req.method === 'POST') {
+      const body = await parseJsonBody<{ clearCredentials?: boolean }>(req);
+      clearCredentials = !!body?.clearCredentials;
+    }
+    await weixinConnector.disconnect(clearCredentials);
+    return { status: 'disconnected', clearCredentials };
+  });
+  defineRoute(
+    ctx,
+    `${weixinPrefix}/config/save`,
+    async (req) => {
+      const body = await parseJsonBody<{
+        baseUrl?: string;
+        autoReconnect?: boolean;
+      }>(req);
+      return weixinConnector.saveConfig(body || {});
+    },
+    { errorStatus: 400 }
+  );
+  defineRoute(
+    ctx,
+    `${weixinPrefix}/send-test`,
+    async (req) => {
+      const body = await parseJsonBody<{
+        content?: string;
+        toUserId?: string;
+      }>(req);
+      const content = body?.content || '助理测试消息发送成功！';
+      return weixinConnector.sendMessage({
+        content,
+        toUserId: body?.toUserId,
+      });
+    },
+    { errorStatus: 400 }
+  );
 
-  // 5. 清除配置并断开
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${dingtalkTunnelPrefix}/clear`,
-    handler: async (_req: IncomingMessage, res: ServerResponse) => {
-      try {
-        await dingtalkTunnelService.clearConfig();
-        sendJson(res, {
-          success: true,
-          data: { message: 'Dingtalk tunnel configuration cleared' },
-        });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error
-            ? err.message
-            : 'Clear Dingtalk tunnel config failed',
-          500
-        );
+  // ================= 移动端 (Android/ADB) 控制器 =================
+  const mobilePrefix = '/api/jingyun/connectors/mobile';
+  defineRoute(ctx, `${mobilePrefix}/status`, () => mobileService.getStatus());
+  defineRoute(
+    ctx,
+    `${mobilePrefix}/connect`,
+    async (req) => {
+      const body = await parseJsonBody<{ host: string; port?: number }>(req);
+      if (!body.host || typeof body.host !== 'string') {
+        throw new HttpError('参数 host 不能为空', 400);
       }
+      const port = body.port !== undefined ? Number(body.port) : 5555;
+      const result = await mobileService.connectWifi(body.host, port);
+      return { success: true, ...result };
     },
-  });
-
-  // 6. 主动发送测试消息
-  ctx.webServer.register({
-    kind: 'exact',
-    path: `${dingtalkTunnelPrefix}/send`,
-    handler: async (req: IncomingMessage, res: ServerResponse) => {
-      try {
-        const body = (await parseJsonBody(req)) as Record<string, unknown>;
-        const content =
-          typeof body?.content === 'string' ? body.content.trim() : '';
-        if (!content) {
-          sendError(res, 'content is required', 400);
-          return;
-        }
-        const title =
-          typeof body?.title === 'string' ? body.title.trim() : undefined;
-        const result = await dingtalkTunnelService.sendMessage({
-          content,
-          title,
-        });
-        sendJson(res, { success: true, data: result });
-      } catch (err: unknown) {
-        sendError(
-          res,
-          err instanceof Error
-            ? err.message
-            : 'Failed to send Dingtalk message',
-          500
-        );
+    { rawResult: true, errorStatus: 400 }
+  );
+  defineRoute(
+    ctx,
+    `${mobilePrefix}/pair`,
+    async (req) => {
+      const body = await parseJsonBody<{
+        host: string;
+        port: number;
+        code: string;
+      }>(req);
+      if (!body.host || !body.port || !body.code) {
+        throw new HttpError('参数 host、port 和 code 均为必填项', 400);
       }
+      const result = await mobileService.pairWifi(
+        body.host,
+        Number(body.port),
+        body.code
+      );
+      return { success: true, ...result };
     },
-  });
-
-  // ===================== ima 知识库连接器 =====================
-  // 获取 ima 连接状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/ima/status',
-    handler: async (_req, res) => {
-      try {
-        const result = await imaConnector.getStatus();
-        sendJson(res, { success: true, data: result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
+    { rawResult: true, errorStatus: 400 }
+  );
+  defineRoute(
+    ctx,
+    `${mobilePrefix}/tcpip`,
+    async (req) => {
+      const body = await parseJsonBody<{
+        deviceId?: string;
+        port?: number;
+      }>(req);
+      const port = body.port !== undefined ? Number(body.port) : 5555;
+      const result = await mobileService.enableTcpIp(body.deviceId, port);
+      return { success: true, ...result };
+    },
+    { rawResult: true, errorStatus: 400 }
+  );
+  defineRoute(
+    ctx,
+    `${mobilePrefix}/disconnect`,
+    async (req) => {
+      const body = await parseJsonBody<{ target: string }>(req);
+      if (!body.target) {
+        throw new HttpError('参数 target 不能为空', 400);
       }
+      const result = await mobileService.disconnect(body.target);
+      return { success: true, ...result };
     },
-  });
-
-  // 连接 / 绑定 ima
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/ima/connect',
-    handler: async (req, res) => {
-      try {
-        const body = await parseJsonBody<{
-          apiKey: string;
-          clientId?: string;
-          apiBase?: string;
-          defaultKbId?: string;
-          nickname?: string;
-        }>(req);
-        const result = await imaConnector.connect(body || { apiKey: '' });
-        sendJson(res, { success: true, data: result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 400);
-      }
+    { rawResult: true, errorStatus: 400 }
+  );
+  defineRoute(
+    ctx,
+    `${mobilePrefix}/screenshot`,
+    async (req, res) => {
+      const url = new URL(req.url!, 'http://localhost');
+      const deviceId = url.searchParams.get('deviceId') || undefined;
+      const buf = await mobileService.screenshot(deviceId);
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Content-Length': buf.length,
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      });
+      res.end(buf);
     },
-  });
-
-  // 解绑 ima
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/ima/disconnect',
-    handler: async (_req, res) => {
-      try {
-        await imaConnector.disconnect();
-        sendJson(res, { success: true, data: { status: 'disconnected' } });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
-      }
-    },
-  });
-
-  // 获取 ima 配置详情
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/ima/config',
-    handler: async (_req, res) => {
-      try {
-        const cfg = await imaConnector.loadConfig();
-        sendJson(res, { success: true, data: cfg });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
-      }
-    },
-  });
-
-  // 获取微信助理连接状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/weixin/status',
-    handler: async (_req, res) => {
-      try {
-        const status = weixinConnector.getStatus();
-        sendJson(res, { success: true, data: status });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
-      }
-    },
-  });
-
-  // 获取微信助理登录二维码
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/weixin/qr-start',
-    handler: async (_req, res) => {
-      try {
-        const result = await weixinConnector.getQrCode();
-        sendJson(res, { success: true, data: result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
-      }
-    },
-  });
-
-  // 轮询微信助理登录二维码状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/weixin/qr-poll',
-    handler: async (req, res) => {
-      try {
-        const url = new URL(req.url || '', 'http://localhost');
-        const qrcode = url.searchParams.get('qrcode') || '';
-        if (!qrcode) {
-          sendError(res, '缺少 qrcode 参数', 400);
-          return;
-        }
-        const result = await weixinConnector.pollQrStatus(qrcode);
-        sendJson(res, { success: true, data: result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
-      }
-    },
-  });
-
-  // 断开微信助理连接
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/weixin/disconnect',
-    handler: async (req, res) => {
-      try {
-        let clearCredentials = false;
-        if (req.method === 'POST') {
-          const body = await parseJsonBody<{ clearCredentials?: boolean }>(req);
-          clearCredentials = !!body?.clearCredentials;
-        }
-        await weixinConnector.disconnect(clearCredentials);
-        sendJson(res, {
-          success: true,
-          data: { status: 'disconnected', clearCredentials },
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
-      }
-    },
-  });
-
-  // 保存微信助理配置
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/weixin/config/save',
-    handler: async (req, res) => {
-      try {
-        const body = await parseJsonBody<{
-          baseUrl?: string;
-          autoReconnect?: boolean;
-        }>(req);
-        const saved = await weixinConnector.saveConfig(body || {});
-        sendJson(res, { success: true, data: saved });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 400);
-      }
-    },
-  });
-
-  // 发送微信测试消息
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/weixin/send-test',
-    handler: async (req, res) => {
-      try {
-        const body = await parseJsonBody<{
-          content?: string;
-          toUserId?: string;
-        }>(req);
-        const content = body?.content || '助理测试消息发送成功！';
-        const result = await weixinConnector.sendMessage({
-          content,
-          toUserId: body?.toUserId,
-        });
-        sendJson(res, { success: true, data: result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 400);
-      }
-    },
-  });
-
-  // 12. 移动端 (Android/ADB) 控制器路由
-  // 12.1 获取移动设备连接与 ADB 运行状态
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/mobile/status',
-    handler: async (_req, res) => {
-      try {
-        const status = await mobileService.getStatus();
-        sendJson(res, { success: true, data: status });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
-      }
-    },
-  });
-
-  // 12.2 一键无线配对连接 (WiFi Connect)
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/mobile/connect',
-    handler: async (req, res) => {
-      try {
-        const body = await parseJsonBody<{ host: string; port?: number }>(req);
-        if (!body.host || typeof body.host !== 'string') {
-          return sendError(res, '参数 host 不能为空', 400);
-        }
-        const port = body.port !== undefined ? Number(body.port) : 5555;
-        const result = await mobileService.connectWifi(body.host, port);
-        sendJson(res, { success: true, ...result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 400);
-      }
-    },
-  });
-
-  // 12.3 Android 11+ 无线配对 (WiFi Pair)
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/mobile/pair',
-    handler: async (req, res) => {
-      try {
-        const body = await parseJsonBody<{
-          host: string;
-          port: number;
-          code: string;
-        }>(req);
-        if (!body.host || !body.port || !body.code) {
-          return sendError(res, '参数 host、port 和 code 均为必填项', 400);
-        }
-        const result = await mobileService.pairWifi(
-          body.host,
-          Number(body.port),
-          body.code
-        );
-        sendJson(res, { success: true, ...result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 400);
-      }
-    },
-  });
-
-  // 12.4 一键开启 USB 设备无线调试端口 (adb tcpip 5555)
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/mobile/tcpip',
-    handler: async (req, res) => {
-      try {
-        const body = await parseJsonBody<{
-          deviceId?: string;
-          port?: number;
-        }>(req);
-        const port = body.port !== undefined ? Number(body.port) : 5555;
-        const result = await mobileService.enableTcpIp(body.deviceId, port);
-        sendJson(res, { success: true, ...result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 400);
-      }
-    },
-  });
-
-  // 12.5 断开设备连接
-  ctx.webServer.register({
-    kind: 'exact',
-    path: '/api/jingyun/connectors/mobile/disconnect',
-    handler: async (req, res) => {
-      try {
-        const body = await parseJsonBody<{
-          target: string;
-        }>(req);
-        if (!body.target) {
-          return sendError(res, '参数 target 不能为空', 400);
-        }
-        const result = await mobileService.disconnect(body.target);
-        sendJson(res, { success: true, ...result });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 400);
-      }
-    },
-  });
-
-  // 12.6 获取实时手机屏幕快照 (PNG 图片流)
-  ctx.webServer.register({
-    kind: 'prefix',
-    path: '/api/jingyun/connectors/mobile/screenshot',
-    handler: async (req, res) => {
-      try {
-        const url = new URL(req.url!, 'http://localhost');
-        const deviceId = url.searchParams.get('deviceId') || undefined;
-        const buf = await mobileService.screenshot(deviceId);
-        res.writeHead(200, {
-          'Content-Type': 'image/png',
-          'Content-Length': buf.length,
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-        });
-        res.end(buf);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        sendError(res, message, 500);
-      }
-    },
-  });
+    { kind: 'prefix' }
+  );
 }

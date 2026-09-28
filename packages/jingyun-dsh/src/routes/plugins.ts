@@ -8,7 +8,7 @@ import {
   getInstalledPlugins,
   installCommunityPlugin,
   uninstallCommunityPlugin,
-} from '../plugins';
+} from '../plugins/service';
 
 export function registerPluginsRoutes(ctx: Context) {
   // 1. 获取底座与已安装插件列表

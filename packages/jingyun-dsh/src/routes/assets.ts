@@ -9,7 +9,7 @@ import {
   installAsset,
   openAssetFolder,
   uninstallAsset,
-} from '../assets';
+} from '../assets/service';
 import { parseJsonBody, sendError, sendJson } from '../common/http';
 
 export function registerAssetsRoutes(ctx: Context) {
