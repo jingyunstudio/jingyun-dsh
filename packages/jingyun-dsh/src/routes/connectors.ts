@@ -12,6 +12,7 @@ import {
   dingtalkTunnelService,
   feishuService,
   imaConnector,
+  jingyunTunnelService,
   larkConnector,
   mobileService,
   wecomService,
@@ -460,5 +461,41 @@ export function registerConnectorsRoutes(ctx: Context) {
       res.end(buf);
     },
     { kind: 'prefix' }
+  );
+
+  // ================= Jingyun 云端工作台反向隧道 =================
+  const jyTunnelPrefix = '/api/jingyun/connectors/jingyun-tunnel';
+  defineRoute(
+    ctx,
+    `${jyTunnelPrefix}/status`,
+    () => jingyunTunnelService.getStatus(),
+    { rawResult: true }
+  );
+  defineRoute(
+    ctx,
+    `${jyTunnelPrefix}/connect`,
+    async (req) => {
+      const body = await parseJsonBody<{
+        userToken?: string;
+        cloudUrl?: string;
+        deviceName?: string;
+      }>(req);
+      const res = await jingyunTunnelService.connect({
+        userToken: body?.userToken,
+        cloudUrl: body?.cloudUrl,
+        deviceName: body?.deviceName,
+      });
+      return { success: true, ...res };
+    },
+    { rawResult: true, errorStatus: 400 }
+  );
+  defineRoute(
+    ctx,
+    `${jyTunnelPrefix}/disconnect`,
+    () => {
+      const res = jingyunTunnelService.disconnect();
+      return { success: true, ...res };
+    },
+    { rawResult: true }
   );
 }

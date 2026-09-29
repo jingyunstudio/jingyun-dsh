@@ -21,6 +21,7 @@ import {
   cliManager,
   dingtalkTunnelService,
   feishuService,
+  jingyunTunnelService,
   wecomService,
   weixinConnector,
 } from './connectors';
@@ -228,6 +229,13 @@ export function apply(ctx: Context, config: Config) {
   dingtalkTunnelService.init().catch((err) => {
     console.warn(
       '[JingyunDsh] Failed to initialize Dingtalk tunnel service:',
+      err
+    );
+  });
+
+  jingyunTunnelService.init().catch((err) => {
+    console.warn(
+      '[JingyunDsh] Failed to initialize Jingyun tunnel service:',
       err
     );
   });

@@ -28,3 +28,12 @@ export {
   type MobileDeviceInfo,
   type MobileStatusResult,
 } from './mobile-service';
+export * from './jingyun-tunnel-types';
+export {
+  JingyunTunnelService,
+  jingyunTunnelService,
+} from './jingyun-tunnel-service';
+export {
+  JingyunTunnelClient,
+  jingyunTunnelClient,
+} from './jingyun-tunnel-client';

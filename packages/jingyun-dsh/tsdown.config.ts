@@ -35,7 +35,7 @@ export default defineConfig([
     ],
     outputOptions: {
       entryFileNames: 'client.js',
-      banner: `window.__ModuleLoader__.load({ id: ${JSON.stringify(id)}, factory: (require) => {`,
+      banner: `globalThis.__DSH_TRANSPORT__ = Object.assign(globalThis.__DSH_TRANSPORT__ || {}, { ownsHost: true });\nwindow.__ModuleLoader__.load({ id: ${JSON.stringify(id)}, factory: (require) => {`,
       footer: 'return module.exports; } });',
       intro: 'var module = { exports: {} }; var exports = module.exports;',
     },

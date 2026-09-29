@@ -17,6 +17,12 @@ import { DingtalkTunnelModal } from './DingtalkTunnelModal';
 import { FeishuModal } from './FeishuModal';
 import { ImaCatLogo, ImaConnectorModal } from './ImaConnectorModal';
 import {
+  JingyunCloudIcon,
+  JingyunTunnelModal,
+  type JingyunTunnelStateResponse,
+} from './JingyunTunnelModal';
+import { ConnectedBadge } from './TunnelCommon';
+import {
   MobileBrandIcon,
   MobileConnectorModal,
   type MobileStatusData,
@@ -363,6 +369,10 @@ export const ConnectorPanel = () => {
   } | null>(null);
   const [dingtalkTunnelLoading, setDingtalkTunnelLoading] = useState(true);
   const [showDingtalkTunnelModal, setShowDingtalkTunnelModal] = useState(false);
+  const [jingyunTunnelStatus, setJingyunTunnelStatus] =
+    useState<JingyunTunnelStateResponse | null>(null);
+  const [jingyunTunnelLoading, setJingyunTunnelLoading] = useState(true);
+  const [showJingyunTunnelModal, setShowJingyunTunnelModal] = useState(false);
   const [mobileStatus, setMobileStatus] = useState<MobileStatusData | null>(
     null
   );
@@ -650,6 +660,25 @@ export const ConnectorPanel = () => {
     }
   };
 
+  // 获取 Jingyun 云端工作台反向穿透状态
+  const fetchJingyunTunnelStatus = async () => {
+    setJingyunTunnelLoading(true);
+    try {
+      const res = await fetch('/api/jingyun/connectors/jingyun-tunnel/status');
+      if (res.ok) {
+        const json = await res.json();
+        setJingyunTunnelStatus(json?.data || json);
+      }
+    } catch (err) {
+      console.warn(
+        '[ConnectorPanel] Failed to fetch jingyun tunnel status:',
+        err
+      );
+    } finally {
+      setJingyunTunnelLoading(false);
+    }
+  };
+
   // 获取移动端设备连接状态
   const fetchMobileStatus = async () => {
     setMobileLoading(true);
@@ -679,6 +708,7 @@ export const ConnectorPanel = () => {
       fetchDingtalkTunnelStatus();
       fetchCliStatus();
       fetchMobileStatus();
+      fetchJingyunTunnelStatus();
     });
   }, []);
 
@@ -892,31 +922,7 @@ export const ConnectorPanel = () => {
             description="与钉钉官方工作区生态深度集成，支持浏览器一键授权、消息收发与知识库/日程/待办协同。"
             isConnected={isDingtalkConnected}
             isLoading={dingtalkLoading}
-            statusBadge={
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '10px',
-                  color: '#16a34a',
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  fontWeight: 500,
-                }}
-              >
-                <span
-                  style={{
-                    width: '4px',
-                    height: '4px',
-                    borderRadius: '50%',
-                    background: '#22c55e',
-                  }}
-                />
-                已连接
-              </span>
-            }
+            statusBadge={<ConnectedBadge />}
             onConnect={() => handleConnect('dingtalk')}
             onManage={() => setShowDingtalkDetailModal(true)}
           />
@@ -927,31 +933,7 @@ export const ConnectorPanel = () => {
             description="与企业微信智能机器人深度集成，支持 WebSocket 长连接实时消息收发与协同。"
             isConnected={isWecomConnected}
             isLoading={wecomLoading}
-            statusBadge={
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '10px',
-                  color: '#16a34a',
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  fontWeight: 500,
-                }}
-              >
-                <span
-                  style={{
-                    width: '4px',
-                    height: '4px',
-                    borderRadius: '50%',
-                    background: '#22c55e',
-                  }}
-                />
-                已连接
-              </span>
-            }
+            statusBadge={<ConnectedBadge />}
             onConnect={() => handleConnect('wecom')}
             onManage={() => setShowWecomDetailModal(true)}
           />
@@ -962,31 +944,7 @@ export const ConnectorPanel = () => {
             description="腾讯AI知识管家，连接后支持搜索、读取和写入知识库资料，并可搜索和订阅教育、法律、财经、科技等20+行业专业知识。"
             isConnected={isImaConnected}
             isLoading={imaLoading}
-            statusBadge={
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '10px',
-                  color: '#16a34a',
-                  background: 'rgba(34, 197, 94, 0.1)',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
-                  fontWeight: 500,
-                }}
-              >
-                <span
-                  style={{
-                    width: '4px',
-                    height: '4px',
-                    borderRadius: '50%',
-                    background: '#22c55e',
-                  }}
-                />
-                已连接
-              </span>
-            }
+            statusBadge={<ConnectedBadge />}
             onConnect={() => setShowImaModal(true)}
             onManage={() => setShowImaDetailModal(true)}
           />
@@ -1102,38 +1060,26 @@ export const ConnectorPanel = () => {
             }}
           >
             <ConnectorCard
+              name="云端工作台"
+              icon={<JingyunCloudIcon />}
+              description="连接后可在网页端直接使用本地工作台，随时随地进行智能体对话与任务协作。"
+              isConnected={jingyunTunnelStatus?.status === 'connected'}
+              isLoading={jingyunTunnelLoading}
+              statusBadge={
+                jingyunTunnelStatus?.status === 'connected' ? (
+                  <ConnectedBadge />
+                ) : undefined
+              }
+              onConnect={() => setShowJingyunTunnelModal(true)}
+              onManage={() => setShowJingyunTunnelModal(true)}
+            />
+            <ConnectorCard
               name="微信助理"
               icon={<WeixinLogo />}
               description="通过微信直接下发指令，结果实时回传至微信聊天窗口。"
               isConnected={isWeixinConnected}
               isLoading={weixinLoading}
-              statusBadge={
-                isWeixinConnected ? (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '10px',
-                      color: '#16a34a',
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '4px',
-                        height: '4px',
-                        borderRadius: '50%',
-                        background: '#22c55e',
-                      }}
-                    />
-                    已连接
-                  </span>
-                ) : undefined
-              }
+              statusBadge={isWeixinConnected ? <ConnectedBadge /> : undefined}
               onConnect={() => setShowWeixinModal(true)}
               onManage={() => setShowWeixinModal(true)}
             />
@@ -1143,33 +1089,7 @@ export const ConnectorPanel = () => {
               description="通过企业微信下发指令，结果实时回传至企业微信聊天窗口。"
               isConnected={isWecomConnected}
               isLoading={wecomLoading}
-              statusBadge={
-                isWecomConnected ? (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '10px',
-                      color: '#16a34a',
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '4px',
-                        height: '4px',
-                        borderRadius: '50%',
-                        background: '#22c55e',
-                      }}
-                    />
-                    已连接
-                  </span>
-                ) : undefined
-              }
+              statusBadge={isWecomConnected ? <ConnectedBadge /> : undefined}
               onConnect={() => setShowWecomModal(true)}
               onManage={() => setShowWecomAssistantModal(true)}
             />
@@ -1181,29 +1101,7 @@ export const ConnectorPanel = () => {
               isLoading={feishuTunnelLoading}
               statusBadge={
                 feishuTunnelStatus?.status === 'connected' ? (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '10px',
-                      color: '#16a34a',
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '4px',
-                        height: '4px',
-                        borderRadius: '50%',
-                        background: '#22c55e',
-                      }}
-                    />
-                    已连接
-                  </span>
+                  <ConnectedBadge />
                 ) : undefined
               }
               onConnect={() => setShowFeishuTunnelModal(true)}
@@ -1217,29 +1115,7 @@ export const ConnectorPanel = () => {
               isLoading={dingtalkTunnelLoading}
               statusBadge={
                 dingtalkTunnelStatus?.status === 'connected' ? (
-                  <span
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      fontSize: '10px',
-                      color: '#16a34a',
-                      background: 'rgba(34, 197, 94, 0.1)',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      fontWeight: 500,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '4px',
-                        height: '4px',
-                        borderRadius: '50%',
-                        background: '#22c55e',
-                      }}
-                    />
-                    已连接
-                  </span>
+                  <ConnectedBadge />
                 ) : undefined
               }
               onConnect={() => setShowDingtalkTunnelModal(true)}
@@ -1444,6 +1320,15 @@ export const ConnectorPanel = () => {
           onClose={() => setShowDingtalkTunnelModal(false)}
           onRefresh={() => fetchDingtalkTunnelStatus()}
           onSuccess={() => fetchDingtalkTunnelStatus()}
+        />
+      )}
+      {/* 云端工作台管理弹窗 */}
+      {showJingyunTunnelModal && (
+        <JingyunTunnelModal
+          isOpen={showJingyunTunnelModal}
+          onClose={() => setShowJingyunTunnelModal(false)}
+          initialStatus={jingyunTunnelStatus}
+          onRefresh={setJingyunTunnelStatus}
         />
       )}
       {confirmInstallChannel && (

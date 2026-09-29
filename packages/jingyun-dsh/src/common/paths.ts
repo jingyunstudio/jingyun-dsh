@@ -69,6 +69,12 @@ export function getWeixinConfigDir(): string {
   return path.join(getConnectorsDir(), 'weixin');
 }
 /**
+ * 获取 Jingyun 云端工作台反向隧道连接器配置目录 ($DSH_HOME/connectors/jingyun-tunnel)
+ */
+export function getJingyunTunnelConfigDir(): string {
+  return path.join(getConnectorsDir(), 'jingyun-tunnel');
+}
+/**
  * 获取助理会话与消息存储目录 ($DSH_HOME/assistant)
  */
 export function getAssistantDataDir(): string {

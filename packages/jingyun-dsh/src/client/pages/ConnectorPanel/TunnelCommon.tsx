@@ -379,12 +379,14 @@ export const TunnelActionButtons: React.FC<TunnelActionButtonsProps> = ({
           onClick={onDisconnect}
           disabled={isBusy}
           style={{
+            flex: !onTestSend && !onEdit ? 1 : undefined,
             padding: '10px 16px',
             borderRadius: '8px',
             border: '1px solid #fee2e2',
             background: '#fef2f2',
             color: '#ef4444',
             fontSize: '13px',
+            fontWeight: 500,
             cursor: isBusy ? 'not-allowed' : 'pointer',
           }}
         >
@@ -394,6 +396,34 @@ export const TunnelActionButtons: React.FC<TunnelActionButtonsProps> = ({
     </div>
   );
 };
+
+export const ConnectedBadge: React.FC<{ text?: string }> = ({
+  text = '已连接',
+}) => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '4px',
+      fontSize: '10px',
+      color: '#16a34a',
+      background: 'rgba(34, 197, 94, 0.1)',
+      padding: '1px 6px',
+      borderRadius: '4px',
+      fontWeight: 500,
+    }}
+  >
+    <span
+      style={{
+        width: '4px',
+        height: '4px',
+        borderRadius: '50%',
+        background: '#22c55e',
+      }}
+    />
+    {text}
+  </span>
+);
 
 // ==================== 5. 提示信息横幅 ====================
 export const TunnelNotice: React.FC<{
