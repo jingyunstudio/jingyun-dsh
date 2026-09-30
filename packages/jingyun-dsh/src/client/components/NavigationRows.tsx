@@ -1,9 +1,9 @@
 import {
-  IconSkillOutline16,
-  IconBranchOutline16,
-  IconLinkOutline16,
-  IconDataOutline16,
-  IconProjectAddOutline16,
+  IconSkillOutlineRegular,
+  IconBranchOutlineRegular,
+  IconLinkOutlineRegular,
+  IconDataOutlineRegular,
+  IconProjectAddOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import React from 'react';
 import { createPortal } from 'react-dom';
@@ -203,7 +203,7 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
           handleNavClick(e, '#/jingyun/more?path=%2Fzh%2Fmarketplace', true)
         }
       >
-        <IconSkillOutline16 size={16} className="link-icon" />
+        <IconSkillOutlineRegular size={16} className="link-icon" />
         {!isCollapsed && <span>应用市场</span>}
       </button>
 
@@ -213,7 +213,7 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
         className={`jy-sidebar-btn jy-sidebar-link-connector ${currentHash === '#/jingyun/connectors' ? 'jy-active' : ''}`}
         onClick={(e) => handleNavClick(e, '#/jingyun/connectors', false)}
       >
-        <IconBranchOutline16 size={16} className="link-icon" />
+        <IconBranchOutlineRegular size={16} className="link-icon" />
         {!isCollapsed && <span>连接器</span>}
       </button>
 
@@ -223,7 +223,7 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
         className={`jy-sidebar-btn jy-sidebar-link-auto ${currentHash === '#/jingyun/automation' ? 'jy-active' : ''}`}
         onClick={(e) => handleNavClick(e, '#/jingyun/automation', false)}
       >
-        <IconLinkOutline16 size={16} className="link-icon" />
+        <IconLinkOutlineRegular size={16} className="link-icon" />
         {!isCollapsed && <span>自动化</span>}
       </button>
 
@@ -235,7 +235,7 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
           handleNavClick(e, '#/jingyun/more?path=%2Fzh%2Fmy-assets', true)
         }
       >
-        <IconDataOutline16 size={16} className="link-icon" />
+        <IconDataOutlineRegular size={16} className="link-icon" />
         {!isCollapsed && <span>资产库</span>}
       </button>
 
@@ -257,7 +257,7 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
             display: 'inline-flex',
           }}
         >
-          <IconProjectAddOutline16 size={16} className="link-icon" />
+          <IconProjectAddOutlineRegular size={16} className="link-icon" />
         </span>
         {!isCollapsed && <span>更多</span>}
         {!isCollapsed && (

@@ -1,6 +1,6 @@
 import {
   Menu,
-  IconChevronDownOutline14,
+  IconChevronDownOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import React, { useState, useEffect } from 'react';
 
@@ -377,7 +377,7 @@ export const MarketplaceSkillsTab = () => {
             onClose={() => setDropdownOpen(false)}
             items={menuItems}
             selectedId={filterType}
-            onSelect={(id) => {
+            onSelect={(id: string) => {
               setDropdownOpen(false);
               setFilterType(id as 'all' | 'enabled');
               setExpanded(null);
@@ -391,7 +391,7 @@ export const MarketplaceSkillsTab = () => {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
               >
                 {activeLabel}
-                <IconChevronDownOutline14 className="jy-select-chevron" />
+                <IconChevronDownOutlineRegular className="jy-select-chevron" />
               </button>
             }
           />
@@ -933,7 +933,7 @@ export const MarketplaceCommunityPluginsTab = () => {
             onClose={() => setDropdownOpen(false)}
             items={filterMenuItems}
             selectedId={filterType}
-            onSelect={(id) => {
+            onSelect={(id: string) => {
               setDropdownOpen(false);
               setFilterType(id as 'all' | 'installed');
             }}
@@ -946,7 +946,7 @@ export const MarketplaceCommunityPluginsTab = () => {
                 onClick={() => setDropdownOpen(!dropdownOpen)}
               >
                 {activeFilterLabel}
-                <IconChevronDownOutline14 className="jy-select-chevron" />
+                <IconChevronDownOutlineRegular className="jy-select-chevron" />
               </button>
             }
           />

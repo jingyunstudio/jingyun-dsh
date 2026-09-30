@@ -1,5 +1,5 @@
 import {
-  IconChevronDownOutline14,
+  IconChevronDownOutlineRegular,
   Menu,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import React from 'react';
@@ -250,7 +250,7 @@ export const AgentSelectorBtn = (props: any) => {
                 transform: open ? 'rotate(180deg)' : 'none',
               }}
             >
-              <IconChevronDownOutline14 />
+              <IconChevronDownOutlineRegular />
             </span>
           </button>
         }

@@ -22,7 +22,7 @@
     "release": "bumpp package.json packages/jingyun-dsh/package.json src-tauri/tauri.conf.json src-tauri/Cargo.toml -x \"cargo update -p jingyun-dsh-client --manifest-path src-tauri/Cargo.toml\" --all"
   },
   "dependencies": {
-    "@deepseek-ai/dsh": "0.1.5-rc.2",
+    "@deepseek-ai/dsh": "0.2.0-rc.2",
     "@jingyun-ai/jingyun-dsh": "workspace:^",
     "qrcode.react": "^4.2.0",
     "ws": "^8.21.3",
@@ -34,7 +34,7 @@
     "@types/node": "^24.13.4",
     "bumpp": "^12.3.0",
     "decompress": "^4.2.1",
-    "oxfmt": "^0.67.0",
+    "oxfmt": "^0.71.0",
     "oxlint": "^1.82.0",
     "tsdown": "^0.23.0",
     "typescript": "^7.0.2"

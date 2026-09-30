@@ -1,6 +1,6 @@
 import {
-  IconUserOutline16,
-  IconSettingsOutline16,
+  IconUserOutlineRegular,
+  IconSettingsOutlineRegular,
 } from '@deepseek-ai/dsh-client-ui-primitives';
 import React from 'react';
 import { createPortal } from 'react-dom';
@@ -504,7 +504,7 @@ export function CustomLoginSettingBtn(props: any) {
           </div>
         ) : (
           <span style={{ flexShrink: 0, display: 'inline-flex' }}>
-            <IconUserOutline16 size={16} className="link-icon" />
+            <IconUserOutlineRegular size={16} className="link-icon" />
           </span>
         )}
 
@@ -614,7 +614,7 @@ export function CustomLoginSettingBtn(props: any) {
                 handleOpenSettings(e);
               }}
             >
-              <IconSettingsOutline16 size={13} />
+              <IconSettingsOutlineRegular size={13} />
             </div>
           </div>
         )}
