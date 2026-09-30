@@ -21,12 +21,12 @@ import {
   JingyunTunnelModal,
   type JingyunTunnelStateResponse,
 } from './JingyunTunnelModal';
-import { ConnectedBadge } from './TunnelCommon';
 import {
   MobileBrandIcon,
   MobileConnectorModal,
   type MobileStatusData,
 } from './MobileConnectorModal';
+import { ConnectedBadge } from './TunnelCommon';
 import { WecomModal } from './WecomModal';
 import { WeixinModal } from './WeixinModal';
 

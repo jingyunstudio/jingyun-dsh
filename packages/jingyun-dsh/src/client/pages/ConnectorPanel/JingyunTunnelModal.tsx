@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
+import { brandingManager, showToast } from '../../components/BrandBranding';
 import {
   TunnelModalShell,
   TunnelReadyCard,
@@ -7,7 +8,6 @@ import {
   TunnelActionButtons,
   TunnelFormButtons,
 } from './TunnelCommon.js';
-import { brandingManager, showToast } from '../../components/BrandBranding';
 
 export interface JingyunTunnelModalProps {
   isOpen?: boolean;
@@ -169,9 +169,7 @@ export const JingyunTunnelModal: React.FC<JingyunTunnelModalProps> = ({
     }
   };
 
-
   const displayName = '云端工作台';
-
 
   return (
     <TunnelModalShell
@@ -284,7 +282,9 @@ export const JingyunTunnelModal: React.FC<JingyunTunnelModalProps> = ({
           </div>
         ) : isConnected ? (
           /* 已连接态：精炼核心信息 */
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div
+            style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+          >
             <TunnelReadyCard
               channelName={displayName}
               subtitle={`已绑定账号：${userInfo?.username || userInfo?.phone || '平台用户'}`}

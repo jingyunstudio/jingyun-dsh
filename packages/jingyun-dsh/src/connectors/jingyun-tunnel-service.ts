@@ -102,9 +102,7 @@ export class JingyunTunnelService {
   }): Promise<JingyunTunnelState> {
     const config = this.readConfig();
 
-    let targetBaseUrl =
-      params.cloudUrl?.trim() ||
-      config.cloudUrl?.trim();
+    let targetBaseUrl = params.cloudUrl?.trim() || config.cloudUrl?.trim();
     if (!targetBaseUrl) {
       throw new Error(
         '未检测到云端服务器地址，请先在客户端登录账号或传入目标云端地址'
@@ -190,7 +188,6 @@ export class JingyunTunnelService {
     jingyunTunnelClient.disconnect(true);
     return this.getStatus();
   }
-
 }
 
 export const jingyunTunnelService = new JingyunTunnelService();

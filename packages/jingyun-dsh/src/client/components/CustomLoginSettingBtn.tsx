@@ -156,7 +156,10 @@ export function CustomLoginSettingBtn(props: any) {
     };
 
     const syncUrlTokenIfNeeded = () => {
-      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+      if (
+        typeof window === 'undefined' ||
+        typeof localStorage === 'undefined'
+      ) {
         return;
       }
       try {

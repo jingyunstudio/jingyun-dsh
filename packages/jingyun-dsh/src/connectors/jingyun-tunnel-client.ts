@@ -6,7 +6,10 @@ export class JingyunTunnelClient {
   private reconnectTimer: NodeJS.Timeout | null = null;
   private shouldReconnect = false;
   private localWsStreams = new Map<string, WebSocket>();
-  private localWsQueues = new Map<string, Array<Uint8Array<ArrayBuffer> | string>>();
+  private localWsQueues = new Map<
+    string,
+    Array<Uint8Array<ArrayBuffer> | string>
+  >();
 
   private cloudWsUrl = '';
   private deviceId = '';
@@ -57,7 +60,9 @@ export class JingyunTunnelClient {
     this.cloudWsUrl = params.cloudWsUrl;
     this.deviceId = params.deviceId;
     this.deviceToken = params.deviceToken;
-    this.localPort = params.localPort ?? (process.env.DSH_PORT ? Number(process.env.DSH_PORT) : 3080);
+    this.localPort =
+      params.localPort ??
+      (process.env.DSH_PORT ? Number(process.env.DSH_PORT) : 3080);
     this.shouldReconnect = true;
 
     this.setState({
@@ -98,7 +103,10 @@ export class JingyunTunnelClient {
       try {
         stream.close();
       } catch (err) {
-        console.debug('[JingyunTunnelClient] Local WS stream close error:', err);
+        console.debug(
+          '[JingyunTunnelClient] Local WS stream close error:',
+          err
+        );
       }
     }
     this.localWsStreams.clear();
@@ -292,7 +300,6 @@ export class JingyunTunnelClient {
         }
       });
 
-
       if (!res.body) {
         this.send({
           type: 'http_res',
@@ -419,7 +426,15 @@ export class JingyunTunnelClient {
     if (!localWs || !msg.body) return;
 
     const buf = Buffer.from(msg.body, 'base64');
-    const payload = msg.payload_type === 2 ? new Uint8Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer) : buf.toString('utf-8');
+    const payload =
+      msg.payload_type === 2
+        ? new Uint8Array(
+            buf.buffer.slice(
+              buf.byteOffset,
+              buf.byteOffset + buf.byteLength
+            ) as ArrayBuffer
+          )
+        : buf.toString('utf-8');
 
     if (localWs.readyState === WebSocket.OPEN) {
       localWs.send(payload);
