@@ -1,149 +1,40 @@
-import React from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useState } from 'react';
 
+import { sessionAgentMemory } from '../components/AgentSelectorBtn';
+import { brandingManager } from '../components/BrandBranding';
 import { sendPromptToComposer } from '../dom-helper';
-import { AutomationPanel } from '../pages/AutomationPanel';
-import { ConnectorPanel } from '../pages/ConnectorPanel';
-import { sessionAgentMemory } from './AgentSelectorBtn';
-import { brandingManager } from './BrandBranding';
+import { globalClientContext } from '../index';
 
-export function OnlineWorkspaceOverlay() {
-  const [appHost, setAppHost] = React.useState('');
-  const [currentHash, setCurrentHash] = React.useState(
-    typeof window !== 'undefined' ? window.location.hash || '' : ''
-  );
-  const [targetEl, setTargetEl] = React.useState<HTMLElement | null>(null);
+interface OnlineWorkspaceMainViewProps {
+  subPath?: string;
+}
 
-  React.useEffect(() => {
+export function OnlineWorkspaceMainView({
+  subPath = '/',
+}: OnlineWorkspaceMainViewProps) {
+  const [appHost, setAppHost] = useState('');
+  const [currentTheme, setCurrentTheme] = useState(() => {
+    return typeof localStorage !== 'undefined'
+      ? localStorage.getItem('jy_theme_mode') || 'light'
+      : 'light';
+  });
+  useEffect(() => {
     brandingManager.fetch().then((data) => {
       const host = (data && data.appHost) || '';
       setAppHost(host);
     });
 
-    const handleHashChange = () => {
-      const hash = window.location.hash || '';
-      setCurrentHash(hash);
-    };
-    window.addEventListener('hashchange', handleHashChange);
-
-    // 捕获阶段监听侧边栏交互：处线上资源页面时，若点击侧边栏的会话或新建任务按钮，自动退出遮罩
-    const handleGlobalClick = (e: MouseEvent) => {
-      const hash = window.location.hash || '';
-      const isOverlay =
-        hash.startsWith('#/jingyun/more') ||
-        hash === '#/jingyun/connectors' ||
-        hash === '#/jingyun/automation';
-      if (!isOverlay) return;
-      const target = e.target as HTMLElement;
-      if (!target) return;
-
-      // 仅当点击发生在侧边栏 (sidebar) 内部时才检测退出遮罩，严禁响应主工作区、连接器面板或弹窗内的点击
-      const sidebar = document.querySelector('[class*="sidebar"]');
-      if (!sidebar || !sidebar.contains(target)) {
-        return;
-      }
-      // 过滤折叠/展开侧边栏按钮，避免误触发退出
-      const isToggleBtn =
-        target.closest('button[class*="toggle"]') ||
-        target.closest('button[class*="collapse"]') ||
-        target.closest('button[class*="expand"]') ||
-        target.closest('button[class*="trigger"]') ||
-        target.closest('[aria-label*="collapse"]') ||
-        target.closest('[aria-label*="toggle"]');
-
-      // 过滤我们自定义的菜单链接与头像弹窗，避免误触
-      const isMoreControl =
-        target.closest('.jy-sidebar-custom-links') ||
-        target.closest('.jy-sidebar-link-more') ||
-        target.closest('.jy-more-dropdown') ||
-        target.closest('.jy-workspace-overlay') ||
-        target.closest('[ref*="containerRef"]') || // 自定义头像按钮外层容器
-        target.closest('#jy-sidebar-nav-actions') ||
-        target.closest('.jy-popover-menu');
-
-      const isSwitchViewInteraction =
-        target.closest('button[class*="newSession"]') ||
-        target.closest('a[href]') ||
-        target.closest('[class*="session"]') ||
-        target.closest('[class*="history"]');
-
-      if (!isMoreControl && !isToggleBtn && isSwitchViewInteraction) {
-        window.location.hash = '#/';
-        setCurrentHash('#/');
-      }
-    };
-    document.addEventListener('click', handleGlobalClick, true);
-
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-      document.removeEventListener('click', handleGlobalClick, true);
-    };
-  }, []);
-
-  // 动态锁定官方 Layout 中的 iframe 挂载点容器 (优先排除侧边栏，避免全屏遮挡)
-  React.useEffect(() => {
-    const locateTarget = () => {
-      const sidebar = document.querySelector('[class*="sidebar"]');
-      const mainEl =
-        sidebar && sidebar.parentElement
-          ? (Array.from(sidebar.parentElement.children).find(
-              (el) => el !== sidebar
-            ) as HTMLElement)
-          : null;
-
-      if (mainEl) {
-        if (mainEl.style.position !== 'relative') {
-          mainEl.style.position = 'relative';
-        }
-        setTargetEl(mainEl);
-      } else {
-        const chatWrapper =
-          document.querySelector('[class*="chatWrapper"]') ||
-          document.querySelector('[class*="mainContent"]') ||
-          document.querySelector('main') ||
-          document.querySelector('#root');
-        setTargetEl(chatWrapper as HTMLElement);
-      }
-    };
-    locateTarget();
-    const observer = new MutationObserver(locateTarget);
-    observer.observe(document.body, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, []);
-
-  const isOverlayActive =
-    currentHash.startsWith('#/jingyun/more') ||
-    currentHash === '#/jingyun/connectors' ||
-    currentHash === '#/jingyun/automation';
-
-  const isConnectorsRoute = currentHash === '#/jingyun/connectors';
-  const isAutomationRoute = currentHash === '#/jingyun/automation';
-
-  React.useEffect(() => {
-    if (isOverlayActive) {
-      document.body.classList.add('jy-route-more');
-    } else {
-      document.body.classList.remove('jy-route-more');
-    }
-    return () => {
-      document.body.classList.remove('jy-route-more');
-    };
-  }, [isOverlayActive]);
-
-  // 同步主应用主题和 iframe 内联样式
-  const [currentTheme, setCurrentTheme] = React.useState('light');
-  React.useEffect(() => {
-    const handleThemeChange = (e: CustomEvent) => {
+    const handleThemeChange = (e: CustomEvent<string>) => {
       const newTheme =
         e.detail ||
         (typeof localStorage !== 'undefined'
-          ? localStorage.getItem('jy_theme_mode')
+          ? localStorage.getItem('jy_theme_mode') || 'light'
           : 'light');
       if (newTheme) {
         setCurrentTheme(newTheme);
         const iframeEl = document.querySelector(
-          '.jy-workspace-overlay iframe'
-        ) as HTMLIFrameElement;
+          '.jy-online-workspace-iframe'
+        ) as HTMLIFrameElement | null;
         if (iframeEl && iframeEl.contentWindow) {
           try {
             iframeEl.contentWindow.postMessage(
@@ -155,13 +46,19 @@ export function OnlineWorkspaceOverlay() {
       }
     };
 
-    window.addEventListener('jy_theme_change', handleThemeChange as any);
+    window.addEventListener(
+      'jy_theme_change',
+      handleThemeChange as EventListener
+    );
     return () =>
-      window.removeEventListener('jy_theme_change', handleThemeChange as any);
+      window.removeEventListener(
+        'jy_theme_change',
+        handleThemeChange as EventListener
+      );
   }, []);
 
-  // Listen to postMessage from embedded iframe
-  React.useEffect(() => {
+  // 监听来自 iframe 的跨域消息通信
+  useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       const { type, payload } = event.data || {};
 
@@ -183,13 +80,13 @@ export function OnlineWorkspaceOverlay() {
         if (!promptText) return;
         sendPromptToComposer(promptText);
       }
+
       if (type === 'JY_START_CHAT_AGENT') {
         const agentId = payload?.agentId || 'none';
-        // 1. 退出线上资源 iframe 遮罩层
-        window.location.hash = '#/';
-        setCurrentHash('#/');
+        // 1. 关闭主面板返回会话视图
+        globalClientContext?.layout?.selectPanel?.(null);
 
-        // 2. 触发新建任务 (新建会话)
+        // 2. 触发新建任务
         setTimeout(() => {
           const allButtons = Array.from(document.querySelectorAll('button'));
           const newChatBtn = allButtons.find((b) => {
@@ -200,17 +97,15 @@ export function OnlineWorkspaceOverlay() {
               t.includes('New') ||
               b.className.includes('newSession')
             );
-          }) as HTMLElement;
+          }) as HTMLElement | undefined;
 
           if (newChatBtn) {
             newChatBtn.click();
           }
 
-          // 3. 异步多次广播并劫持智能体映射，以克服新会话生成的时序滞后
           let timerCount = 0;
           const emitAgent = () => {
             if (typeof window !== 'undefined') {
-              // 默认广播（新版智能体变更事件）
               window.dispatchEvent(
                 new CustomEvent('jy_agent_changed', {
                   detail: { agent: agentId },
@@ -229,8 +124,6 @@ export function OnlineWorkspaceOverlay() {
                     'default';
                   if (sessId && sessId !== 'default') {
                     sessionAgentMemory[sessId] = agentId;
-
-                    // 动态携带刚截获的新 sessionId 广播智能体变更事件，驱动下拉框组件执行同步激活
                     window.dispatchEvent(
                       new CustomEvent('jy_agent_changed', {
                         detail: { agent: agentId, sessionId: sessId },
@@ -263,9 +156,9 @@ export function OnlineWorkspaceOverlay() {
 
             if (
               event.source &&
-              typeof (event.source as any).postMessage === 'function'
+              typeof (event.source as Window).postMessage === 'function'
             ) {
-              (event.source as any).postMessage(respData, '*');
+              (event.source as Window).postMessage(respData, '*');
             }
 
             const iframes = document.querySelectorAll('iframe');
@@ -380,62 +273,36 @@ export function OnlineWorkspaceOverlay() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  if (!isOverlayActive || !targetEl) {
-    return null;
-  }
-
-  if (isConnectorsRoute) {
-    return createPortal(
-      <div className="jy-workspace-overlay">
-        <ConnectorPanel />
-      </div>,
-      targetEl
+  if (!appHost) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--dsw-alias-label-secondary, #666)',
+          fontSize: '14px',
+        }}
+      >
+        未配置线上服务域名，请在桌面端设置中配置 app_host
+      </div>
     );
   }
-
-  if (isAutomationRoute) {
-    return createPortal(
-      <div className="jy-workspace-overlay">
-        <AutomationPanel />
-      </div>,
-      targetEl
-    );
-  }
-
-  if (!appHost) return null;
 
   let finalIframeUrl = appHost;
-  const pathPrefix = '?path=';
-  const pIdx = currentHash.indexOf(pathPrefix);
-  let subPath = '/';
-  if (pIdx !== -1) {
-    const rawPath = currentHash.substring(pIdx + pathPrefix.length);
-    try {
-      subPath = decodeURIComponent(rawPath);
-    } catch {
-      subPath = rawPath;
-    }
-  }
-
   try {
     const baseUrl = appHost.endsWith('/') ? appHost : appHost + '/';
     const cleanSubPath = subPath.startsWith('/') ? subPath.slice(1) : subPath;
     const targetUrl = new URL(cleanSubPath, baseUrl);
     targetUrl.searchParams.set('embed', 'true');
     targetUrl.searchParams.set('theme', currentTheme);
-    let cachedToken =
+
+    const cachedToken =
       typeof localStorage !== 'undefined'
         ? localStorage.getItem('jy_online_token')
         : null;
-    if (!cachedToken && typeof window !== 'undefined') {
-      const urlToken = new URLSearchParams(window.location.search).get('token');
-      if (urlToken) {
-        cachedToken = urlToken;
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('jy_online_token', urlToken);
-        }
-      }
-    }
     if (cachedToken) {
       targetUrl.searchParams.set('token', cachedToken);
     }
@@ -443,18 +310,36 @@ export function OnlineWorkspaceOverlay() {
   } catch {
     const cleanHost = appHost.endsWith('/') ? appHost.slice(0, -1) : appHost;
     const cleanSubPath = subPath.startsWith('/') ? subPath : `/${subPath}`;
-    finalIframeUrl = `${cleanHost}${cleanSubPath}${cleanSubPath.includes('?') ? '&' : '?'}embed=true&theme=${currentTheme}`;
+    finalIframeUrl = `${cleanHost}${cleanSubPath}${
+      cleanSubPath.includes('?') ? '&' : '?'
+    }embed=true&theme=${currentTheme}`;
   }
 
-  return createPortal(
-    <div className="jy-workspace-overlay">
+  return (
+    <div
+      style={{
+        width: '100%',
+        height: '100%',
+        position: 'relative',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'var(--dsh-boot-bg, #ffffff)',
+        overflow: 'hidden',
+      }}
+    >
       <iframe
         key={finalIframeUrl}
+        className="jy-online-workspace-iframe"
         src={finalIframeUrl}
+        style={{
+          width: '100%',
+          height: '100%',
+          border: 'none',
+          display: 'block',
+        }}
         sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-forms allow-downloads allow-modals"
         allow="camera; microphone; clipboard-read; clipboard-write; display-capture; autoplay; fullscreen"
       />
-    </div>,
-    targetEl
+    </div>
   );
 }

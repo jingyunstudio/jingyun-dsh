@@ -41,36 +41,47 @@ interface NavigationRowsProps {
 
 export function NavigationRows({ wide = true }: NavigationRowsProps) {
   const isCollapsed = !wide;
-  const [currentHash, setCurrentHash] = React.useState(
-    typeof window !== 'undefined' ? window.location.hash || '' : ''
-  );
   const [topPortalTarget, setTopPortalTarget] =
     React.useState<HTMLElement | null>(null);
   const [isAssistantActive, setIsAssistantActive] = React.useState(false);
 
-  const handleNavClick = (
+  // 1. 订阅官方 Central Main Panel 状态 (单一事实来源)
+  const activePanelId = React.useSyncExternalStore(
+    (cb) =>
+      globalClientContext?.layout?.panelInfo?.subscribe?.(cb) || (() => {}),
+    () =>
+      globalClientContext?.layout?.panelInfo?.getSnapshot?.()?.activePanelId ??
+      null
+  );
+
+  type MainPanelKey =
+    | 'marketplace'
+    | 'connectors'
+    | 'automation'
+    | 'assets'
+    | 'more';
+
+  const handleOpenPanel = (
     e: React.MouseEvent,
-    targetHash: string,
-    requiresConfig: boolean
+    panelKey: MainPanelKey,
+    requiresConfig = false
   ) => {
     e.stopPropagation();
-    if (!requiresConfig) {
-      window.location.hash = targetHash;
-      return;
+    if (requiresConfig) {
+      brandingManager.fetch().then((data) => {
+        const configured = !!data?.appHost;
+        if (!configured) {
+          showToast('线上域名未配置，请先配置');
+          return;
+        }
+        globalClientContext?.layout?.selectPanel?.(panelKey);
+      });
+    } else {
+      globalClientContext?.layout?.selectPanel?.(panelKey);
     }
-
-    brandingManager.fetch().then((data) => {
-      const configured = !!data?.appHost;
-      if (!configured) {
-        showToast('线上域名未配置，请先配置');
-      } else {
-        window.location.hash = targetHash;
-      }
-    });
   };
 
   React.useEffect(() => {
-    // 寻找顶部“新会话”按钮的后方容器，实现纯声明式 Portal 移至顶部
     const newChatBtn =
       document.querySelector('button[class*="newSession"]') ||
       Array.from(document.querySelectorAll('button')).find((btn) => {
@@ -91,7 +102,6 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
         labelSpan.textContent = '新建任务';
       }
 
-      // 使用原生 MutationObserver 实时响应框架文案更新，无需定时器
       const btnObserver = new MutationObserver(() => {
         const span =
           newChatBtn.querySelector('[class*="newSessionLabel"]') ||
@@ -109,11 +119,12 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
         subtree: true,
         characterData: true,
       });
+
       const handleNewChatClick = () => {
         setIsAssistantActive(false);
-        if (window.location.hash && window.location.hash !== '#/') {
-          window.location.hash = '#/';
-        }
+        try {
+          globalClientContext?.layout?.selectPanel?.(null);
+        } catch {}
       };
       newChatBtn.addEventListener('click', handleNewChatClick);
 
@@ -138,31 +149,20 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
       }
     }
 
-    const checkState = () => {
-      const hash = window.location.hash || '';
-      setCurrentHash(hash);
-      if (hash && hash.startsWith('#/jingyun/')) {
-        setIsAssistantActive(false);
-        return;
-      }
-      // 只能通过 sessionId 精准匹配激活状态，绝不爬取 DOM 或做文本模糊猜测
+    const checkAssistantState = () => {
       const currentId =
         globalClientContext?.sessions?.list?.getSnapshot()?.current;
       const assistantId = localStorage.getItem(ASSISTANT_SESSION_STORAGE_KEY);
-
       setIsAssistantActive(
         Boolean(currentId && assistantId && currentId === assistantId)
       );
     };
 
-    checkState();
-    const timer = setInterval(checkState, 200);
-    window.addEventListener('hashchange', checkState);
-    const unsub = globalClientContext?.sessions?.list?.subscribe(checkState);
+    checkAssistantState();
+    const unsub =
+      globalClientContext?.sessions?.list?.subscribe(checkAssistantState);
 
     return () => {
-      clearInterval(timer);
-      window.removeEventListener('hashchange', checkState);
       unsub?.();
     };
   }, []);
@@ -181,11 +181,12 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
       <button
         type="button"
         className={`jy-sidebar-btn jy-sidebar-link-assistant ${
-          isAssistantActive ? 'jy-active' : ''
+          activePanelId === null && isAssistantActive ? 'jy-active' : ''
         }`}
         onClick={async (e) => {
           e.stopPropagation();
           try {
+            globalClientContext?.layout?.selectPanel?.(null);
             await openAssistantSession();
           } catch (err) {
             console.error('[Assistant] Failed to open assistant session:', err);
@@ -195,13 +196,14 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
         <AssistantNavIcon size={16} />
         {!isCollapsed && <span>助理</span>}
       </button>
+
       {/* 1. 应用市场 */}
       <button
         type="button"
-        className={`jy-sidebar-btn jy-sidebar-link-market ${currentHash.includes('path=%2Fzh%2Fmarketplace') || currentHash.includes('path=/zh/marketplace') ? 'jy-active' : ''}`}
-        onClick={(e) =>
-          handleNavClick(e, '#/jingyun/more?path=%2Fzh%2Fmarketplace', true)
-        }
+        className={`jy-sidebar-btn jy-sidebar-link-market ${
+          activePanelId === 'marketplace' ? 'jy-active' : ''
+        }`}
+        onClick={(e) => handleOpenPanel(e, 'marketplace', true)}
       >
         <IconSkillOutlineRegular size={16} className="link-icon" />
         {!isCollapsed && <span>应用市场</span>}
@@ -210,8 +212,10 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
       {/* 2. 连接器 */}
       <button
         type="button"
-        className={`jy-sidebar-btn jy-sidebar-link-connector ${currentHash === '#/jingyun/connectors' ? 'jy-active' : ''}`}
-        onClick={(e) => handleNavClick(e, '#/jingyun/connectors', false)}
+        className={`jy-sidebar-btn jy-sidebar-link-connector ${
+          activePanelId === 'connectors' ? 'jy-active' : ''
+        }`}
+        onClick={(e) => handleOpenPanel(e, 'connectors')}
       >
         <IconBranchOutlineRegular size={16} className="link-icon" />
         {!isCollapsed && <span>连接器</span>}
@@ -220,20 +224,22 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
       {/* 3. 自动化 */}
       <button
         type="button"
-        className={`jy-sidebar-btn jy-sidebar-link-auto ${currentHash === '#/jingyun/automation' ? 'jy-active' : ''}`}
-        onClick={(e) => handleNavClick(e, '#/jingyun/automation', false)}
+        className={`jy-sidebar-btn jy-sidebar-link-auto ${
+          activePanelId === 'automation' ? 'jy-active' : ''
+        }`}
+        onClick={(e) => handleOpenPanel(e, 'automation')}
       >
         <IconLinkOutlineRegular size={16} className="link-icon" />
         {!isCollapsed && <span>自动化</span>}
       </button>
 
-      {/* 4. 资产库 (链接到 /zh/my-assets) */}
+      {/* 4. 资产库 */}
       <button
         type="button"
-        className={`jy-sidebar-btn jy-sidebar-link-assets ${currentHash.includes('path=%2Fzh%2Fmy-assets') || currentHash.includes('path=/zh/my-assets') ? 'jy-active' : ''}`}
-        onClick={(e) =>
-          handleNavClick(e, '#/jingyun/more?path=%2Fzh%2Fmy-assets', true)
-        }
+        className={`jy-sidebar-btn jy-sidebar-link-assets ${
+          activePanelId === 'assets' ? 'jy-active' : ''
+        }`}
+        onClick={(e) => handleOpenPanel(e, 'assets', true)}
       >
         <IconDataOutlineRegular size={16} className="link-icon" />
         {!isCollapsed && <span>资产库</span>}
@@ -242,8 +248,10 @@ export function NavigationRows({ wide = true }: NavigationRowsProps) {
       {/* 5. 更多 (线上资源) */}
       <button
         type="button"
-        className={`jy-sidebar-btn jy-sidebar-link-more ${currentHash.startsWith('#/jingyun/more') && !currentHash.includes('marketplace') && !currentHash.includes('my-assets') ? 'jy-active' : ''}`}
-        onClick={(e) => handleNavClick(e, '#/jingyun/more?path=%2F', true)}
+        className={`jy-sidebar-btn jy-sidebar-link-more ${
+          activePanelId === 'more' ? 'jy-active' : ''
+        }`}
+        onClick={(e) => handleOpenPanel(e, 'more', true)}
         style={{
           display: 'flex',
           justifyContent: isCollapsed ? 'center' : 'space-between',

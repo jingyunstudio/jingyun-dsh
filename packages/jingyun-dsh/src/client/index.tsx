@@ -13,7 +13,6 @@ import { CustomLoginSettingBtn } from './components/CustomLoginSettingBtn';
 import { JYTopDragBar } from './components/JYTopDragBar';
 import { JYWindowControls } from './components/JYWindowControls';
 import { NavigationRows } from './components/NavigationRows';
-import { OnlineWorkspaceOverlay } from './components/OnlineWorkspaceOverlay';
 import { initClientBrandingDOM } from './dom-helper';
 import { JYCardActivateModal } from './modals/JYCardActivateModal';
 // 3. 导入解耦的商业化 Modal 弹窗
@@ -22,11 +21,14 @@ import { JYRechargeModal } from './modals/JYRechargeModal';
 import { JYUpgradeModal } from './modals/JYUpgradeModal';
 // 2. 导入解耦的业务交互面板
 import { ArtifactInspectorPanel } from './pages/ArtifactInspectorPanel';
+import { AutomationPanel } from './pages/AutomationPanel';
+import { ConnectorPanel } from './pages/ConnectorPanel';
 import {
   MarketplaceAgentsTab,
   MarketplaceSkillsTab,
   MarketplaceCommunityPluginsTab,
 } from './pages/MarketplaceSection';
+import { OnlineWorkspaceMainView } from './pages/OnlineWorkspaceMainView';
 
 export interface AssistantSessionsService {
   readonly list: {
@@ -51,6 +53,10 @@ export type CustomClientContext = ClientContext & {
   sessions?: AssistantSessionsService;
   layout?: {
     selectPanel?: (panel: unknown) => void;
+    panelInfo?: {
+      getSnapshot?: () => { activePanelId?: string | null };
+      subscribe?: (listener: () => void) => () => void;
+    };
   };
 };
 
@@ -186,7 +192,6 @@ export function apply(ctx: ClientContext) {
           React.Fragment,
           null,
           React.createElement(NavigationRows, { wide: props?.wide }),
-          React.createElement(OnlineWorkspaceOverlay),
           React.createElement(ArtifactInspectorPanel, { ctx }),
           React.createElement(JYLoginModal),
           React.createElement(JYUpgradeModal),
@@ -269,5 +274,61 @@ export function apply(ctx: ClientContext) {
   // 六、应用网页 Title、Favicon、以及全局动态遮罩与自愈自隐
   // ==========================================
   initClientBrandingDOM();
+
+  // ==========================================
+  // 七、注册官方 main 页面插槽 (5 个独立业务面板与侧栏 1:1 对齐)
+  // ==========================================
+  ctx.slots.inject('main', () => {
+    // 1. 应用市场
+    ctx.slots.register(
+      {
+        name: 'main',
+        key: 'marketplace',
+      },
+      () =>
+        React.createElement(OnlineWorkspaceMainView, {
+          subPath: '/zh/marketplace',
+        })
+    );
+
+    // 2. 连接器
+    ctx.slots.register(
+      {
+        name: 'main',
+        key: 'connectors',
+      },
+      () => React.createElement(ConnectorPanel)
+    );
+
+    // 3. 自动化
+    ctx.slots.register(
+      {
+        name: 'main',
+        key: 'automation',
+      },
+      () => React.createElement(AutomationPanel)
+    );
+
+    // 4. 资产库
+    ctx.slots.register(
+      {
+        name: 'main',
+        key: 'assets',
+      },
+      () =>
+        React.createElement(OnlineWorkspaceMainView, {
+          subPath: '/zh/my-assets',
+        })
+    );
+
+    // 5. 更多 (线上资源)
+    ctx.slots.register(
+      {
+        name: 'main',
+        key: 'more',
+      },
+      () => React.createElement(OnlineWorkspaceMainView, { subPath: '/' })
+    );
+  });
 }
 export { brandingManager };

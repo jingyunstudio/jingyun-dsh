@@ -886,38 +886,6 @@ button[class*="newSession"] svg {
   border-left-color: rgba(255, 255, 255, 0.08);
 }
 
-/* 线上资源工作区全屏遮盖视图容器 (仅将遮罩层级调低为 1，避免挡住侧边栏与浮层) */
-.jy-workspace-overlay {
-  position: absolute !important;
-  inset: 0 !important;
-  z-index: 1 !important;
-  background: var(--dsw-alias-bg-layer-1, #ffffff) !important;
-  overflow: hidden !important;
-}
-
-.jy-workspace-overlay iframe {
-  width: 100% !important;
-  height: 100% !important;
-  border: none !important;
-  display: block !important;
-}
-
-/* ---------------------------------------------------- */
-/* 线上资源独立新页面路由隔离：仅隐藏右侧 CenterColumn 内的原生对话、输入框与底部状态栏，绝对保留左侧侧边栏历史任务记录 */
-/* ---------------------------------------------------- */
-body.jy-route-more [class*="centerCol"] {
-  position: relative !important;
-}
-
-body.jy-route-more [class*="centerCol"] > *:not(.jy-workspace-overlay) {
-  display: none !important;
-}
-
-body.jy-route-more .jy-artifact-side-panel,
-body.jy-route-more [class*="centerCol"] {
-  margin-right: 0 !important;
-}
-
 /* ---------------------------------------------------- */
 /* 1:1 对齐产物工作区/预览器全套像素级样式 (支持拖拽调整宽度) */
 /* ---------------------------------------------------- */
