@@ -12,7 +12,7 @@ export default defineConfig([
     format: ['esm'],
     platform: 'node',
     target: 'es2022',
-    clean: true,
+    clean: false,
     dts: false,
   },
   // 2. Client half (Browser, CJS wrapped)
