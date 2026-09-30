@@ -172,6 +172,9 @@ export function OnlineWorkspaceOverlay() {
           if (user) {
             localStorage.setItem('jy_online_user', JSON.stringify(user));
           }
+          window.dispatchEvent(
+            new CustomEvent('jy_auth_changed', { detail: { token, user } })
+          );
         }
       }
 
@@ -420,10 +423,19 @@ export function OnlineWorkspaceOverlay() {
     const targetUrl = new URL(cleanSubPath, baseUrl);
     targetUrl.searchParams.set('embed', 'true');
     targetUrl.searchParams.set('theme', currentTheme);
-    const cachedToken =
+    let cachedToken =
       typeof localStorage !== 'undefined'
         ? localStorage.getItem('jy_online_token')
         : null;
+    if (!cachedToken && typeof window !== 'undefined') {
+      const urlToken = new URLSearchParams(window.location.search).get('token');
+      if (urlToken) {
+        cachedToken = urlToken;
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('jy_online_token', urlToken);
+        }
+      }
+    }
     if (cachedToken) {
       targetUrl.searchParams.set('token', cachedToken);
     }

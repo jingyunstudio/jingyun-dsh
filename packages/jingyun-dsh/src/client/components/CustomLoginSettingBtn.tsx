@@ -155,7 +155,32 @@ export function CustomLoginSettingBtn(props: any) {
       }
     };
 
+    const syncUrlTokenIfNeeded = () => {
+      if (typeof window === 'undefined' || typeof localStorage === 'undefined') {
+        return;
+      }
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlToken = urlParams.get('token');
+        if (urlToken) {
+          const prevToken = localStorage.getItem('jy_online_token');
+          localStorage.setItem('jy_online_token', urlToken);
+          if (prevToken !== urlToken) {
+            localStorage.removeItem('jy_online_user');
+          }
+          urlParams.delete('token');
+          const newQuery = urlParams.toString();
+          const cleanUrl =
+            window.location.pathname +
+            (newQuery ? `?${newQuery}` : '') +
+            window.location.hash;
+          window.history.replaceState({}, '', cleanUrl);
+        }
+      } catch {}
+    };
+
     const checkAuth = async () => {
+      syncUrlTokenIfNeeded();
       if (typeof localStorage !== 'undefined') {
         const t = localStorage.getItem('jy_online_token');
         const u = localStorage.getItem('jy_online_user');
@@ -185,10 +210,27 @@ export function CustomLoginSettingBtn(props: any) {
     checkAuth();
 
     const handleAuthChange = () => checkAuth();
+    const handleWindowMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'JY_LOGIN_SUCCESS') {
+        const { token: msgToken, user: msgUser } = event.data?.payload || {};
+        if (msgToken && typeof localStorage !== 'undefined') {
+          const prevToken = localStorage.getItem('jy_online_token');
+          localStorage.setItem('jy_online_token', msgToken);
+          if (msgUser) {
+            localStorage.setItem('jy_online_user', JSON.stringify(msgUser));
+          } else if (prevToken !== msgToken) {
+            localStorage.removeItem('jy_online_user');
+          }
+          checkAuth();
+        }
+      }
+    };
     window.addEventListener('jy_auth_changed', handleAuthChange);
+    window.addEventListener('message', handleWindowMessage);
     return () => {
       active = false;
       window.removeEventListener('jy_auth_changed', handleAuthChange);
+      window.removeEventListener('message', handleWindowMessage);
     };
   }, []);
 
