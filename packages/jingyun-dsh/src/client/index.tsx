@@ -51,6 +51,10 @@ export interface AssistantSessionsService {
 
 export type CustomClientContext = ClientContext & {
   sessions?: AssistantSessionsService;
+  uiWorkspace?: {
+    openSession: (sessionId: string) => void;
+    startSession?: (workspaceId?: string) => void;
+  };
   layout?: {
     selectPanel?: (panel: unknown) => void;
     panelInfo?: {
@@ -60,7 +64,7 @@ export type CustomClientContext = ClientContext & {
   };
 };
 
-export const inject = ['slots', 'sessions', 'layout'];
+export const inject = ['slots', 'sessions', 'layout', 'uiWorkspace'];
 export let globalClientContext: CustomClientContext | null = null;
 export const ASSISTANT_SESSION_STORAGE_KEY = 'dsh_assistant_session_id';
 
@@ -98,36 +102,17 @@ export async function openAssistantSession(forceNew = false): Promise<void> {
   }
   localStorage.setItem(ASSISTANT_SESSION_STORAGE_KEY, targetSessionId);
 
-  const sessions = globalClientContext?.sessions;
-  if (!sessions) {
-    throw new Error(
-      '[Assistant] sessions service is not available on client context'
-    );
+  const uiWorkspace = globalClientContext?.uiWorkspace;
+  if (uiWorkspace && typeof uiWorkspace.openSession === 'function') {
+    uiWorkspace.openSession(targetSessionId);
+  } else {
+    const sessions = globalClientContext?.sessions as unknown as {
+      open?: (id: string) => void;
+    };
+    if (sessions && typeof sessions.open === 'function') {
+      sessions.open(targetSessionId);
+    }
   }
-
-  let snapshot = sessions.list?.getSnapshot();
-  const byId = snapshot?.byId as Record<string, unknown> | undefined;
-  let exists = Boolean(
-    byId?.[targetSessionId] ||
-    (snapshot?.ids as string[] | undefined)?.includes(targetSessionId)
-  );
-
-  if (!exists && typeof sessions.refresh === 'function') {
-    await sessions.refresh();
-    snapshot = sessions.list?.getSnapshot();
-    const refreshedById = snapshot?.byId as Record<string, unknown> | undefined;
-    exists = Boolean(
-      refreshedById?.[targetSessionId] ||
-      (snapshot?.ids as string[] | undefined)?.includes(targetSessionId)
-    );
-  }
-
-  if (!exists && !forceNew) {
-    return openAssistantSession(true);
-  }
-
-  sessions.open(targetSessionId as never);
-
   setTimeout(() => {
     const input = document.querySelector<HTMLElement>(
       'div[contenteditable="true"], textarea'
